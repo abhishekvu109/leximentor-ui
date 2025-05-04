@@ -1,16 +1,10 @@
 import {useEffect, useState} from "react";
-import WordFlashcard, {
-    CircularProgressBar, Sources, Stepper
-} from "@/components/practice/VCDetailedViewComponents";
-import ProgressBar from "@/components/widgets/ProgressBar";
-import axios from "axios";
-import {API_LEXIMENTOR_BASE_URL, API_TEXT_TO_SPEECH} from "@/constants";
+import {CircularProgressBar, Sources} from "@/components/practice/VCDetailedViewComponents";
+import {API_LEXIMENTOR_BASE_URL} from "@/constants";
 import {fetchData} from "@/dataService";
-import Link from "next/link";
-import {SpeakerWaveIcon} from "@heroicons/react/24/solid";
 
 const Main = ({word, width = '20rem', height = '14rem'}) => {
-
+    console.log("The word is :"+JSON.stringify(word));
     const [flipped, setFlipped] = useState(false);
 
     const wrapperStyle = {
@@ -34,7 +28,7 @@ const Main = ({word, width = '20rem', height = '14rem'}) => {
     };
     return (<>
 
-        <div className="flex justify-center bg-gray-100">
+        <div className="flex justify-center">
             <div
                 className="relative cursor-pointer"
                 onClick={() => setFlipped(!flipped)}
@@ -83,7 +77,48 @@ const Main = ({word, width = '20rem', height = '14rem'}) => {
 
     </>);
 }
-const FlashcardView = ({drillSetData, drillId, wordMetadata, sourcesData}) => {
+
+// const Progress = ({ currentIndex, size }) => {
+//     const [animate, setAnimate] = useState(false);
+//     const percentage = Math.round(((currentIndex + 1) / size) * 100);
+//
+//     useEffect(() => {
+//         setAnimate(true);
+//         const timeout = setTimeout(() => setAnimate(false), 500); // Animation lasts 500ms
+//         return () => clearTimeout(timeout);
+//     }, [percentage]);
+//
+//     return (
+//         <div
+//             className={`w-[65%] text-white bg-blue-700 hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300 font-medium rounded-full text-sm px-5 py-2.5 text-center me-2 mb-2 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800 transition-colors duration-500 ${
+//                 animate ? "bg-green-500" : ""
+//             }`}
+//         >
+//             {percentage}% Done
+//         </div>
+//     );
+// };
+const Progress = ({ currentIndex, size }) => {
+    const [animate, setAnimate] = useState(false);
+    const percentage = Math.round(((currentIndex + 1) / size) * 100);
+
+    useEffect(() => {
+        setAnimate(true);
+        const timeout = setTimeout(() => setAnimate(false), 500);
+        return () => clearTimeout(timeout);
+    }, [percentage]);
+
+    return (
+        <div
+            className={`w-[65%] text-white ${
+                animate ? "bg-green-500" : "bg-indigo-400"
+            } hover:bg-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-300 font-medium rounded-full text-sm px-5 py-2.5 text-center me-2 mb-2 transition-colors duration-500`}
+        >
+            {percentage}% Done
+        </div>
+    );
+};
+const FlashcardView = ({drillSetData, wordMetadata, sourcesData}) => {
     const [currentIndex, setCurrentIndex] = useState(0);
     const [size, setSize] = useState(drillSetData.data.length);
     const [drillMetadata, setDrillMetadata] = useState(drillSetData);
@@ -115,36 +150,37 @@ const FlashcardView = ({drillSetData, drillId, wordMetadata, sourcesData}) => {
     };
 
     return (<>
-        <Sources allSources={sources} onClick={handleSources}/>
-        <div className="flex flex-row my-2">
-            <div>
-                <CircularProgressBar progressInfo={Math.round(((currentIndex + 1) / size) * 100)}></CircularProgressBar>
+        <div className="flex flex-col items-center">
+            <div className="w-[40%] p-2 mt-2">
+                <div className="grid grid-cols-3 gap-x-5 gap-y-3">
+                    <div className="col-span-3">
+                        <Sources allSources={sources} onClick={handleSources}/>
+                        <hr className="border-dashed border-1 my-2"/>
+                    </div>
+                    <div className="col-span-3">
+                        <div className="flex flex-row justify-center">
+                            <div>
+                                <button type="button" onClick={prevWord}
+                                        className="text-white bg-blue-700 hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300 font-medium rounded-full text-sm px-5 py-2.5 text-center me-2 mb-2 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800">Prev
+                                </button>
+                            </div>
+                            <div className="w-1/2 justify-items-center">
+                                <Progress currentIndex={currentIndex} size={size}/>
+                                {/*<div className="w-[65%] text-white bg-blue-700 hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300 font-medium rounded-full text-sm px-5 py-2.5 text-center me-2 mb-2 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800">{Math.round(((currentIndex + 1) / size) * 100)}% Completed</div>*/}
+                            </div>
+                            <div>
+                                <button type="button" onClick={nextWord}
+                                        className="text-white bg-blue-700 hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300 font-medium rounded-full text-sm px-5 py-2.5 text-center me-2 mb-2 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800">Next
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="col-span-3">
+                        <Main word={wordData} height="500px" width="600px"/>
+                    </div>
+                </div>
             </div>
         </div>
-        <div className="flex flex-row mb-2 p-2">
-            {/*<button type="button" onClick={prevWord}*/}
-            {/*        className="bg-blue-400 text-white font-bold  px-4 py-2 rounded-lg hover:bg-blue-700 mr-20">Prev*/}
-            {/*</button>*/}
-            <button onClick={prevWord}
-                    className="relative mr-20 inline-flex items-center justify-center p-0.5 mb-2 me-2 overflow-hidden text-sm font-medium text-gray-900 rounded-lg group bg-gradient-to-br from-purple-600 to-blue-500 group-hover:from-purple-600 group-hover:to-blue-500 hover:text-white dark:text-white focus:ring-4 focus:outline-none focus:ring-blue-300 dark:focus:ring-blue-800">
-                <span
-                    className="relative px-5 py-2.5 transition-all ease-in duration-75 bg-white dark:bg-gray-900 rounded-md group-hover:bg-transparent group-hover:dark:bg-transparent">
-                Prev
-                </span>
-            </button>
-            {/*<button type="button" onClick={nextWord}*/}
-            {/*        className="bg-blue-400 text-white font-bold px-4 py-2 rounded-lg hover:bg-blue-700 ml-20">Next*/}
-            {/*</button>*/}
-            <button onClick={nextWord}
-                    className="relative ml-20 inline-flex items-center justify-center p-0.5 mb-2 me-2 overflow-hidden text-sm font-medium text-gray-900 rounded-lg group bg-gradient-to-br from-purple-600 to-blue-500 group-hover:from-purple-600 group-hover:to-blue-500 hover:text-white dark:text-white focus:ring-4 focus:outline-none focus:ring-blue-300 dark:focus:ring-blue-800">
-                <span
-                    className="relative px-5 py-2.5 transition-all ease-in duration-75 bg-white dark:bg-gray-900 rounded-md group-hover:bg-transparent group-hover:dark:bg-transparent">
-                Next
-                </span>
-            </button>
-        </div>
-        <Main word={wordData}
-              height="480px" width="600px"/>
     </>);
 }
 

@@ -116,7 +116,7 @@ export const WordPanel = ({word}) => {
     </>);
 }
 
-export const WordFlashcard=({word, meanings})=> {
+export const WordFlashcard = ({word, meanings}) => {
     const [flipped, setFlipped] = useState(false);
 
     return (<div className="w-full h-full [perspective:1000px]" onClick={() => setFlipped(!flipped)}>
@@ -149,7 +149,7 @@ export const SynonymFlashcard = ({word, synonyms}) => {
     const [flipped, setFlipped] = useState(false);
     return (<div
         onClick={() => setFlipped(!flipped)}
-        className="w-72 h-48 [perspective:1000px]"
+        className="w-full h-48 [perspective:1000px]"
     >
         <div
             className={`relative w-full h-full justify-content-center transition-transform duration-700 [transform-style:preserve-3d] ${flipped ? '[transform:rotateY(180deg)]' : ''}`}>
@@ -180,11 +180,6 @@ export const SynonymFlashcard = ({word, synonyms}) => {
                     same or
                     almost the same as other words. They help you say
                     things in different ways and make your speaking and writing more interesting.</p>
-                {/*<div className="text-center">*/}
-                {/*    <h1 className="text-3xl font-bold bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 text-transparent bg-clip-text animate-pulse">*/}
-                {/*        Flip Me*/}
-                {/*    </h1>*/}
-                {/*</div>*/}
             </div>
 
             {/* Back Side */}
@@ -200,10 +195,8 @@ export const SynonymFlashcard = ({word, synonyms}) => {
                     <div className="basis-3/4">
                         <div className="flex flex-wrap gap-2 p-1 mt-2">
                             {(synonyms && synonyms.length > 1 ? synonyms : [{synonym: "dummy"}, {synonym: "placeholder"}, {synonym: "example"}]).map((item, index) => (
-                                <span
-                                    key={index}
-                                    className="bg-gray-100 text-gray-800 text-xs font-bold px-3 py-1 rounded-2 border-1"
-                                >
+                                <span key={index}
+                                      className="bg-gray-100 text-gray-800 text-xs font-bold px-3 py-1 rounded-2 border-1">
                             {item.synonym}
                           </span>))}
                         </div>
@@ -219,7 +212,7 @@ export const AntonymFlashcard = ({word, antonyms}) => {
 
     return (<div
         onClick={() => setFlipped(!flipped)}
-        className="w-72 h-48 [perspective:1000px]"
+        className="w-full h-48 [perspective:1000px]"
     >
         <div
             className={`relative w-full h-full justify-content-center transition-transform duration-700 [transform-style:preserve-3d] ${flipped ? '[transform:rotateY(180deg)]' : ''}`}>
@@ -281,7 +274,7 @@ export const MnemonicFlashcard = ({word, mnemonic}) => {
 
     return (<div
         onClick={() => setFlipped(!flipped)}
-        className="w-72 h-48 [perspective:1000px]"
+        className="w-full h-48 [perspective:1000px]"
     >
         <div
             className={`relative w-full h-full justify-content-center transition-transform duration-700 [transform-style:preserve-3d] ${flipped ? '[transform:rotateY(180deg)]' : ''}`}>
@@ -339,7 +332,7 @@ export const PronunciationFlashcard = ({word, pronunciation}) => {
 
     return (<div
         onClick={() => setFlipped(!flipped)}
-        className="w-72 h-48 [perspective:1000px]"
+        className="w-full h-48 [perspective:1000px]"
     >
         <div
             className={`relative w-full h-full justify-content-center transition-transform duration-700 [transform-style:preserve-3d] ${flipped ? '[transform:rotateY(180deg)]' : ''}`}>
@@ -394,26 +387,24 @@ export const PronunciationFlashcard = ({word, pronunciation}) => {
 }
 
 export const Sources = ({allSources, onClick}) => {
-    return (
-        <div className="flex flex-wrap gap-2">
-            {allSources.data != null && allSources.data.length > 0 ? (
-                allSources.data.map((item, index) => (
+    return (<>
+        <div className="flex flex-row text-center">
+            <div className="w-[100%]">
+                {allSources.data != null && allSources.data.length > 0 ? (allSources.data.map((item, index) => (<>
                     <button
                         key={index}
                         type="button"
                         data-modal-target="create-new-drill-modal-form"
                         onClick={() => onClick(item)}
                         data-model-toggle="create-new-drill-modal-form"
-                        className="px-4 py-2.5 text-base font-medium text-xs text-white inline-flex items-center bg-blue-500 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 rounded-lg text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
+                        className=" mr-2 px-4 py-2.5 text-base font-medium text-xs text-white bg-blue-500 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 rounded-lg text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
                     >
                         {item}
                     </button>
-                ))
-            ) : (
-                <p className="text-lg text-center">No sources found</p>
-            )}
+                </>))) : (<p className="text-lg text-center">No sources found</p>)}
+            </div>
         </div>
-    );
+    </>);
 };
 
 
