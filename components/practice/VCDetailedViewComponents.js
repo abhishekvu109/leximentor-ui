@@ -1,7 +1,5 @@
-import {ArrowPathIcon, ArrowsRightLeftIcon, CheckIcon, StarIcon} from "@heroicons/react/24/solid";
+import {StarIcon} from "@heroicons/react/24/solid";
 import {useState} from "react";
-import Head from "next/head";
-import Link from "next/link";
 
 export const CircularProgressBar = ({progressInfo}) => {
     const progress = progressInfo;
@@ -118,7 +116,7 @@ export const WordPanel = ({word}) => {
     </>);
 }
 
-export default function WordFlashcard({word, meanings}) {
+export const WordFlashcard=({word, meanings})=> {
     const [flipped, setFlipped] = useState(false);
 
     return (<div className="w-full h-full [perspective:1000px]" onClick={() => setFlipped(!flipped)}>
@@ -527,3 +525,5 @@ export const Stepper = () => {
         </div>
     </>);
 }
+
+export default WordFlashcard;

@@ -1,14 +1,14 @@
 import axios from "axios";
 import {API_LEXIMENTOR_BASE_URL, API_TEXT_TO_SPEECH} from "@/constants";
-import WordFlashcard, {
+import {
     AntonymFlashcard,
     CircularProgressBar,
     CollapsibleWidget,
     MnemonicFlashcard,
     PronunciationFlashcard,
     Sources,
-    SynonymFlashcard
-} from "@/pages/drills/learning/practice/VCDetailedViewComponents";
+    SynonymFlashcard, WordFlashcard
+} from "@/components/practice/VCDetailedViewComponents";
 import Link from "next/link";
 import {SpeakerWaveIcon} from "@heroicons/react/24/solid";
 import {fetchData} from "@/dataService";
@@ -68,7 +68,7 @@ const Main = ({word, currentIndex, wordCount}) => {
     </>);
 }
 
-export const DetailedView = ({drillSetData, drillId, wordMetadata, sourcesData}) => {
+const DetailedView = ({drillSetData, drillId, wordMetadata, sourcesData}) => {
     const [currentIndex, setCurrentIndex] = useState(0);
     const [size, setSize] = useState(drillSetData.data.length);
     const [drillMetadata, setDrillMetadata] = useState(drillSetData);
@@ -147,3 +147,5 @@ export const DetailedView = ({drillSetData, drillId, wordMetadata, sourcesData})
         </div>
     </>);
 }
+
+export default DetailedView;

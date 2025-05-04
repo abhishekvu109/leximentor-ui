@@ -1,16 +1,27 @@
 import Script from "next/script";
 import Head from "next/head";
 import Link from "next/link";
+import {useEffect} from "react";
 
 const Layout = ({content}) => {
     return <>
-        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"></script>
-        <script src="https://cdn.jsdelivr.net/npm/flowbite@3.1.2/dist/flowbite.min.js"></script>
-        <script src="https://cdn.jsdelivr.net/npm/apexcharts@3.46.0/dist/apexcharts.min.js"></script>
-        <Head>
-            <Link href="https://cdn.jsdelivr.net/npm/flowbite@3.1.2/dist/flowbite.min.css" rel="stylesheet"/>
-            <Link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet"/>
-        </Head>
+        {/*<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"></script>*/}
+        {/*<script src="https://cdn.jsdelivr.net/npm/flowbite@3.1.2/dist/flowbite.min.js"></script>*/}
+        {/*<script src="https://cdn.jsdelivr.net/npm/apexcharts@3.46.0/dist/apexcharts.min.js"></script>*/}
+        {/*<Script*/}
+        {/*    src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"*/}
+        {/*/>*/}
+        {/*<Script*/}
+        {/*    src="https://cdn.jsdelivr.net/npm/flowbite@3.1.2/dist/flowbite.min.js"*/}
+        {/*/>*/}
+        {/*<Script*/}
+        {/*    src="https://cdn.jsdelivr.net/npm/apexcharts@3.46.0/dist/apexcharts.min.js"*/}
+        {/*/>*/}
+
+        {/*<Head>*/}
+        {/*    <Link href="https://cdn.jsdelivr.net/npm/flowbite@3.1.2/dist/flowbite.min.css" rel="stylesheet"/>*/}
+        {/*    <Link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet"/>*/}
+        {/*</Head>*/}
         <nav
             className="fixed top-0 z-50 w-full bg-white border-b border-gray-200 dark:bg-gray-800 dark:border-gray-700">
             <div className="px-3 py-3 lg:px-5 lg:pl-3">
@@ -229,7 +240,8 @@ const Layout = ({content}) => {
         </aside>
 
         <div className="p-4 sm:ml-64">
-            <div className="p-4 justify-items-center border-2 border-gray-200 border-dashed rounded-lg dark:border-gray-700 mt-14">
+            <div
+                className="p-4 justify-items-center border-2 border-gray-200 border-dashed rounded-lg dark:border-gray-700 mt-14">
                 {content}
                 {/*<div className="grid grid-cols-3 gap-4 mb-4">*/}
                 {/*    <div className="flex items-center justify-center h-24 rounded-sm bg-gray-50 dark:bg-gray-800">*/}

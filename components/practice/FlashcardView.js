@@ -1,7 +1,7 @@
 import {useEffect, useState} from "react";
 import WordFlashcard, {
     CircularProgressBar, Sources, Stepper
-} from "@/pages/drills/learning/practice/VCDetailedViewComponents";
+} from "@/components/practice/VCDetailedViewComponents";
 import ProgressBar from "@/components/widgets/ProgressBar";
 import axios from "axios";
 import {API_LEXIMENTOR_BASE_URL, API_TEXT_TO_SPEECH} from "@/constants";
@@ -67,11 +67,12 @@ const Main = ({word, width = '20rem', height = '14rem'}) => {
                         <p className="text-lg text-black/65">{word.data.localMeaning}</p>
                         <hr className="h-px my-3 bg-black/55 dark:bg-gray-700"/>
                         <h2 className="text-blue-800 font-semibold mb-1 text-lg">Part of Speech</h2>
-                        <p className="text-lg text-black/65 italic">The word is: {word.data != null && word.data.partsOfSpeeches.length > 0 ? (<>
-                            {word.data.partsOfSpeeches.map((item, index) => (<>
-                                <b key={item}>{item.pos} </b>
-                            </>))}
-                        </>) : (<></>)}</p>
+                        <p className="text-lg text-black/65 italic">The word
+                            is: {word.data != null && word.data.partsOfSpeeches.length > 0 ? (<>
+                                {word.data.partsOfSpeeches.map((item, index) => (<>
+                                    <b key={item}>{item.pos} </b>
+                                </>))}
+                            </>) : (<></>)}</p>
                         <hr className="h-px my-3 bg-black/55 dark:bg-gray-700"/>
                         <h2 className="text-blue-800 font-semibold mb-1 text-lg">Mnemonic</h2>
                         <p className="text-lg text-black/65">🧠 {word.data.mnemonic}</p>
@@ -82,7 +83,7 @@ const Main = ({word, width = '20rem', height = '14rem'}) => {
 
     </>);
 }
-export const FlashcardView = ({drillSetData, drillId, wordMetadata, sourcesData}) => {
+const FlashcardView = ({drillSetData, drillId, wordMetadata, sourcesData}) => {
     const [currentIndex, setCurrentIndex] = useState(0);
     const [size, setSize] = useState(drillSetData.data.length);
     const [drillMetadata, setDrillMetadata] = useState(drillSetData);
@@ -117,7 +118,7 @@ export const FlashcardView = ({drillSetData, drillId, wordMetadata, sourcesData}
         <Sources allSources={sources} onClick={handleSources}/>
         <div className="flex flex-row my-2">
             <div>
-                <CircularProgressBar progressInfo={Math.round(((currentIndex +1)/ size) * 100)}></CircularProgressBar>
+                <CircularProgressBar progressInfo={Math.round(((currentIndex + 1) / size) * 100)}></CircularProgressBar>
             </div>
         </div>
         <div className="flex flex-row mb-2 p-2">
@@ -146,3 +147,5 @@ export const FlashcardView = ({drillSetData, drillId, wordMetadata, sourcesData}
               height="480px" width="600px"/>
     </>);
 }
+
+export default FlashcardView;

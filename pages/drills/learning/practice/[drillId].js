@@ -2,12 +2,20 @@ import Layout from "@/components/layout/Layout";
 import {useEffect, useState} from "react";
 import {fetchData} from "@/dataService";
 import {API_LEXIMENTOR_BASE_URL} from "@/constants";
-import {DetailedView} from "@/pages/drills/learning/practice/DetailedView";
-import {FlashcardView} from "@/pages/drills/learning/practice/FlashcardView";
+import FlashcardView from "@/components/practice/FlashcardView";
+import DetailedView from "@/components/practice/DetailedView";
+// import {DetailedView} from "@/pages/drills/learning/practice/DetailedView";
+// import {FlashcardView} from "@/pages/drills/learning/practice/FlashcardView";
 
 
 export default function VocabularyCard({drillSetData, drillId, wordMetadata, sourcesData}) {
     const [isToggleChecked, setIsToggleChecked] = useState(false);
+    useEffect(() => {
+        // Run only once on mount to initialize all Flowbite components
+        if (typeof window !== 'undefined' && window.initFlowbite) {
+            window.initFlowbite();
+        }
+    }, []);
 
     useEffect(() => {
         // Wait for DOM to render, then initialize popover

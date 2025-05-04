@@ -10,7 +10,7 @@ const data = [{name: "Week 1", words: 400, drills: 240}, {name: "Week 2", words:
 }, {name: "Week 4", words: 278, drills: 390}];
 
 export default function BarChartWidget() {
-    return (<div className="h-[375px] w-full">
+    return (<div className="h-[375px] w-[375px]">
             <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={data}>
                     <CartesianGrid strokeDasharray="3 3"/>
