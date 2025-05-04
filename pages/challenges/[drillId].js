@@ -132,9 +132,9 @@ const Challenges = ({data, drillId}) => {
                                         className="text-white inline-flex items-center bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800">
                                     <svg className="me-1 -ms-1 w-5 h-5" fill="currentColor" viewBox="0 0 20 20"
                                          xmlns="http://www.w3.org/2000/svg">
-                                        <path fill-rule="evenodd"
+                                        <path fillRule="evenodd"
                                               d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z"
-                                              clip-rule="evenodd"></path>
+                                              clipRule="evenodd"></path>
                                     </svg>
                                     Evaluate
                                 </button>
@@ -687,7 +687,7 @@ const Challenges = ({data, drillId}) => {
         {/*                className="px-2 py-1.5 m-2 text-base text-sm font-medium text-white inline-flex items-center bg-cyan-400 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 rounded-lg text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800">*/}
         {/*            <svg className="w-4 h-4 text-white me-2" aria-hidden="true"*/}
         {/*                 xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="none" viewBox="0 0 24 24">*/}
-        {/*                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"*/}
+        {/*                <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"*/}
         {/*                      d="M12 7.757v8.486M7.757 12h8.486M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>*/}
         {/*            </svg>*/}
         {/*            Dashboard*/}
@@ -702,7 +702,7 @@ const Challenges = ({data, drillId}) => {
         {/*            className="px-6 py-3.5 m-2 text-base font-medium text-white inline-flex items-center bg-violet-400 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 rounded-lg text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800">*/}
         {/*        <svg className="w-4 h-4 text-white me-2" aria-hidden="true"*/}
         {/*             xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">*/}
-        {/*            <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"*/}
+        {/*            <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"*/}
         {/*                  d="M12 7.757v8.486M7.757 12h8.486M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>*/}
         {/*        </svg>*/}
         {/*        Meaning*/}
@@ -714,7 +714,7 @@ const Challenges = ({data, drillId}) => {
         {/*            className="px-6 py-3.5 m-2 text-base font-medium text-white inline-flex items-center bg-red-400 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 rounded-lg text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800">*/}
         {/*        <svg className="w-4 h-4 text-white me-2" aria-hidden="true"*/}
         {/*             xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">*/}
-        {/*            <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"*/}
+        {/*            <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"*/}
         {/*                  d="M12 7.757v8.486M7.757 12h8.486M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>*/}
         {/*        </svg>*/}
         {/*        Identify POS*/}
@@ -723,7 +723,7 @@ const Challenges = ({data, drillId}) => {
         {/*            className="px-6 py-3.5 m-2 text-base font-medium text-white inline-flex items-center bg-green-400 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 rounded-lg text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800">*/}
         {/*        <svg className="w-4 h-4 text-white me-2" aria-hidden="true"*/}
         {/*             xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">*/}
-        {/*            <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"*/}
+        {/*            <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"*/}
         {/*                  d="M12 7.757v8.486M7.757 12h8.486M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>*/}
         {/*        </svg>*/}
         {/*        Spell Jumble*/}
@@ -736,7 +736,7 @@ const Challenges = ({data, drillId}) => {
         {/*            className="px-6 py-3.5 m-2 text-base font-medium text-white inline-flex items-center bg-yellow-400 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 rounded-lg text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800">*/}
         {/*        <svg className="w-4 h-4 text-white me-2" aria-hidden="true"*/}
         {/*             xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">*/}
-        {/*            <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"*/}
+        {/*            <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"*/}
         {/*                  d="M12 7.757v8.486M7.757 12h8.486M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>*/}
         {/*        </svg>*/}
         {/*        Spell it from pronunciation.*/}
@@ -749,7 +749,7 @@ const Challenges = ({data, drillId}) => {
         {/*            className="px-6 py-3.5 m-2 text-base font-medium text-white inline-flex items-center bg-orange-400 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 rounded-lg text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800">*/}
         {/*        <svg className="w-4 h-4 text-white me-2" aria-hidden="true"*/}
         {/*             xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">*/}
-        {/*            <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"*/}
+        {/*            <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"*/}
         {/*                  d="M12 7.757v8.486M7.757 12h8.486M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>*/}
         {/*        </svg>*/}
         {/*        Guess word from meaning*/}
@@ -759,7 +759,7 @@ const Challenges = ({data, drillId}) => {
         {/*            className="px-6 py-3.5 m-2 text-base font-medium text-white inline-flex items-center bg-sky-400 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 rounded-lg text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800">*/}
         {/*        <svg className="w-4 h-4 text-white me-2" aria-hidden="true"*/}
         {/*             xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">*/}
-        {/*            <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"*/}
+        {/*            <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"*/}
         {/*                  d="M12 7.757v8.486M7.757 12h8.486M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>*/}
         {/*        </svg>*/}
         {/*        Match the right word*/}
@@ -769,7 +769,7 @@ const Challenges = ({data, drillId}) => {
         {/*            className="px-6 py-3.5 m-2 text-base font-medium text-white inline-flex items-center bg-amber-400 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 rounded-lg text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800">*/}
         {/*        <svg className="w-4 h-4 text-white me-2" aria-hidden="true"*/}
         {/*             xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">*/}
-        {/*            <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"*/}
+        {/*            <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"*/}
         {/*                  d="M17.651 7.65a7.131 7.131 0 0 0-12.68 3.15M18.001 4v4h-4m-7.652 8.35a7.13 7.13 0 0 0 12.68-3.15M6 20v-4h4"/>*/}
         {/*        </svg>*/}
         {/*        Reload*/}

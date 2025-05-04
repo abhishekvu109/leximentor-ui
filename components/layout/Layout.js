@@ -1,12 +1,15 @@
 import Script from "next/script";
 import Head from "next/head";
+import Link from "next/link";
 
 const Layout = ({content}) => {
     return <>
-        <Script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"></Script>
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/flowbite@3.1.2/dist/flowbite.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/apexcharts@3.46.0/dist/apexcharts.min.js"></script>
         <Head>
-            <link href="https://cdn.jsdelivr.net/npm/flowbite@3.1.2/dist/flowbite.min.css" rel="stylesheet"/>
+            <Link href="https://cdn.jsdelivr.net/npm/flowbite@3.1.2/dist/flowbite.min.css" rel="stylesheet"/>
+            <Link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet"/>
         </Head>
         <nav
             className="fixed top-0 z-50 w-full bg-white border-b border-gray-200 dark:bg-gray-800 dark:border-gray-700">
@@ -19,7 +22,7 @@ const Layout = ({content}) => {
                             <span className="sr-only">Open sidebar</span>
                             <svg className="w-6 h-6" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20"
                                  xmlns="http://www.w3.org/2000/svg">
-                                <path clip-rule="evenodd" fill-rule="evenodd"
+                                <path clipRule="evenodd" fillRule="evenodd"
                                       d="M2 4.75A.75.75 0 012.75 4h14.5a.75.75 0 010 1.5H2.75A.75.75 0 012 4.75zm0 10.5a.75.75 0 01.75-.75h7.5a.75.75 0 010 1.5h-7.5a.75.75 0 01-.75-.75zM2 10a.75.75 0 01.75-.75h14.5a.75.75 0 010 1.5H2.75A.75.75 0 012 10z"></path>
                             </svg>
                         </button>
@@ -117,8 +120,8 @@ const Layout = ({content}) => {
                             <span className="flex-1 ms-3 text-left rtl:text-right whitespace-nowrap">E-commerce</span>
                             <svg className="w-3 h-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none"
                                  viewBox="0 0 10 6">
-                                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
-                                      stroke-width="2" d="m1 1 4 4 4-4"/>
+                                <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"
+                                      strokeWidth="2" d="m1 1 4 4 4-4"/>
                             </svg>
                         </button>
                         <ul id="dropdown-example" className="hidden py-2 space-y-2">
@@ -198,8 +201,8 @@ const Layout = ({content}) => {
                             <svg
                                 className="shrink-0 w-5 h-5 text-gray-500 transition duration-75 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white"
                                 aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 18 16">
-                                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
-                                      stroke-width="2"
+                                <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"
+                                      strokeWidth="2"
                                       d="M1 8h11m0 0L8 4m4 4-4 4m4-11h3a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-3"/>
                             </svg>
                             <span className="flex-1 ms-3 whitespace-nowrap">Sign In</span>
@@ -226,15 +229,15 @@ const Layout = ({content}) => {
         </aside>
 
         <div className="p-4 sm:ml-64">
-            <div className="p-4 border-2 border-gray-200 border-dashed rounded-lg dark:border-gray-700 mt-14">
+            <div className="p-4 justify-items-center border-2 border-gray-200 border-dashed rounded-lg dark:border-gray-700 mt-14">
                 {content}
                 {/*<div className="grid grid-cols-3 gap-4 mb-4">*/}
                 {/*    <div className="flex items-center justify-center h-24 rounded-sm bg-gray-50 dark:bg-gray-800">*/}
                 {/*        <p className="text-2xl text-gray-400 dark:text-gray-500">*/}
                 {/*            <svg className="w-3.5 h-3.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"*/}
                 {/*                 fill="none" viewBox="0 0 18 18">*/}
-                {/*                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"*/}
-                {/*                      stroke-width="2" d="M9 1v16M1 9h16"/>*/}
+                {/*                <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"*/}
+                {/*                      strokeWidth="2" d="M9 1v16M1 9h16"/>*/}
                 {/*            </svg>*/}
                 {/*        </p>*/}
                 {/*    </div>*/}
@@ -242,8 +245,8 @@ const Layout = ({content}) => {
                 {/*        <p className="text-2xl text-gray-400 dark:text-gray-500">*/}
                 {/*            <svg className="w-3.5 h-3.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"*/}
                 {/*                 fill="none" viewBox="0 0 18 18">*/}
-                {/*                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"*/}
-                {/*                      stroke-width="2" d="M9 1v16M1 9h16"/>*/}
+                {/*                <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"*/}
+                {/*                      strokeWidth="2" d="M9 1v16M1 9h16"/>*/}
                 {/*            </svg>*/}
                 {/*        </p>*/}
                 {/*    </div>*/}
@@ -251,8 +254,8 @@ const Layout = ({content}) => {
                 {/*        <p className="text-2xl text-gray-400 dark:text-gray-500">*/}
                 {/*            <svg className="w-3.5 h-3.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"*/}
                 {/*                 fill="none" viewBox="0 0 18 18">*/}
-                {/*                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"*/}
-                {/*                      stroke-width="2" d="M9 1v16M1 9h16"/>*/}
+                {/*                <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"*/}
+                {/*                      strokeWidth="2" d="M9 1v16M1 9h16"/>*/}
                 {/*            </svg>*/}
                 {/*        </p>*/}
                 {/*    </div>*/}
@@ -261,7 +264,7 @@ const Layout = ({content}) => {
                 {/*    <p className="text-2xl text-gray-400 dark:text-gray-500">*/}
                 {/*        <svg className="w-3.5 h-3.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none"*/}
                 {/*             viewBox="0 0 18 18">*/}
-                {/*            <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"*/}
+                {/*            <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"*/}
                 {/*                  d="M9 1v16M1 9h16"/>*/}
                 {/*        </svg>*/}
                 {/*    </p>*/}
@@ -271,8 +274,8 @@ const Layout = ({content}) => {
                 {/*        <p className="text-2xl text-gray-400 dark:text-gray-500">*/}
                 {/*            <svg className="w-3.5 h-3.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"*/}
                 {/*                 fill="none" viewBox="0 0 18 18">*/}
-                {/*                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"*/}
-                {/*                      stroke-width="2" d="M9 1v16M1 9h16"/>*/}
+                {/*                <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"*/}
+                {/*                      strokeWidth="2" d="M9 1v16M1 9h16"/>*/}
                 {/*            </svg>*/}
                 {/*        </p>*/}
                 {/*    </div>*/}
@@ -280,8 +283,8 @@ const Layout = ({content}) => {
                 {/*        <p className="text-2xl text-gray-400 dark:text-gray-500">*/}
                 {/*            <svg className="w-3.5 h-3.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"*/}
                 {/*                 fill="none" viewBox="0 0 18 18">*/}
-                {/*                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"*/}
-                {/*                      stroke-width="2" d="M9 1v16M1 9h16"/>*/}
+                {/*                <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"*/}
+                {/*                      strokeWidth="2" d="M9 1v16M1 9h16"/>*/}
                 {/*            </svg>*/}
                 {/*        </p>*/}
                 {/*    </div>*/}
@@ -289,8 +292,8 @@ const Layout = ({content}) => {
                 {/*        <p className="text-2xl text-gray-400 dark:text-gray-500">*/}
                 {/*            <svg className="w-3.5 h-3.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"*/}
                 {/*                 fill="none" viewBox="0 0 18 18">*/}
-                {/*                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"*/}
-                {/*                      stroke-width="2" d="M9 1v16M1 9h16"/>*/}
+                {/*                <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"*/}
+                {/*                      strokeWidth="2" d="M9 1v16M1 9h16"/>*/}
                 {/*            </svg>*/}
                 {/*        </p>*/}
                 {/*    </div>*/}
@@ -298,8 +301,8 @@ const Layout = ({content}) => {
                 {/*        <p className="text-2xl text-gray-400 dark:text-gray-500">*/}
                 {/*            <svg className="w-3.5 h-3.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"*/}
                 {/*                 fill="none" viewBox="0 0 18 18">*/}
-                {/*                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"*/}
-                {/*                      stroke-width="2" d="M9 1v16M1 9h16"/>*/}
+                {/*                <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"*/}
+                {/*                      strokeWidth="2" d="M9 1v16M1 9h16"/>*/}
                 {/*            </svg>*/}
                 {/*        </p>*/}
                 {/*    </div>*/}
@@ -308,7 +311,7 @@ const Layout = ({content}) => {
                 {/*    <p className="text-2xl text-gray-400 dark:text-gray-500">*/}
                 {/*        <svg className="w-3.5 h-3.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none"*/}
                 {/*             viewBox="0 0 18 18">*/}
-                {/*            <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"*/}
+                {/*            <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"*/}
                 {/*                  d="M9 1v16M1 9h16"/>*/}
                 {/*        </svg>*/}
                 {/*    </p>*/}
@@ -318,8 +321,8 @@ const Layout = ({content}) => {
                 {/*        <p className="text-2xl text-gray-400 dark:text-gray-500">*/}
                 {/*            <svg className="w-3.5 h-3.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"*/}
                 {/*                 fill="none" viewBox="0 0 18 18">*/}
-                {/*                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"*/}
-                {/*                      stroke-width="2" d="M9 1v16M1 9h16"/>*/}
+                {/*                <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"*/}
+                {/*                      strokeWidth="2" d="M9 1v16M1 9h16"/>*/}
                 {/*            </svg>*/}
                 {/*        </p>*/}
                 {/*    </div>*/}
@@ -327,8 +330,8 @@ const Layout = ({content}) => {
                 {/*        <p className="text-2xl text-gray-400 dark:text-gray-500">*/}
                 {/*            <svg className="w-3.5 h-3.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"*/}
                 {/*                 fill="none" viewBox="0 0 18 18">*/}
-                {/*                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"*/}
-                {/*                      stroke-width="2" d="M9 1v16M1 9h16"/>*/}
+                {/*                <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"*/}
+                {/*                      strokeWidth="2" d="M9 1v16M1 9h16"/>*/}
                 {/*            </svg>*/}
                 {/*        </p>*/}
                 {/*    </div>*/}
@@ -336,8 +339,8 @@ const Layout = ({content}) => {
                 {/*        <p className="text-2xl text-gray-400 dark:text-gray-500">*/}
                 {/*            <svg className="w-3.5 h-3.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"*/}
                 {/*                 fill="none" viewBox="0 0 18 18">*/}
-                {/*                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"*/}
-                {/*                      stroke-width="2" d="M9 1v16M1 9h16"/>*/}
+                {/*                <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"*/}
+                {/*                      strokeWidth="2" d="M9 1v16M1 9h16"/>*/}
                 {/*            </svg>*/}
                 {/*        </p>*/}
                 {/*    </div>*/}
@@ -345,8 +348,8 @@ const Layout = ({content}) => {
                 {/*        <p className="text-2xl text-gray-400 dark:text-gray-500">*/}
                 {/*            <svg className="w-3.5 h-3.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"*/}
                 {/*                 fill="none" viewBox="0 0 18 18">*/}
-                {/*                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"*/}
-                {/*                      stroke-width="2" d="M9 1v16M1 9h16"/>*/}
+                {/*                <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"*/}
+                {/*                      strokeWidth="2" d="M9 1v16M1 9h16"/>*/}
                 {/*            </svg>*/}
                 {/*        </p>*/}
                 {/*    </div>*/}
