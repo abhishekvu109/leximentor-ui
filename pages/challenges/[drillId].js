@@ -1,6 +1,6 @@
 // pages/[id].js
 
-import React, {useEffect, useState} from "react";
+import React, {useCallback, useEffect, useState} from "react";
 import Link from "next/link";
 import {API_LEXIMENTOR_BASE_URL} from "@/constants";
 import {deleteData, fetchData, postData} from "@/dataService";
@@ -45,12 +45,19 @@ const Challenges = ({data, drillId}) => {
     }, [challengeRequestData]); // Add challengeRequestData as a dependency
 
 
-    const createChallenge = async () => {
+    // const createChallenge = async () => {
+    //     const queryString = new URLSearchParams(challengeRequestData).toString();
+    //     const URL = `${API_LEXIMENTOR_BASE_URL}/drill/metadata/challenges/challenge?${queryString}`;
+    //     const saveChallengeSavedData = await postData(URL);
+    //     await LoadTable();
+    // };
+    const createChallenge = useCallback(async () => {
         const queryString = new URLSearchParams(challengeRequestData).toString();
         const URL = `${API_LEXIMENTOR_BASE_URL}/drill/metadata/challenges/challenge?${queryString}`;
         const saveChallengeSavedData = await postData(URL);
         await LoadTable();
-    };
+    }, [challengeRequestData, LoadTable]); // include dependencies here
+
     const deleteChallenge = async (drillRefId) => {
         const URL = `${API_LEXIMENTOR_BASE_URL}/drill/metadata/challenges/${drillRefId}`;
         const saveChallengeSavedData = await deleteData(URL);

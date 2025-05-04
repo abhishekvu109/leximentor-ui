@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from "react";
+import React, {useCallback, useEffect, useState} from "react";
 import Link from "next/link";
 import {API_LEXIMENTOR_BASE_URL} from "@/constants";
 
@@ -86,21 +86,50 @@ const GetAllDrills = ({data}) => {
         }
     };
 
-    const GetDrillAnalytics = async (drillRefId) => {
-        // Don't call again if data is already in cache
+    // const GetDrillAnalytics = async (drillRefId) => {
+    //     // Don't call again if data is already in cache
+    //     if (analyticsCache[drillRefId]) return;
+    //
+    //     try {
+    //         const response = await fetch(`${API_LEXIMENTOR_BASE_URL}/analytics/drill/${drillRefId}`, {
+    //             method: 'GET', headers: {
+    //                 'Content-Type': 'application/json',
+    //             }
+    //         });
+    //         if (!response.ok) throw new Error('Network response was not ok');
+    //         const data = await response.json();
+    //
+    //         setAnalyticsCache(prev => ({
+    //             ...prev, [drillRefId]: {
+    //                 avgScore: data.data.avgDrillScore,
+    //                 wordCount: data.data.countOfWordsLearned,
+    //                 challengeCount: data.data.countOfChallenges
+    //             }
+    //         }));
+    //     } catch (error) {
+    //         console.error('Error:', error);
+    //     }
+    // };
+    //
+    // useEffect(() => {
+    //     drillMetadata.data?.forEach(item => {
+    //         GetDrillAnalytics(item.refId);
+    //     });
+    // }, [drillMetadata.data]);
+    const GetDrillAnalytics = useCallback(async (drillRefId) => {
         if (analyticsCache[drillRefId]) return;
 
         try {
             const response = await fetch(`${API_LEXIMENTOR_BASE_URL}/analytics/drill/${drillRefId}`, {
-                method: 'GET', headers: {
-                    'Content-Type': 'application/json',
-                }
+                method: 'GET',
+                headers: {'Content-Type': 'application/json'}
             });
             if (!response.ok) throw new Error('Network response was not ok');
             const data = await response.json();
 
             setAnalyticsCache(prev => ({
-                ...prev, [drillRefId]: {
+                ...prev,
+                [drillRefId]: {
                     avgScore: data.data.avgDrillScore,
                     wordCount: data.data.countOfWordsLearned,
                     challengeCount: data.data.countOfChallenges
@@ -109,13 +138,14 @@ const GetAllDrills = ({data}) => {
         } catch (error) {
             console.error('Error:', error);
         }
-    };
+    }, [analyticsCache, setAnalyticsCache]);
 
     useEffect(() => {
         drillMetadata.data?.forEach(item => {
             GetDrillAnalytics(item.refId);
         });
-    }, [drillMetadata.data]);
+    }, [drillMetadata.data, GetDrillAnalytics]);
+
 
     const RemoveDrill = async (drillRefId) => {
         try {
