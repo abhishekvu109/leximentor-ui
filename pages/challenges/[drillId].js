@@ -5,15 +5,22 @@ import Link from "next/link";
 import {API_LEXIMENTOR_BASE_URL} from "@/constants";
 import {deleteData, fetchData, postData} from "@/dataService";
 import DashboardCard from "@/components/widgets/DashboardCard";
+import Layout from "@/components/layout/Layout";
 
 const Challenges = ({data, drillId}) => {
-    console.log(data);
     const [challengeData, setChallengeData] = useState(data);
     const [drillRefId, setDrillRefId] = useState(drillId);
     const [isEvaluatorVisible, setIsEvaluatorVisible] = useState(false);
     const [challengeEvaluators, setChallengeEvaluators] = useState(null);
     const [challengeRequestData, setChallengeRequestData] = useState({drillId: drillId, drillType: ''});
     const [evaluationData, setEvaluationData] = useState({challengeId: "", evaluator: ""});
+
+    useEffect(() => {
+        if (typeof window !== "undefined" && window.initFlowbite) {
+            window.initFlowbite();
+        }
+    }, []);
+
     const handleChange = (e) => {
         // Update form data state when input fields change
         setEvaluationData({...evaluationData, [e.target.name]: e.target.value});
@@ -44,7 +51,11 @@ const Challenges = ({data, drillId}) => {
         }
     }, [challengeRequestData]); // Add challengeRequestData as a dependency
 
-
+    const LoadTable = async () => {
+        const URL = `${API_LEXIMENTOR_BASE_URL}/drill/metadata/challenges/${drillRefId}`;
+        const challengeDataFromDb = await fetchData(URL)
+        setChallengeData(challengeDataFromDb);
+    };
     // const createChallenge = async () => {
     //     const queryString = new URLSearchParams(challengeRequestData).toString();
     //     const URL = `${API_LEXIMENTOR_BASE_URL}/drill/metadata/challenges/challenge?${queryString}`;
@@ -72,11 +83,6 @@ const Challenges = ({data, drillId}) => {
         await handleEvaluatorModel(false, '');
     };
 
-    const LoadTable = async () => {
-        const URL = `${API_LEXIMENTOR_BASE_URL}/drill/metadata/challenges/${drillRefId}`;
-        const challengeDataFromDb = await fetchData(URL)
-        setChallengeData(challengeDataFromDb);
-    };
 
     const EvaluatorSelectorModalComponent = ({isVisible}) => {
         if (isVisible) {
@@ -155,7 +161,7 @@ const Challenges = ({data, drillId}) => {
     };
 
 
-    return (<>
+    return (<><Layout content={<>
         <div className="container mt-5">
             <DashboardCard title="REVENUE"
                            amount="$12,500"
@@ -441,7 +447,8 @@ const Challenges = ({data, drillId}) => {
                 </div>
             </div>
         </div>
-
+    </>}>
+    </Layout>
 
         {/*<h2 className="text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-purple-500 to-blue-500 mb-6 text-center hover:shadow-xl transition-shadow duration-300 ease-in-out">*/}
         {/*    List of challenges for the drill*/}

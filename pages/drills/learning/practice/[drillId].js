@@ -27,7 +27,7 @@ export default function VocabularyCard({drillSetData, drillId, wordMetadata, sou
 
     return (<Layout content={<>
             <div className="flex flex-row justify-center text-center">
-                <div className="w-[20%] py-2 px-2 mb-2 border border-gray-300 justify-items-center">
+                <div className="w-[20%] py-2 px-2 mb-2 justify-items-center">
                     <label className="inline-flex items-center cursor-pointer">
                         <input
                             type="checkbox"

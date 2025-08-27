@@ -2,6 +2,7 @@ import Link from "next/link";
 import {fetchData} from "@/dataService";
 import {API_FITMATE_BASE_URL} from "@/constants";
 import {useState} from "react";
+import Layout from "@/components/layout/Layout";
 
 const FitmateDashboard = ({trainings, bodyParts}) => {
     const [bodyPartsData, setBodyPartsData] = useState(bodyParts);
@@ -252,7 +253,14 @@ const FitmateDashboard = ({trainings, bodyParts}) => {
     </>);
 };
 
-export default FitmateDashboard;
+
+const MainDesign = (bodyParts, trainings) => {
+    return <>
+        <Layout content={<><FitmateDashboard bodyParts={bodyParts} trainings={trainings}/> </>}/>
+    </>
+}
+
+export default MainDesign;
 
 export async function getServerSideProps(context) {
     const bodyParts = await fetchData(`${API_FITMATE_BASE_URL}/bodyparts`);

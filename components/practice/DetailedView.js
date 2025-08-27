@@ -22,6 +22,8 @@ const Main = ({drillSetData, wordMetadata, sourcesData}) => {
     const [wordData, setWordData] = useState(wordMetadata);
     const [sources, setSources] = useState(sourcesData);
     const [source, setSource] = useState(sourcesData.data[0]);
+
+
     const handleSources = (value) => {
         setSource(value);
     };
@@ -64,7 +66,22 @@ const Main = ({drillSetData, wordMetadata, sourcesData}) => {
                     </div>
                     <div className="col-span-2">
                         <div className="flex flex-row">
-                            <div className="w-1/4">
+                            <div className="w-[6%] mr-5 flex items-center">
+                                <Link onClick={prevWord} href="#">
+                                    <div
+                                        className="h-1/4 w-full bg-blue-500 rounded-l-3xl hover:bg-blue-900 cursor-pointer justify-items-center p-2">
+                                        <svg className="w-8 h-8 text-white dark:text-white" aria-hidden="true"
+                                             xmlns="http://www.w3.org/2000/svg" width="24" height="24"
+                                             fill="currentColor"
+                                             viewBox="0 0 24 24">
+                                            <path fillRule="evenodd"
+                                                  d="M7 6a1 1 0 0 1 2 0v4l6.4-4.8A1 1 0 0 1 17 6v12a1 1 0 0 1-1.6.8L9 14v4a1 1 0 1 1-2 0V6Z"
+                                                  clipRule="evenodd"/>
+                                        </svg>
+                                    </div>
+                                </Link>
+                            </div>
+                            <div className="w-[20%]">
                                 <div className="flex flex-col">
                                     <div className="basis-3/4">
                                         {/*Start of the progress information*/}
@@ -81,8 +98,22 @@ const Main = ({drillSetData, wordMetadata, sourcesData}) => {
                                     </div>
                                 </div>
                             </div>
-                            <div className="w-3/4">
+                            <div className="w-[68%]">
                                 <WordFlashcard word={wordData} meanings={["Meaning-1", "Meaning-2"]}></WordFlashcard>
+                            </div>
+                            <div className="w-[6%] ml-5 flex items-center">
+                                <Link onClick={nextWord} href="#">
+                                    <div
+                                        className="h-1/4 w-full bg-blue-500 rounded-r-3xl hover:bg-blue-900 cursor-pointer justify-items-center p-2">
+                                        <svg className="w-8 h-8 text-white dark:text-white" aria-hidden="true"
+                                             xmlns="http://www.w3.org/2000/svg" width="24" height="24"
+                                             fill="currentColor" viewBox="0 0 24 24">
+                                            <path fillRule="evenodd"
+                                                  d="M17 6a1 1 0 1 0-2 0v4L8.6 5.2A1 1 0 0 0 7 6v12a1 1 0 0 0 1.6.8L15 14v4a1 1 0 1 0 2 0V6Z"
+                                                  clipRule="evenodd"/>
+                                        </svg>
+                                    </div>
+                                </Link>
                             </div>
                         </div>
                     </div>
@@ -90,7 +121,7 @@ const Main = ({drillSetData, wordMetadata, sourcesData}) => {
                         <SynonymFlashcard word={wordData.data.word} synonyms={wordData.data.synonyms}/>
                     </div>
                     <div>
-                        <AntonymFlashcard word={wordData.data.word} antonyms={wordData.data.antonyms}/>
+                    <AntonymFlashcard word={wordData.data.word} antonyms={wordData.data.antonyms}/>
                     </div>
                     <div>
                         <MnemonicFlashcard word={wordData.data.word} mnemonic={wordData.data.mnemonic}/>
@@ -154,6 +185,11 @@ const Main = ({drillSetData, wordMetadata, sourcesData}) => {
 }
 
 const DetailedView = ({drillSetData, drillId, wordMetadata, sourcesData}) => {
+    useEffect(() => {
+        if (typeof window !== "undefined" && window.initFlowbite) {
+            window.initFlowbite();
+        }
+    }, []);
     return (<>
         <Main wordMetadata={wordMetadata} drillSetData={drillSetData} sourcesData={sourcesData}/>
     </>);

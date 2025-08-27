@@ -1,5 +1,5 @@
 import {API_FITMATE_BASE_URL} from "@/constants";
-import {deleteDataByBody, fetchData, postData} from "@/dataService";
+import {DeleteByObject, fetchData, postData} from "@/dataService";
 import Link from "next/link";
 import {useState} from "react";
 import ModalDialog from "@/components/modal_notifications/modal_notification_dialog";
@@ -95,7 +95,7 @@ const FitmateDashboard = ({bodyParts}) => {
         try {
             const data = [{refId: refId, name: "", description: "", status: "active", primaryName: ""}];
             console.log("data to be delete: " + JSON.stringify(data));
-            const deleteResponse = await deleteDataByBody(`${API_FITMATE_BASE_URL}/bodyparts/bodypart`, data);
+            const deleteResponse = await DeleteByObject(`${API_FITMATE_BASE_URL}/bodyparts/bodypart`, data);
             await LoadBodyPartsData();
         } catch (error) {
             console.log('Unable to delete')
