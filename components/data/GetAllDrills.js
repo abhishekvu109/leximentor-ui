@@ -1,6 +1,7 @@
-import React, {useEffect, useState} from "react";
+import React, {useCallback, useEffect, useState} from "react";
 import Link from "next/link";
 import {API_LEXIMENTOR_BASE_URL} from "@/constants";
+import {GetAllDrillTable} from "@/components/data-table/drills/GetAllDrillTable";
 
 const GetAllDrills = ({data}) => {
     const [isNewDrillModalOpen, setIsNewDrillModalOpen] = useState(false);
@@ -86,15 +87,12 @@ const GetAllDrills = ({data}) => {
         }
     };
 
-    const GetDrillAnalytics = async (drillRefId) => {
-        // Don't call again if data is already in cache
+    const GetDrillAnalytics = useCallback(async (drillRefId) => {
         if (analyticsCache[drillRefId]) return;
 
         try {
             const response = await fetch(`${API_LEXIMENTOR_BASE_URL}/analytics/drill/${drillRefId}`, {
-                method: 'GET', headers: {
-                    'Content-Type': 'application/json',
-                }
+                method: 'GET', headers: {'Content-Type': 'application/json'}
             });
             if (!response.ok) throw new Error('Network response was not ok');
             const data = await response.json();
@@ -109,18 +107,37 @@ const GetAllDrills = ({data}) => {
         } catch (error) {
             console.error('Error:', error);
         }
-    };
+    }, [analyticsCache, setAnalyticsCache]);
 
     useEffect(() => {
         drillMetadata.data?.forEach(item => {
             GetDrillAnalytics(item.refId);
         });
-    }, [drillMetadata.data]);
+    }, [drillMetadata.data, GetDrillAnalytics]);
+
 
     const RemoveDrill = async (drillRefId) => {
         try {
             const response = await fetch(`${API_LEXIMENTOR_BASE_URL}/drill/metadata/${drillRefId}`, {
                 method: 'DELETE', headers: {
+                    'Content-Type': 'application/json',
+                }
+            });
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+
+            const data = await response.json();
+            console.log('Response data:', data);
+        } catch (error) {
+            console.error('Error:', error);
+        }
+    };
+
+    const GenerateName = async (drillRefId) => {
+        try {
+            const response = await fetch(`${API_LEXIMENTOR_BASE_URL}/drill/metadata/assign-name/${drillRefId}`, {
+                method: 'POST', headers: {
                     'Content-Type': 'application/json',
                 }
             });
@@ -156,7 +173,7 @@ const GetAllDrills = ({data}) => {
                         <span className="sr-only">Close</span>
                         <svg className="w-3 h-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none"
                              viewBox="0 0 14 14">
-                            <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
                                   d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"/>
                         </svg>
                     </button>
@@ -186,7 +203,7 @@ const GetAllDrills = ({data}) => {
                         <span className="sr-only">Close</span>
                         <svg className="w-3 h-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none"
                              viewBox="0 0 14 14">
-                            <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
                                   d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"/>
                         </svg>
                     </button>
@@ -250,7 +267,7 @@ const GetAllDrills = ({data}) => {
                                          xmlns="http://www.w3.org/2000/svg">
                                         <path fill-rule="evenodd"
                                               d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z"
-                                              clip-rule="evenodd"></path>
+                                              clipRule="evenodd"></path>
                                     </svg>
                                     Create new drill
                                 </button>
@@ -263,6 +280,22 @@ const GetAllDrills = ({data}) => {
         }
     };
 
+    const NameTags = ({apiText}) => {
+        apiText = String(apiText || '');
+        // Extract and clean keywords
+        const keywords = apiText.match(/"([^"]+)"/g)?.map((str) => str.replace(/"/g, '')) || [];
+
+        return (<div className="flex flex-wrap gap-2">
+            {keywords.map((word, index) => (<span
+                key={index}
+                className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 text-blue-800"
+            >
+          {word}
+        </span>))}
+        </div>);
+    }
+
+
     return (<>
 
         <div className="container mt-2">
@@ -274,7 +307,7 @@ const GetAllDrills = ({data}) => {
                     className="px-6 py-3.5 m-2 text-base font-medium text-white inline-flex items-center bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 rounded-lg text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800">
                 <svg className="w-4 h-4 text-white me-2" aria-hidden="true"
                      xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
-                    <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
                           d="M12 7.757v8.486M7.757 12h8.486M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
                 </svg>
                 New drill
@@ -283,7 +316,7 @@ const GetAllDrills = ({data}) => {
                     className="px-6 py-3.5 m-2 text-base font-medium text-white inline-flex items-center bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 rounded-lg text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800">
                 <svg className="w-4 h-4 text-white me-2" aria-hidden="true"
                      xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
-                    <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
                           d="M12 7.757v8.486M7.757 12h8.486M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
                 </svg>
                 List Challenges
@@ -292,7 +325,7 @@ const GetAllDrills = ({data}) => {
                     className="px-6 py-3.5 m-2 text-base font-medium text-white inline-flex items-center bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 rounded-lg text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800">
                 <svg className="w-4 h-4 text-white me-2" aria-hidden="true"
                      xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
-                    <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
                           d="M12 7.757v8.486M7.757 12h8.486M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
                 </svg>
                 Create Challenges
@@ -301,92 +334,154 @@ const GetAllDrills = ({data}) => {
                     className="px-6 py-3.5 m-2 text-base font-medium text-white inline-flex items-center bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 rounded-lg text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800">
                 <svg className="w-4 h-4 text-white me-2" aria-hidden="true"
                      xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
-                    <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
                           d="M12 7.757v8.486M7.757 12h8.486M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
                 </svg>
                 Load Table
             </button>
             <NewDrillModalComponent isVisible={isNewDrillModalOpen}/>
-            <div className="relative overflow-x-auto shadow-md sm:rounded-lg">
-                <table className="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
-                    <thead className="text-xs text-gray-700 uppercase bg-gray-200 dark:bg-gray-700 dark:text-gray-400">
-                    <tr>
-                        <th scope="col" className="px-6 py-3 text-center">
-                            Serial
-                        </th>
-                        <th scope="col" className="px-6 py-3 text-center">
-                            ID
-                        </th>
-                        <th scope="col" className="px-6 py-3 text-center">
-                            Drill Name
-                        </th>
-                        <th scope="col" className="px-6 py-3 text-center">
-                            Status
-                        </th>
-                        <th scope="col" className="px-6 py-3 text-center">
-                            Avg Score
-                        </th>
-                        <th scope="col" className="px-6 py-3 text-center">
-                            Total words
-                        </th>
-                        <th scope="col" className="px-6 py-3 text-center">
-                            Total Challenges
-                        </th>
-                        <th scope="col" className="px-6 py-3 text-center">
-                            LEARN
-                        </th>
-                        <th scope="col" className="px-6 py-3 text-center">
-                            CHALLENGE
-                        </th>
-                        <th scope="col" className="px-6 py-3 text-center">
-                            Remove
-                        </th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    {(drillMetadata.data != null && drillMetadata.data.length > 0) ? (<>
-                        {drillMetadata.data.map((item, index) => (<tr key={item.refId}
-                                                                      className="odd:bg-white odd:dark:bg-gray-900 even:bg-gray-50 even:dark:bg-gray-800 border-b dark:border-gray-700">
-                            <th scope="row"
-                                className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white text-center">{index + 1}</th>
-                            <td className="px-6 py-4 text-center">{item.refId}</td>
-                            <td className="px-6 py-4 text-center">{item.name}</td>
-                            <td className="px-6 py-4 text-center">{item.status}</td>
-                            <td className="px-6 py-4 text-center">{analyticsCache[item.refId]?.avgScore ?? '...'}</td>
-                            <td className="px-6 py-4 text-center">
-                                {analyticsCache[item.refId]?.wordCount ?? '...'}
-                            </td>
-                            <td className="px-6 py-4 text-center">
-                                {analyticsCache[item.refId]?.challengeCount ?? '-'}
-                            </td>
-                            <td className="px-6 py-4 text-center">
-                                <Link href={"/drills/learning/practice/" + item.refId}
-                                      className="font-medium text-blue-600 dark:text-blue-500 hover:underline">
-                                    Click
-                                </Link>
-                            </td>
-                            <td className="px-6 py-4 text-center">
-                                <Link href={"/challenges/" + item.refId}
-                                      className="font-medium text-blue-600 dark:text-blue-500 hover:underline">
-                                    Click
-                                </Link>
-                            </td>
-                            <td className="px-6 py-4 text-center">
-                                <Link href="#" onClick={() => RemoveDrill(item.refId)}
-                                      className="font-medium text-blue-600 dark:text-blue-500 hover:underline">
-                                    Click
-                                </Link>
-                            </td>
-                        </tr>))}
-                    </>) : (<>
-                        <tr>
-                            <td className="px-6 py-4 text-center">No drills found</td>
-                        </tr>
-                    </>)}
+            <GetAllDrillTable drillMetadata={drillMetadata} />
+            {/*<div className="relative overflow-x-auto shadow-md sm:rounded-lg">*/}
+            {/*    <table className="w-full text-xs text-left rtl:text-right text-gray-500 dark:text-gray-400">*/}
+            {/*        <caption*/}
+            {/*            className="caption-bottom text-xm text-center font-bold italic p-2 text-gray-700 dark:text-gray-300">*/}
+            {/*            List of all the word drills*/}
+            {/*        </caption>*/}
+            {/*        <thead className="text-xs text-gray-700 uppercase bg-gray-200 dark:bg-gray-700 dark:text-gray-400">*/}
+            {/*        <tr>*/}
+            {/*            <th scope="col" className="px-6 py-3 text-center">*/}
+            {/*                Serial*/}
+            {/*            </th>*/}
+            {/*            <th scope="col" className="px-6 py-3 text-center">*/}
+            {/*                ID*/}
+            {/*            </th>*/}
+            {/*            <th scope="col" className="px-6 py-3 text-center">*/}
+            {/*                Drill Name*/}
+            {/*            </th>*/}
+            {/*            <th scope="col" className="px-6 py-3 text-center">*/}
+            {/*                Status*/}
+            {/*            </th>*/}
+            {/*            <th scope="col" className="px-6 py-3 text-center">*/}
+            {/*                Avg Score*/}
+            {/*            </th>*/}
+            {/*            <th scope="col" className="px-6 py-3 text-center">*/}
+            {/*                Total words*/}
+            {/*            </th>*/}
+            {/*            <th scope="col" className="px-6 py-3 text-center">*/}
+            {/*                Total Challenges*/}
+            {/*            </th>*/}
+            {/*            <th scope="col" className="px-6 py-3 text-center">*/}
+            {/*                LEARN*/}
+            {/*            </th>*/}
+            {/*            <th scope="col" className="px-6 py-3 text-center">*/}
+            {/*                CHALLENGE*/}
+            {/*            </th>*/}
+            {/*            <th scope="col" className="px-6 py-3 text-center">*/}
+            {/*                Remove*/}
+            {/*            </th>*/}
+            {/*            <th scope="col" className="px-6 py-3 text-center">*/}
+            {/*                Generate name*/}
+            {/*            </th>*/}
+            {/*        </tr>*/}
+            {/*        </thead>*/}
+            {/*        <tbody>*/}
+            {/*        {(drillMetadata.data != null && drillMetadata.data.length > 0) ? (<>*/}
+            {/*            {drillMetadata.data.map((item, index) => (<tr key={item.refId}*/}
+            {/*                                                          className="odd:bg-white odd:dark:bg-gray-900 even:bg-gray-50 even:dark:bg-gray-800 border-b dark:border-gray-700">*/}
+            {/*                <th scope="row"*/}
+            {/*                    className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white text-center">{index + 1}</th>*/}
+            {/*                <td className="px-6 py-4 text-center">{item.refId}</td>*/}
+            {/*                <td className="px-6 py-4 text-center">*/}
+            {/*                    <Link data-popover-target={item.refId} data-popover-placement="bottom" href="#"*/}
+            {/*                          className="font-medium text-blue-600 dark:text-blue-500 hover:underline">*/}
+            {/*                        {(item.namedObjectDTO != null && item.namedObjectDTO.name != null && item.namedObjectDTO.name != '') ? item.namedObjectDTO.name : <>-</>}*/}
+            {/*                    </Link>*/}
+            {/*                    {(item.namedObjectDTO != null && item.namedObjectDTO.name != null && item.namedObjectDTO.name != '') ? <>*/}
+            {/*                        <div data-popover id={item.refId} role="tooltip"*/}
+            {/*                             className="absolute z-10*/}
+            {/*                                 invisible inline-block*/}
+            {/*                                 w-1/3 text-sm text-gray-500*/}
+            {/*                                 transition-opacity duration-300*/}
+            {/*                                 bg-white border border-gray-200*/}
+            {/*                                 rounded-lg shadow-xs opacity-0*/}
+            {/*                                 dark:text-gray-400 dark:border-gray-600 dark:bg-gray-800">*/}
+            {/*                            <div*/}
+            {/*                                className="px-3 py-2 bg-gray-100 border-b border-gray-200 rounded-t-lg dark:border-gray-600 dark:bg-gray-700">*/}
+            {/*                                <h3 className="font-semibold text-gray-900 dark:text-white">{item.namedObjectDTO.name}</h3>*/}
+            {/*                            </div>*/}
+            {/*                            {item.namedObjectDTO.description != null && item.namedObjectDTO.description != '' ? <>*/}
+            {/*                                <div className="px-3 py-2">*/}
+            {/*                                    <h4 className="font-bold text-black/60 text-left mb-1">Description</h4>*/}
+            {/*                                    <p className="text-justify">{item.namedObjectDTO.description}</p>*/}
+            {/*                                </div>*/}
+            {/*                                <hr className="my-2 mx-2 border-dashed"/>*/}
+            {/*                            </> : <></>}*/}
 
-                    </tbody>
-                </table>
-            </div>
+            {/*                            {item.namedObjectDTO.tags != null && item.namedObjectDTO.tags != '' ? <>*/}
+            {/*                                <div className="px-3 py-2">*/}
+            {/*                                    <h4 className="font-bold text-black/60 text-left mb-2">Tags</h4>*/}
+            {/*                                    <NameTags*/}
+            {/*                                        apiText={item.namedObjectDTO.tags}/>*/}
+            {/*                                </div>*/}
+            {/*                                <hr className="my-2 mx-2 border-dashed"/>*/}
+            {/*                            </> : <></>}*/}
+
+            {/*                            <div className="px-3 py-2">*/}
+            {/*                                <h4 className="font-bold text-black/60 text-left mb-2">Genre</h4>*/}
+            {/*                                <p className="text-justify">{item.namedObjectDTO.genre}</p>*/}
+            {/*                            </div>*/}
+            {/*                            <hr className="my-2 mx-2 border-dashed"/>*/}
+            {/*                            <div className="px-3 py-2">*/}
+            {/*                                <h4 className="font-bold text-black/60 text-left mb-2">Genre</h4>*/}
+            {/*                                <p className="text-justify">{item.namedObjectDTO.subGenre}</p>*/}
+            {/*                            </div>*/}
+            {/*                            <div data-popper-arrow></div>*/}
+            {/*                        </div>*/}
+            {/*                    </> : <>-</>}*/}
+
+            {/*                </td>*/}
+            {/*                <td className="px-6 py-4 text-center">{item.status}</td>*/}
+            {/*                <td className="px-6 py-4 text-center">{analyticsCache[item.refId]?.avgScore ?? '...'}</td>*/}
+            {/*                <td className="px-6 py-4 text-center">*/}
+            {/*                    {analyticsCache[item.refId]?.wordCount ?? '...'}*/}
+            {/*                </td>*/}
+            {/*                <td className="px-6 py-4 text-center">*/}
+            {/*                    {analyticsCache[item.refId]?.challengeCount ?? '-'}*/}
+            {/*                </td>*/}
+            {/*                <td className="px-6 py-4 text-center">*/}
+            {/*                    <Link href={"/drills/learning/practice/" + item.refId}*/}
+            {/*                          className="font-medium text-blue-600 dark:text-blue-500 hover:underline">*/}
+            {/*                        Click*/}
+            {/*                    </Link>*/}
+            {/*                </td>*/}
+            {/*                <td className="px-6 py-4 text-center">*/}
+            {/*                    <Link href={"/challenges/" + item.refId}*/}
+            {/*                          className="font-medium text-blue-600 dark:text-blue-500 hover:underline">*/}
+            {/*                        Click*/}
+            {/*                    </Link>*/}
+            {/*                </td>*/}
+            {/*                <td className="px-6 py-4 text-center">*/}
+            {/*                    <Link href="#" onClick={() => RemoveDrill(item.refId)}*/}
+            {/*                          className="font-medium text-blue-600 dark:text-blue-500 hover:underline">*/}
+            {/*                        Click*/}
+            {/*                    </Link>*/}
+            {/*                </td>*/}
+            {/*                <td className="px-6 py-4 text-center">*/}
+            {/*                    <Link href="#" onClick={() => GenerateName(item.refId)}*/}
+            {/*                          className="font-medium text-blue-600 dark:text-blue-500 hover:underline">*/}
+            {/*                        Click*/}
+            {/*                    </Link>*/}
+            {/*                </td>*/}
+            {/*            </tr>))}*/}
+            {/*        </>) : (<>*/}
+            {/*            <tr>*/}
+            {/*                <td className="px-6 py-4 text-center">No drills found</td>*/}
+            {/*            </tr>*/}
+            {/*        </>)}*/}
+
+            {/*        </tbody>*/}
+            {/*    </table>*/}
+            {/*</div>*/}
         </div>
 
 
@@ -394,3 +489,4 @@ const GetAllDrills = ({data}) => {
 };
 
 export default GetAllDrills;
+

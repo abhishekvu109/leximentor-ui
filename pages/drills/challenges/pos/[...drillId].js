@@ -41,8 +41,8 @@ const LoadPosDrillChallenge = ({drillSetData, challengeId, drillSetWordData,dril
                             <span className="sr-only">Dismiss</span>
                             <svg className="w-3 h-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none"
                                  viewBox="0 0 14 14">
-                                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
-                                      stroke-width="2" d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"/>
+                                <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"
+                                      strokeWidth="2" d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"/>
                             </svg>
                         </button>
                     </div>
@@ -66,8 +66,8 @@ const LoadPosDrillChallenge = ({drillSetData, challengeId, drillSetWordData,dril
                             <span className="sr-only">Dismiss</span>
                             <svg className="w-3 h-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none"
                                  viewBox="0 0 14 14">
-                                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
-                                      stroke-width="2" d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"/>
+                                <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"
+                                      strokeWidth="2" d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"/>
                             </svg>
                         </button>
                     </div>
@@ -137,9 +137,9 @@ const LoadPosDrillChallenge = ({drillSetData, challengeId, drillSetWordData,dril
                             <svg className="w-3 h-3 text-white me-2" aria-hidden="true"
                                  xmlns="http://www.w3.org/2000/svg"
                                  fill="currentColor" viewBox="0 0 20 16">
-                                <path fill-rule="evenodd"
+                                <path fillRule="evenodd"
                                       d="M11.293 3.293a1 1 0 0 1 1.414 0l6 6 2 2a1 1 0 0 1-1.414 1.414L19 12.414V19a2 2 0 0 1-2 2h-3a1 1 0 0 1-1-1v-3h-2v3a1 1 0 0 1-1 1H7a2 2 0 0 1-2-2v-6.586l-.293.293a1 1 0 0 1-1.414-1.414l2-2 6-6Z"
-                                      clip-rule="evenodd"/>
+                                      clipRule="evenodd"/>
                             </svg>
                             Dashboard
                         </button>
@@ -152,8 +152,8 @@ const LoadPosDrillChallenge = ({drillSetData, challengeId, drillSetWordData,dril
                             <svg className="w-4 h-4 text-white me-2" aria-hidden="true"
                                  xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none"
                                  viewBox="0 0 24 24">
-                                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
-                                      stroke-width="2"
+                                <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"
+                                      strokeWidth="2"
                                       d="M5 12h14M5 12l4-4m-4 4 4 4"/>
                             </svg>
                             Go back
