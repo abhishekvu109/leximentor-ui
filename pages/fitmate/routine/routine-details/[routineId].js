@@ -346,7 +346,7 @@ const RoutineLogger = ({ initialData }) => {
                 {!isActive && !isCompleted && (
                     <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 mb-6 flex gap-3 text-blue-800 text-sm">
                         <AlertCircle className="shrink-0" size={20} />
-                        <p>Click "Start Session" above to begin logging your sets.</p>
+                        <p>Click &quot;Start Session&quot; above to begin logging your sets.</p>
                     </div>
                 )}
 
