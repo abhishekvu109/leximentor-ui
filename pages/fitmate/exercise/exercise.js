@@ -1,502 +1,452 @@
-import VerticalTabInterface from "@/components/widgets/tabs/VerticalTabInterface";
-import Layout from "@/components/layout/Layout";
 
-import {useEffect, useState} from "react";
-import {API_FITMATE_BASE_URL} from "@/constants";
-import {DeleteByObject, fetchData, postDataAsJson} from "@/dataService";
 import Link from "next/link";
+import Layout from "@/components/layout/Layout";
+import { useEffect, useState, useMemo } from "react";
+import { API_FITMATE_BASE_URL } from "@/constants";
+import { fetchData, postDataAsJson, DeleteByObject } from "@/dataService";
+import {
+    Search, Plus, Filter, Trash2, Edit2, Dumbbell,
+    MoreVertical, X, Check, AlertCircle, Loader2
+} from "lucide-react";
 
-const ViewExercises = () => {
-    const [exercises, setExercises] = useState([]);
-    const [filteredExercises, setFilteredExercises] = useState([]);
-    const [filters, setFilters] = useState({training: '', bodyPart: '', muscle: '', equipment: ''});
-    const [sortField, setSortField] = useState('name');
-    const [sortOrder, setSortOrder] = useState('asc');
+// --- Components ---
 
-    const [dropdowns, setDropdowns] = useState({trainings: [], bodyParts: [], muscles: [], equipments: []});
-
-    useEffect(() => {
-        const loadData = async () => {
-            const exerciseData = await fetchData(`${API_FITMATE_BASE_URL}/exercises`);
-            const trainingData = await fetchData(`${API_FITMATE_BASE_URL}/trainings`);
-            const bodyPartData = await fetchData(`${API_FITMATE_BASE_URL}/bodyparts`);
-            const muscleData = await fetchData(`${API_FITMATE_BASE_URL}/muscles`);
-            const equipmentData = ['Body Weight', 'Dumbbell', 'Barbell Bar', 'Weights', 'Isometric Machine'];
-
-            setExercises(exerciseData.data);
-            setFilteredExercises(exerciseData.data);
-            setDropdowns({
-                trainings: trainingData.data,
-                bodyParts: bodyPartData.data,
-                muscles: muscleData.data,
-                equipments: equipmentData,
-            });
-        };
-        loadData();
-    }, []);
-
-    const LoadTable = async () => {
-        const exerciseData = await fetchData(`${API_FITMATE_BASE_URL}/exercises`);
-        const trainingData = await fetchData(`${API_FITMATE_BASE_URL}/trainings`);
-        const bodyPartData = await fetchData(`${API_FITMATE_BASE_URL}/bodyparts`);
-        const muscleData = await fetchData(`${API_FITMATE_BASE_URL}/muscles`);
-        const equipmentData = ['Body Weight', 'Dumbbell', 'Barbell Bar', 'Weights', 'Isometric Machine'];
-
-        setExercises(exerciseData.data);
-        setFilteredExercises(exerciseData.data);
-        setDropdowns({
-            trainings: trainingData.data,
-            bodyParts: bodyPartData.data,
-            muscles: muscleData.data,
-            equipments: equipmentData,
-        });
-    }
-
-    const applyFilters = () => {
-        let filtered = [...exercises];
-        Object.entries(filters).forEach(([key, value]) => {
-            if (value) {
-                filtered = filtered.filter(item => item[key]?.name === value);
-            }
-        });
-
-        filtered.sort((a, b) => {
-            const aField = a[sortField]?.name || a[sortField];
-            const bField = b[sortField]?.name || b[sortField];
-            return sortOrder === 'asc' ? aField.localeCompare(bField) : bField.localeCompare(aField);
-        });
-
-        setFilteredExercises(filtered);
-    };
-
-    useEffect(() => {
-        applyFilters();
-    }, [filters, sortField, sortOrder]);
-
+const ExerciseCard = ({ exercise, onDelete, onEdit }) => {
     return (
-        <div className="max-w-full mx-auto px-4 py-8">
-            <h1 className="text-2xl font-bold text-gray-800 mb-6">Exercise List</h1>
+        <div className="group bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden flex flex-col relative cursor-pointer">
+            <Link href={`/fitmate/exercise/view/${exercise.refId}`} className="flex-1 flex flex-col">
+                <div className="relative aspect-[4/3] bg-gray-50 overflow-hidden">
+                    <img
+                        src={`https://placehold.co/400x300/e2e8f0/1e293b?text=${encodeURIComponent(exercise.name.substring(0, 2))}`}
+                        alt={exercise.name}
+                        className="w-full h-full object-cover mix-blend-multiply opacity-90 group-hover:scale-105 transition-transform duration-500"
+                    />
+                    <div className="absolute bottom-2 left-2">
+                        <span className="px-2 py-1 bg-black/60 backdrop-blur-sm text-white text-[10px] font-bold uppercase tracking-wider rounded-md">
+                            {exercise.bodyPart?.name || 'General'}
+                        </span>
+                    </div>
+                </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                {['training', 'bodyPart', 'muscle', 'equipment'].map((field) => (
-                    <select
-                        key={field}
-                        value={filters[field]}
-                        onChange={(e) => setFilters({...filters, [field]: e.target.value})}
-                        className="px-3 py-2 text-sm border rounded w-full"
-                    >
-                        <option value="">Filter by {field}</option>
-                        {dropdowns[field + 's']?.map((item) => (
-                            <option key={item.name} value={item.name}>{item.name}</option>
-                        ))}
-                    </select>
-                ))}
-            </div>
+                <div className="p-4 flex-1 flex flex-col">
+                    <div className="flex justify-between items-start mb-2">
+                        <h3 className="font-bold text-gray-800 leading-tight">{exercise.name}</h3>
+                    </div>
 
-            <div className="flex justify-end items-center gap-2 mb-4">
-                <label className="text-sm text-gray-600">Sort By:</label>
-                <select
-                    className="px-2 py-1 border rounded"
-                    value={sortField}
-                    onChange={(e) => setSortField(e.target.value)}
-                >
-                    <option value="name">Name</option>
-                    <option value="training">Training</option>
-                    <option value="bodyPart">Body Part</option>
-                </select>
-                <select
-                    className="px-2 py-1 border rounded"
-                    value={sortOrder}
-                    onChange={(e) => setSortOrder(e.target.value)}
-                >
-                    <option value="asc">Asc</option>
-                    <option value="desc">Desc</option>
-                </select>
-            </div>
-
-            <div className="overflow-x-auto">
-                <table className="min-w-full bg-white border text-sm">
-                    <thead className="bg-gray-100 text-gray-600">
-                    <tr>
-                        <th className="px-4 py-2 text-left">Name</th>
-                        <th className="px-4 py-2 text-left">Training</th>
-                        <th className="px-4 py-2 text-left">Body Part</th>
-                        <th className="px-4 py-2 text-left">Target Muscles</th>
-                        <th className="px-4 py-2 text-left">Equipment</th>
-                        <th className="px-4 py-2 text-left">Details</th>
-                        <th className="px-4 py-2 text-left">Delete</th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    {filteredExercises.map((exercise, index) => (
-                        <tr key={index} className="border-t hover:bg-gray-50">
-                            <td className="px-4 py-2 font-medium text-gray-800">{exercise.name}</td>
-                            <td className="px-4 py-2">{exercise.training?.name}</td>
-                            <td className="px-4 py-2">{exercise.bodyPart?.name}</td>
-                            <td className="px-4 py-2">
-                                {exercise.targetMuscles?.map((m, i) => (
-                                    <span key={i}
-                                          className="inline-block px-2 py-0.5 my-1 bg-blue-100 text-blue-700 rounded text-xs mr-1">
-                                  {m.name}
+                    <div className="mt-auto space-y-3">
+                        {/* Muscles */}
+                        <div className="flex flex-wrap gap-1">
+                            {exercise.targetMuscles?.slice(0, 3).map((m, i) => (
+                                <span key={i} className="text-[10px] px-1.5 py-0.5 bg-blue-50 text-blue-600 rounded font-medium truncate max-w-[80px]">
+                                    {m.name}
                                 </span>
-                                ))}
-                            </td>
-                            {/*<td className="px-4 py-2">{exercise.equipment?.name || '-'}</td>*/}
-                            <td className="px-4 py-2">
-                                {(exercise.equipments == null || exercise.equipments.length < 1) ? <>-</> : <></>}
-                                {exercise.equipments?.map((e, i) => (
-                                    <span key={i}
-                                          className="inline-block px-2 py-0.5 my-1 bg-cyan-100 text-cyan-700 rounded text-xs mr-1">
-                                  {e}
+                            ))}
+                            {(exercise.targetMuscles?.length > 3) && (
+                                <span className="text-[10px] px-1.5 py-0.5 bg-gray-50 text-gray-500 rounded font-medium">
+                                    +{exercise.targetMuscles.length - 3}
                                 </span>
-                                ))}
-                            </td>
-                            <td className="px-4 py-2">
-                                <Link
-                                    href={`view/${exercise.refId}`}
-                                    className="inline-block px-3 py-1 bg-green-100 text-green-700 rounded text-xs hover:bg-green-200 transition"
-                                >
-                                    View
-                                </Link>
-                            </td>
-                            <td className="px-4 py-2">
-                                <button
-                                    onClick={async () => {
-                                        if (confirm(`Are you sure you want to delete "${exercise.name}"?`)) {
-                                            // call delete API and refresh data
+                            )}
+                        </div>
 
-                                            const deleteObject = [{
-                                                refId: exercise.refId
-                                            }]
+                        {/* Equipment Details */}
+                        {exercise.equipments?.length > 0 && (
+                            <div className="pt-3 border-t border-gray-100 flex items-center gap-2 text-xs text-gray-500">
+                                <Dumbbell size={12} />
+                                <span className="truncate">{exercise.equipments.join(', ')}</span>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </Link>
 
-                                            await DeleteByObject(`${API_FITMATE_BASE_URL}/exercises/exercise`, deleteObject);
-                                            await LoadTable();
-                                        }
-                                    }}
-                                    className="inline-block px-3 py-1 bg-red-100 text-red-700 rounded text-xs hover:bg-red-200 transition"
-                                >
-                                    Delete
-                                </button>
-                            </td>
-                        </tr>
-                    ))}
-                    </tbody>
-                </table>
+            <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1 z-10">
+                <button
+                    onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        onDelete(exercise);
+                    }}
+                    className="p-2 bg-white/90 rounded-full text-gray-600 hover:text-red-500 shadow-sm backdrop-blur-sm"
+                    title="Delete Exercise"
+                >
+                    <Trash2 size={14} />
+                </button>
             </div>
         </div>
     );
 }
 
-const AddExerciseForm = () => {
+const AddExerciseModal = ({ isOpen, onClose, onSuccess, data: { trainings, bodyParts, musclesAll } }) => {
+    const [loading, setLoading] = useState(false);
     const [form, setForm] = useState({
-        training: "",
-        bodyPart: "",
-        muscle: [],
         name: "",
         description: "",
-        status: "ACTIVE",
-        equipments: []
+        training: "",
+        bodyPart: "",
+        targetMuscles: [],
+        equipments: [],
+        status: "ACTIVE"
     });
 
-    const [availableBodyParts, setAvailableBodyParts] = useState([]);
-    const [availableMuscles, setAvailableMuscles] = useState([]);
-    const [showModal, setShowModal] = useState(false);
+    const [filteredMuscles, setFilteredMuscles] = useState([]);
 
-    const [trainings, setTrainings] = useState([]);
-    const [bodyParts, setBodyParts] = useState([]);
-    const [muscles, setMuscles] = useState([]);
-
-    const [muscles2, setMuscles2] = useState([]);
-    const equipments = ['Body Weight', 'Dumbbell', 'Barbell Bar', 'Weights', 'Isometric Machine'];
-
+    // Reset form when opening
     useEffect(() => {
-        const fetchData = async () => {
-            try {
-                const [trainingRes, bodyPartRes, muscleRes] = await Promise.all([fetch(`${API_FITMATE_BASE_URL}/trainings`), fetch(`${API_FITMATE_BASE_URL}/bodyparts`), fetch(`${API_FITMATE_BASE_URL}/muscles`)]);
-                const [trainingData, bodyPartData, muscleData] = await Promise.all([trainingRes.json(), bodyPartRes.json(), muscleRes.json()]);
-                setTrainings(trainingData.data || []);
-                setBodyParts(bodyPartData.data || []);
-                setMuscles(muscleData.data || []);
-                setMuscles2(muscleData.data || []);
-            } catch (error) {
-                console.error('Error fetching dropdown data:', error);
-            }
-        };
-
-        fetchData();
-    }, []);
-
-
-    useEffect(() => {
-        if (form.bodyPart) {
-            const filteredMuscles = muscles2.filter(muscle => String(muscle.bodyPart.name).toLowerCase() === String(form.bodyPart).toLowerCase());
-            setMuscles(filteredMuscles || [])
-            setForm(prev => ({...prev, muscle: []}));
+        if (isOpen) {
+            setForm({
+                name: "", description: "", training: "",
+                bodyPart: "", targetMuscles: [], equipments: [], status: "ACTIVE"
+            });
+            setFilteredMuscles([]);
         }
-    }, [form.bodyPart]);
+    }, [isOpen]);
 
+    // Filter muscles when body part changes
+    useEffect(() => {
+        if (form.bodyPart && musclesAll) {
+            const relevant = musclesAll.filter(m => m.bodyPart?.name === form.bodyPart);
+            setFilteredMuscles(relevant);
+        } else {
+            setFilteredMuscles([]);
+        }
+    }, [form.bodyPart, musclesAll]);
 
-    const handleSubmit = (e) => {
+    const equipmentOptions = ['Body Weight', 'Dumbbell', 'Barbell Bar', 'Weights', 'Cable', 'Machine', 'Kettlebell'];
+
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        setShowModal(true);
+        setLoading(true);
+        try {
+            const payload = [{
+                name: form.name,
+                description: form.description,
+                training: { name: form.training },
+                bodyPart: { name: form.bodyPart },
+                targetMuscles: form.targetMuscles.map(m => ({ name: m })),
+                equipments: form.equipments,
+                status: form.status
+            }];
+
+            await postDataAsJson(`${API_FITMATE_BASE_URL}/exercises`, payload);
+            onSuccess();
+            onClose();
+        } catch (error) {
+            console.error(error);
+            alert("Failed to create exercise");
+        } finally {
+            setLoading(false);
+        }
     };
 
-    const confirmSave = async () => {
-        console.log("Form data submitted:", form);
-        const postExerciseData = [{
-            name: form.name,
-            description: form.description,
-            training: {
-                name: form.training
-            },
-            bodyPart: {
-                "name": form.bodyPart
-            },
-            targetMuscles: form.muscle.map(muscleName => ({name: muscleName})),
-            equipments: form.equipments
-        }];
-        const saveExercise = await postDataAsJson(`${API_FITMATE_BASE_URL}/exercises`, postExerciseData);
-        setForm({
-            training: "",
-            bodyPart: "",
-            muscle: [],
-            name: "",
-            description: "",
-            status: "ACTIVE",
-            equipments: []
-        })
-        setShowModal(false);
-
+    const toggleSelection = (field, value) => {
+        setForm(prev => {
+            const current = prev[field];
+            const exists = current.includes(value);
+            return {
+                ...prev,
+                [field]: exists
+                    ? current.filter(item => item !== value)
+                    : [...current, value]
+            };
+        });
     };
+
+    if (!isOpen) return null;
 
     return (
-        <div className="max-w-xl mx-auto p-6 bg-white rounded-xl shadow space-y-6">
-            <h2 className="text-2xl font-bold text-gray-800">Add New Exercise</h2>
-            <form onSubmit={handleSubmit} className="space-y-4">
-
-                {/* Training Dropdown */}
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Training</label>
-                    <select
-                        name="training"
-                        value={form.training}
-                        onChange={(e) => setForm({...form, training: e.target.value})}
-                        className="w-full px-3 py-2 border rounded-md shadow-sm bg-white text-sm"
-                    >
-                        <option value="">Select training</option>
-                        {trainings.map(t => (
-                            <option key={t.name} value={t.name}>{t.name}</option>
-                        ))}
-                    </select>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
+                <div className="p-6 border-b border-gray-100 flex justify-between items-center">
+                    <h2 className="text-xl font-bold text-gray-800">New Exercise</h2>
+                    <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100">
+                        <X size={20} />
+                    </button>
                 </div>
 
-                {/* Body Part Dropdown */}
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Target Body Part</label>
-                    <select
-                        name="bodyPart"
-                        value={form.bodyPart}
-                        onChange={(e) => setForm({...form, bodyPart: e.target.value})}
-                        className="w-full px-3 py-2 border rounded-md shadow-sm bg-white text-sm"
-                        disabled={!bodyParts.length}
-                    >
-                        <option value="">Select body part</option>
-                        {bodyParts.map(bp => (
-                            <option key={bp.refId} value={bp.name}>{bp.name}</option>
-                        ))}
-                    </select>
-                </div>
+                <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-6">
+                    <div className="space-y-4">
+                        {/* Name & Training */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Exercise Name</label>
+                                <input
+                                    required
+                                    value={form.name}
+                                    onChange={e => setForm({ ...form, name: e.target.value })}
+                                    className="w-full rounded-xl border-gray-200 focus:border-blue-500 focus:ring-blue-500 text-sm"
+                                    placeholder="e.g. Incline Bench Press"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Training Type</label>
+                                <select
+                                    required
+                                    value={form.training}
+                                    onChange={e => setForm({ ...form, training: e.target.value })}
+                                    className="w-full rounded-xl border-gray-200 focus:border-blue-500 focus:ring-blue-500 text-sm"
+                                >
+                                    <option value="">Select Type</option>
+                                    {trainings.map((t, i) => <option key={i} value={t.name}>{t.name}</option>)}
+                                </select>
+                            </div>
+                        </div>
 
-                {/* Target Muscle Multi-select */}
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Target Muscles</label>
-                    <select
-                        name="muscle"
-                        multiple
-                        value={form.muscle}
-                        onChange={(e) => {
-                            const selected = Array.from(e.target.selectedOptions, opt => opt.value);
-                            setForm(prev => ({...prev, muscle: selected}));
-                        }}
-                        className="w-full px-3 py-2 border rounded-md shadow-sm bg-white text-sm h-32"
-                        disabled={!muscles.length}
-                    >
-                        {muscles.map(m => (
-                            <option key={m.refId} value={m.name}>{m.name}</option>
-                        ))}
-                    </select>
-                    {form.muscle.length > 0 && (
-                        <p className="text-sm text-gray-500 mt-1">
-                            Selected: {form.muscle.join(", ")}
-                        </p>
-                    )}
-                </div>
-
-                {/* Name */}
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Exercise Name</label>
-                    <input
-                        type="text"
-                        value={form.name}
-                        onChange={(e) => setForm({...form, name: e.target.value})}
-                        className="w-full px-3 py-2 border rounded-md shadow-sm text-sm"
-                        required
-                    />
-                </div>
-
-                {/* Description */}
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                    <textarea
-                        value={form.description}
-                        onChange={(e) => setForm({...form, description: e.target.value})}
-                        className="w-full px-3 py-2 border rounded-md shadow-sm text-sm"
-                        rows="3"
-                    />
-                </div>
-
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Equipments</label>
-                    <select
-                        name="muscle"
-                        multiple
-                        value={form.equipments}
-                        onChange={(e) => {
-                            const selected = Array.from(e.target.selectedOptions, opt => opt.value);
-                            setForm(prev => ({...prev, equipments: selected}));
-                        }}
-                        className="w-full px-3 py-2 border rounded-md shadow-sm bg-white text-sm h-32"
-                        disabled={!equipments.length}
-                    >
-                        {equipments.map(equipment => (
-                            <option key={equipment} value={equipment}>{equipment}</option>
-                        ))}
-                    </select>
-                    {form.equipments.length > 0 && (
-                        <p className="text-sm text-gray-500 mt-1">
-                            Selected: {form.equipments.join(", ")}
-                        </p>
-                    )}
-                </div>
-
-                {/* Status Radio Buttons */}
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                    <div className="flex gap-4">
-                        <label className="inline-flex items-center">
-                            <input
-                                type="radio"
-                                name="status"
-                                value="ACTIVE"
-                                checked={form.status === "ACTIVE"}
-                                onChange={(e) => setForm({...form, status: e.target.value})}
-                                className="form-radio"
+                        {/* Description */}
+                        <div>
+                            <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Description</label>
+                            <textarea
+                                value={form.description}
+                                onChange={e => setForm({ ...form, description: e.target.value })}
+                                className="w-full rounded-xl border-gray-200 focus:border-blue-500 focus:ring-blue-500 text-sm"
+                                rows="2"
+                                placeholder="Optional instructions..."
                             />
-                            <span className="ml-2 text-sm text-gray-700">Active</span>
-                        </label>
-                        <label className="inline-flex items-center">
-                            <input
-                                type="radio"
-                                name="status"
-                                value="INACTIVE"
-                                checked={form.status === "INACTIVE"}
-                                onChange={(e) => setForm({...form, status: e.target.value})}
-                                className="form-radio"
-                            />
-                            <span className="ml-2 text-sm text-gray-700">Inactive</span>
-                        </label>
+                        </div>
+
+                        <div className="w-full h-px bg-gray-100 my-2"></div>
+
+                        {/* Body Part & Muscles */}
+                        <div>
+                            <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Target Body Part</label>
+                            <select
+                                required
+                                value={form.bodyPart}
+                                onChange={e => setForm({ ...form, bodyPart: e.target.value, targetMuscles: [] })}
+                                className="w-full rounded-xl border-gray-200 focus:border-blue-500 focus:ring-blue-500 text-sm mb-4"
+                            >
+                                <option value="">Select Body Part</option>
+                                {bodyParts.map((b, i) => <option key={i} value={b.name}>{b.name}</option>)}
+                            </select>
+
+                            {form.bodyPart && (
+                                <div className="animate-in slide-in-from-top-2 duration-300">
+                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-2">
+                                        Target Muscles ({form.targetMuscles.length})
+                                    </label>
+                                    <div className="flex flex-wrap gap-2 p-3 bg-gray-50 rounded-xl max-h-32 overflow-y-auto">
+                                        {filteredMuscles.length > 0 ? filteredMuscles.map((m, i) => {
+                                            const isActive = form.targetMuscles.includes(m.name);
+                                            return (
+                                                <button
+                                                    key={i}
+                                                    type="button"
+                                                    onClick={() => toggleSelection('targetMuscles', m.name)}
+                                                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${isActive
+                                                        ? 'bg-blue-600 text-white shadow-md'
+                                                        : 'bg-white text-gray-600 border border-gray-200 hover:border-blue-300'
+                                                        }`}
+                                                >
+                                                    {m.name}
+                                                </button>
+                                            )
+                                        }) : <p className="text-gray-400 text-sm italic">No muscles found for this body part.</p>}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Equipments */}
+                        <div>
+                            <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Equipment Needed</label>
+                            <div className="flex flex-wrap gap-2">
+                                {equipmentOptions.map((eq, i) => {
+                                    const isActive = form.equipments.includes(eq);
+                                    return (
+                                        <button
+                                            key={i}
+                                            type="button"
+                                            onClick={() => toggleSelection('equipments', eq)}
+                                            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${isActive
+                                                ? 'bg-gray-800 text-white shadow-md'
+                                                : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+                                                }`}
+                                        >
+                                            {eq}
+                                        </button>
+                                    )
+                                })}
+                            </div>
+                        </div>
                     </div>
-                </div>
+                </form>
 
-                {/* Buttons */}
-                <div className="flex justify-end gap-3">
-                    <button
-                        type="button"
-                        className="px-4 py-2 bg-gray-200 text-sm text-gray-700 rounded-md hover:bg-gray-300"
-                        onClick={() => alert("Cancelled")}
-                    >
+                <div className="p-6 border-t border-gray-100 flex justify-end gap-3 bg-gray-50/50">
+                    <button onClick={onClose} className="px-5 py-2.5 text-gray-600 font-medium hover:bg-gray-100 rounded-xl transition-colors">
                         Cancel
                     </button>
                     <button
-                        type="submit"
-                        className="px-4 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700"
+                        onClick={handleSubmit}
+                        disabled={loading}
+                        className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg shadow-blue-200 transition-all flex items-center gap-2 disabled:opacity-70"
                     >
-                        Save
+                        {loading ? <Loader2 size={18} className="animate-spin" /> : <SaveIcon />}
+                        Save Exercise
                     </button>
                 </div>
-            </form>
+            </div>
+        </div>
+    )
+}
 
-            {/* Modal for confirmation */}
-            {showModal && (
-                <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-                    <div className="bg-white p-6 rounded-lg shadow-xl w-full max-w-md space-y-4">
-                        <h3 className="text-lg font-semibold text-gray-800">Confirm Add</h3>
-                        <p className="text-sm text-gray-600">Are you sure you want to add this exercise?</p>
-                        <div className="flex justify-end gap-3 pt-2">
-                            <button
-                                className="px-4 py-2 text-sm bg-gray-200 rounded hover:bg-gray-300"
-                                onClick={() => setShowModal(false)}
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                className="px-4 py-2 text-sm bg-green-600 text-white rounded hover:bg-green-700"
-                                onClick={confirmSave}
-                            >
-                                Confirm
-                            </button>
-                        </div>
-                    </div>
+// Icon helper
+const SaveIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+
+
+// --- Main Page Component ---
+
+const ExerciseLibrary = () => {
+    // State
+    const [exercises, setExercises] = useState([]);
+    const [refData, setRefData] = useState({ trainings: [], bodyParts: [], musclesAll: [] });
+    const [loading, setLoading] = useState(true);
+    const [search, setSearch] = useState("");
+    const [filters, setFilters] = useState({ bodyPart: "", training: "" });
+    const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+
+    // Fetch Data
+    const loadData = async () => {
+        setLoading(true);
+        try {
+            const [exRes, trRes, bpRes, mRes] = await Promise.all([
+                fetchData(`${API_FITMATE_BASE_URL}/exercises`),
+                fetchData(`${API_FITMATE_BASE_URL}/trainings`),
+                fetchData(`${API_FITMATE_BASE_URL}/bodyparts`),
+                fetchData(`${API_FITMATE_BASE_URL}/muscles`)
+            ]);
+
+            setExercises(exRes.data || []);
+            setRefData({
+                trainings: trRes.data || [],
+                bodyParts: bpRes.data || [],
+                musclesAll: mRes.data || []
+            });
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => { loadData(); }, []);
+
+    // Handlers
+    const handleDelete = async (exercise) => {
+        if (!confirm(`Permanently delete "${exercise.name}"?`)) return;
+        try {
+            await DeleteByObject(`${API_FITMATE_BASE_URL}/exercises/exercise`, [{ refId: exercise.refId }]);
+            // Optimistic update or reload
+            loadData();
+        } catch (e) {
+            alert("Delete failed");
+        }
+    };
+
+    // Derived State
+    const filteredExercises = useMemo(() => {
+        let res = exercises;
+        if (search) {
+            const lower = search.toLowerCase();
+            res = res.filter(e => e.name.toLowerCase().includes(lower));
+        }
+        if (filters.bodyPart) {
+            res = res.filter(e => e.bodyPart?.name === filters.bodyPart);
+        }
+        if (filters.training) {
+            res = res.filter(e => e.training?.name === filters.training);
+        }
+        return res;
+    }, [exercises, search, filters]);
+
+    // Unique options for filters based on actual data
+    // const availableBodyParts = [...new Set(exercises.map(e => e.bodyPart?.name).filter(Boolean))];
+
+    return (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+            {/* Header */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                    <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Exercise Library</h1>
+                    <p className="text-gray-500 mt-1">Manage your collection of {exercises.length} exercises</p>
+                </div>
+                <button
+                    onClick={() => setIsAddModalOpen(true)}
+                    className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-3 rounded-xl font-bold shadow-lg shadow-blue-200 transition-all active:scale-95"
+                >
+                    <Plus size={20} /> Add Exercise
+                </button>
+            </div>
+
+            {/* Filter Toolbar */}
+            <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex flex-col md:flex-row items-center gap-4">
+                <div className="relative flex-1 w-full">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-bold" size={18} />
+                    <input
+                        type="text"
+                        placeholder="Search by name..."
+                        value={search}
+                        onChange={e => setSearch(e.target.value)}
+                        className="w-full pl-10 pr-4 py-2.5 bg-gray-50 hover:bg-gray-100 focus:bg-white border-transparent focus:border-blue-500 rounded-xl transition-all outline-none"
+                    />
+                </div>
+
+                <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto pb-2 md:pb-0 scrollbar-hide">
+                    <Filter size={18} className="text-gray-400 mr-2 shrink-0" />
+                    <select
+                        value={filters.bodyPart}
+                        onChange={e => setFilters({ ...filters, bodyPart: e.target.value })}
+                        className="px-4 py-2.5 bg-gray-50 hover:bg-gray-100 rounded-xl text-sm font-medium text-gray-700 border-none focus:ring-0 cursor-pointer min-w-[140px]"
+                    >
+                        <option value="">All Body Parts</option>
+                        {refData.bodyParts.map((b, i) => <option key={i} value={b.name}>{b.name}</option>)}
+                    </select>
+                    <select
+                        value={filters.training}
+                        onChange={e => setFilters({ ...filters, training: e.target.value })}
+                        className="px-4 py-2.5 bg-gray-50 hover:bg-gray-100 rounded-xl text-sm font-medium text-gray-700 border-none focus:ring-0 cursor-pointer min-w-[140px]"
+                    >
+                        <option value="">All Types</option>
+                        {refData.trainings.map((t, i) => <option key={i} value={t.name}>{t.name}</option>)}
+                    </select>
+                </div>
+            </div>
+
+            {/* Grid Content */}
+            {loading ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 animate-pulse">
+                    {[1, 2, 3, 4].map(i => (
+                        <div key={i} className="bg-gray-100 rounded-2xl aspect-[4/3]" />
+                    ))}
+                </div>
+            ) : filteredExercises.length === 0 ? (
+                <div className="text-center py-20 text-gray-400">
+                    <Dumbbell size={48} className="mx-auto mb-4 opacity-20" />
+                    <p className="text-lg font-medium">No exercises found.</p>
+                    <p className="text-sm">Try adjusting your filters or add a new one.</p>
+                </div>
+            ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                    {filteredExercises.map((ex, i) => (
+                        <ExerciseCard key={i} exercise={ex} onDelete={handleDelete} onEdit={() => { }} />
+                    ))}
                 </div>
             )}
+
+            {/* Modal */}
+            <AddExerciseModal
+                isOpen={isAddModalOpen}
+                onClose={() => setIsAddModalOpen(false)}
+                onSuccess={loadData}
+                data={refData}
+            />
         </div>
     );
 };
 
-
-const Main = () => {
-    const FormHeading = () => {
-        return (<>
-            <div className="flex flex-col justify-center items-center justify-items-center text-center">
-                <div className="w-[100%]">
-                    <h2 className="text-2xl text-black font-bold">Exercise Dashboard</h2>
-                    <p className="mt-2 text-sm font-semibold text-black/65">Add, View, Update and Remove exercises.</p>
-                </div>
-            </div>
-        </>);
-    }
-    const tabs = [{
-        id: 'Add', label: 'Add Exercises', content: () => (<>
-            <AddExerciseForm/>
-        </>),
-    }, {
-        id: 'View', label: 'View Exercises', content: (<>
-            <ViewExercises/>
-        </>),
-    }, {
-        id: 'Remove', label: 'Remove Exercises', content: (<>
-            <p></p>
-        </>),
-    },];
-    return (<>
-        <div className="flex flex-col items-center">
-            <div className="w-[100%] p-2 mt-2">
-                <div className="grid grid-cols-3 gap-2">
-                    <div className="col-span-3">
-                        <FormHeading/>
-                    </div>
-                    <div className="col-span-3">
-                        <VerticalTabInterface tabs={tabs}/>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </>);
-}
+// Main Export
 const Exercise = () => {
-    return (<>
-        <Layout content={<Main/>}/>
-    </>);
+    return (
+        <Layout content={<ExerciseLibrary />} />
+    );
 }
 
 export default Exercise;
