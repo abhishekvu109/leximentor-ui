@@ -168,7 +168,7 @@ const RoutineTimeline = () => {
                             <Calendar size={32} />
                         </div>
                         <h3 className="text-lg font-bold text-gray-900">No routines found</h3>
-                        <p className="text-gray-500 mb-6">Looks like you haven't logged any workouts yet.</p>
+                        <p className="text-gray-500 mb-6">Looks like you haven&apos;t logged any workouts yet.</p>
                         <Link href="/fitmate/routine/make-routine">
                             <button className="text-blue-600 font-bold hover:underline">Start your first workout</button>
                         </Link>
