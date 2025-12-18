@@ -1,16 +1,32 @@
 
 import Layout from "@/components/layout/Layout";
-// Stepper removed
-import { ChevronDown, Option, CheckCircle2, MoreVertical, Plus, Trash2, Timer, Check, X, Dumbbell, Calendar, Save, Filter, Search, ArrowRight } from "lucide-react";
+import { ChevronDown, Option, CheckCircle2, MoreVertical, Plus, Trash2, Timer, Check, X, Dumbbell, Calendar, Save, Filter, Search, ArrowRight, Download, FileText } from "lucide-react";
 import { useEffect, useState } from "react";
-// CollapsiblePanel removed
-// EditableTable removed
-// DropDown removed
 import { API_FITMATE_BASE_URL } from "@/constants";
 import { fetchData, POST, postData } from "@/dataService";
 import { useRouter } from "next/router";
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 // --- Sub-components Helper ---
+
+// Success Notification Component
+const SuccessNotification = ({ message, onClose }) => {
+    return (
+        <div className="fixed bottom-6 right-6 max-w-md bg-white rounded-xl shadow-2xl border-l-4 border-green-500 p-4 flex items-start gap-4 z-50 animate-in slide-in-from-right-10 fade-in duration-300">
+            <div className="shrink-0 text-green-500">
+                <CheckCircle2 className="w-6 h-6" />
+            </div>
+            <div className="flex-1 pt-0.5">
+                <h3 className="font-bold text-slate-800 text-sm mb-1">Success!</h3>
+                <p className="text-slate-600 text-sm leading-snug">{message}</p>
+            </div>
+            <button onClick={onClose} className="text-slate-400 hover:text-slate-600">
+                <X className="w-4 h-4" />
+            </button>
+        </div>
+    );
+};
 
 const CompactCardSelector = ({ label, items, selected, onSelect, type = 'text' }) => {
     return (
@@ -78,10 +94,14 @@ const UnifiedRoutineBuilder = ({
     workoutDate, setWorkoutDate,
     description, setDescription,
     // Data
-    bodyParts, muscles, exercises, trainings, // Accepted trainings
+    bodyParts, muscles, exercises, trainings,
     // Cart
     exerciseCart, setExerciseCart,
-    handleSubmit
+    handleSubmit,
+    handleDownloadPDF,
+    showSuccess,
+    successMessage,
+    setShowSuccess
 }) => {
 
     // --> Local UI State for Filters
@@ -242,6 +262,13 @@ const UnifiedRoutineBuilder = ({
                     <div className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-full text-sm font-medium">
                         <Timer size={16} /> 00:00
                     </div>
+                    <button
+                        onClick={handleDownloadPDF}
+                        disabled={exerciseCart.length === 0}
+                        className="flex items-center gap-2 bg-white hover:bg-gray-50 text-gray-700 px-5 py-2.5 rounded-xl font-bold transition-all shadow-md border border-gray-200 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        <Download size={18} /> Download PDF
+                    </button>
                     <button
                         onClick={handleSubmit}
                         className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-bold transition-all shadow-md shadow-blue-200 active:scale-95"
@@ -462,6 +489,14 @@ const UnifiedRoutineBuilder = ({
                     )}
                 </div>
             </div>
+
+            {/* Success Notification */}
+            {showSuccess && (
+                <SuccessNotification
+                    message={successMessage}
+                    onClose={() => setShowSuccess(false)}
+                />
+            )}
         </div>
     );
 };
@@ -480,6 +515,10 @@ const FitmateMakeRoutine = () => {
     const [workoutDate, setWorkoutDate] = useState(new Date().toISOString().split('T')[0]);
     const [description, setDescription] = useState('');
     const [exerciseCart, setExerciseCart] = useState([]);
+
+    // Success notification state
+    const [showSuccess, setShowSuccess] = useState(false);
+    const [successMessage, setSuccessMessage] = useState('');
 
     // --- Data Fetching ---
     const [bodyParts, setBodyParts] = useState([]);
@@ -512,6 +551,129 @@ const FitmateMakeRoutine = () => {
         };
         fetchData();
     }, []);
+
+    // --- PDF Export Function ---
+    const handleDownloadPDF = () => {
+        if (exerciseCart.length === 0) {
+            alert("Your routine is empty! Add some exercises first.");
+            return;
+        }
+
+        const doc = new jsPDF();
+        const pageWidth = doc.internal.pageSize.getWidth();
+
+        // Header
+        doc.setFillColor(59, 130, 246); // Blue
+        doc.rect(0, 0, pageWidth, 40, 'F');
+
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(24);
+        doc.setFont(undefined, 'bold');
+        doc.text('Workout Plan', pageWidth / 2, 20, { align: 'center' });
+
+        doc.setFontSize(10);
+        doc.setFont(undefined, 'normal');
+        doc.text(`${routine.training?.name || 'Training'} - ${workoutDate}`, pageWidth / 2, 30, { align: 'center' });
+
+        // Description
+        if (description) {
+            doc.setTextColor(100, 100, 100);
+            doc.setFontSize(9);
+            doc.text(description, pageWidth / 2, 36, { align: 'center' });
+        }
+
+        let yPos = 50;
+
+        // Exercise Cards
+        exerciseCart.forEach((item, exIdx) => {
+            // Check if we need a new page
+            if (yPos > 250) {
+                doc.addPage();
+                yPos = 20;
+            }
+
+            // Exercise Header
+            doc.setFillColor(243, 244, 246); // Gray background
+            doc.roundedRect(10, yPos, pageWidth - 20, 12, 2, 2, 'F');
+
+            doc.setTextColor(30, 41, 59);
+            doc.setFontSize(12);
+            doc.setFont(undefined, 'bold');
+            doc.text(`${exIdx + 1}. ${item.exercise}`, 15, yPos + 8);
+
+            doc.setFontSize(8);
+            doc.setFont(undefined, 'normal');
+            doc.setTextColor(100, 116, 139);
+            doc.text(`${item.muscle || 'General'}`, pageWidth - 15, yPos + 8, { align: 'right' });
+
+            yPos += 15;
+
+            // Sets Table
+            const tableData = item.sets.map((set, idx) => [
+                `${idx + 1}`,
+                '-',
+                `${set.weight || '0'} ${set.unit}`,
+                `${set.reps || '0'}`,
+                '☐' // Checkbox
+            ]);
+
+            autoTable(doc, {
+                startY: yPos,
+                head: [['Set', 'Previous', 'Weight', 'Reps', '✓']],
+                body: tableData,
+                margin: { left: 15, right: 15 },
+                theme: 'grid',
+                headStyles: {
+                    fillColor: [59, 130, 246],
+                    textColor: [255, 255, 255],
+                    fontSize: 9,
+                    fontStyle: 'bold'
+                },
+                bodyStyles: {
+                    fontSize: 9,
+                    textColor: [51, 65, 85]
+                },
+                columnStyles: {
+                    0: { cellWidth: 15, halign: 'center' },
+                    1: { cellWidth: 30, halign: 'center' },
+                    2: { cellWidth: 35, halign: 'center' },
+                    3: { cellWidth: 25, halign: 'center' },
+                    4: { cellWidth: 15, halign: 'center' }
+                }
+            });
+
+            yPos = doc.lastAutoTable.finalY + 5;
+
+            // Notes
+            if (item.notes) {
+                doc.setFontSize(8);
+                doc.setTextColor(100, 116, 139);
+                doc.setFont(undefined, 'italic');
+                doc.text(`Notes: ${item.notes}`, 15, yPos);
+                yPos += 5;
+            }
+
+            yPos += 5; // Space between exercises
+        });
+
+        // Footer
+        const totalPages = doc.internal.getNumberOfPages();
+        for (let i = 1; i <= totalPages; i++) {
+            doc.setPage(i);
+            doc.setFontSize(8);
+            doc.setTextColor(150, 150, 150);
+            doc.text(
+                `Page ${i} of ${totalPages} - Generated on ${new Date().toLocaleDateString()}`,
+                pageWidth / 2,
+                doc.internal.pageSize.getHeight() - 10,
+                { align: 'center' }
+            );
+        }
+
+        // Download
+        const filename = `workout-${routine.training?.name || 'plan'}-${workoutDate}.pdf`;
+        doc.save(filename);
+    };
 
     // --- Submission Logic ---
     const router = useRouter();
@@ -550,9 +712,21 @@ const FitmateMakeRoutine = () => {
 
         try {
             await postData(`${API_FITMATE_BASE_URL}/routines/routine`, routinePayload);
-            sessionStorage.setItem("message", "Routine created successfully!");
-            sessionStorage.setItem("severity", "success");
-            await router.push('/notifications/notification');
+
+            // Show success notification instead of redirect
+            setSuccessMessage(`Routine "${description || 'Workout'}" created successfully! ${exerciseCart.length} exercises added.`);
+            setShowSuccess(true);
+
+            // Auto-hide after 5 seconds
+            setTimeout(() => {
+                setShowSuccess(false);
+            }, 5000);
+
+            // Optionally clear the form or redirect after delay
+            // setTimeout(() => {
+            //     router.push('/fitmate/routine');
+            // }, 2000);
+
         } catch (e) {
             console.error(e);
             alert("Failed to save routine.");
@@ -560,12 +734,6 @@ const FitmateMakeRoutine = () => {
     };
 
     return (
-        // We do NOT use Layout wrapper here if we want full screen height control without double headers
-        // But assumed User wants Layout sidebar => We wrap but ensure inner is full height
-        // Layout usually adds padding. To make it "app-like", we might need to override Layout styles?
-        // or just accept the padding.
-        // For "Single Page", we render ONLY the builder.
-
         <UnifiedRoutineBuilder
             // State
             routine={routine} setRoutine={setRoutine}
@@ -577,6 +745,11 @@ const FitmateMakeRoutine = () => {
             exerciseCart={exerciseCart} setExerciseCart={setExerciseCart}
             // Actions
             handleSubmit={handleSubmit}
+            handleDownloadPDF={handleDownloadPDF}
+            // Notification
+            showSuccess={showSuccess}
+            successMessage={successMessage}
+            setShowSuccess={setShowSuccess}
         />
     );
 }

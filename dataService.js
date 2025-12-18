@@ -134,4 +134,4 @@ export const DeleteByObject = async (URL, formData) => {
     }
 };
 
-export const ModelData = ['gemma3', 'gemma3:1b', 'phi4-mini-reasoning:3.8b', 'llama3.2:latest', 'deepseek-r1:1.5b', "phi4-mini:latest", 'qwen3:8b', 'mistral:7b', 'deepseek-r1:7b']
+export const ModelData = ['ministral-3:8b', 'gemma3', 'gemma3:1b', 'phi4-mini-reasoning:3.8b', 'llama3.2:latest', 'deepseek-r1:1.5b', "phi4-mini:latest", 'qwen3:8b', 'mistral:7b', 'deepseek-r1:7b']
