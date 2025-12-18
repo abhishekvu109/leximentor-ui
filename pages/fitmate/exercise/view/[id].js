@@ -146,6 +146,7 @@ const ExerciseDetailContent = () => {
                                     {/* Mocking logic for now */}
                                     <img
                                         src="https://placehold.co/400x225/e2e8f0/64748b?text=Video+Preview"
+                                        alt="Video Preview"
                                         className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                                     />
                                 </div>

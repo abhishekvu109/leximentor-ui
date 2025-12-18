@@ -172,7 +172,7 @@ const ContextMasterEvaluationReport = ({ evaluationReportData, challengeId }) =>
                         <AlertTriangle className="text-gray-400" size={32} />
                     </div>
                     <h1 className="text-2xl font-bold text-gray-900 mb-2">Report Not Found</h1>
-                    <p className="text-gray-500 mb-6">We couldn't find the data for this evaluation.</p>
+                    <p className="text-gray-500 mb-6">We couldn&apos;t find the data for this evaluation.</p>
                     <Link href="/dashboard/dashboard2">
                         <button className="text-blue-600 font-bold hover:underline">Return to Dashboard</button>
                     </Link>

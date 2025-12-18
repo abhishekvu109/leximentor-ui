@@ -14,7 +14,7 @@ const LexiDiscover = ({ wordsData }) => {
             setCurrentIndex(randomIndex);
             setCurrentWord(words[randomIndex]);
         }
-    }, [wordsData]);
+    }, [words]);
 
     const handleNext = () => {
         setIsRevealed(false);
@@ -60,7 +60,7 @@ const LexiDiscover = ({ wordsData }) => {
                     {isRevealed ? (
                         <div className="animate-in fade-in zoom-in duration-300">
                             <p className="text-indigo-100 text-sm leading-relaxed mb-4 max-w-[250px] mx-auto italic">
-                                "{currentWord.meaning}"
+                                &quot;{currentWord.meaning}&quot;
                             </p>
                             <button
                                 onClick={() => setIsRevealed(false)}

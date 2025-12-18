@@ -155,7 +155,7 @@ const SpeedTyperChallenge = ({ drillSetData, drillSetWordData, challengeId, dril
                 clearInterval(spawnIntervalRef.current);
             }
         };
-    }, [isPlaying, isGameOver, level, wordQueue, fallingItems.length, difficulty]);
+    }, [isPlaying, isGameOver, level, wordQueue, fallingItems.length, difficulty, spawnItem]);
 
     const handleInputChange = (e) => {
         const input = e.target.value.toLowerCase();

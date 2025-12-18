@@ -63,8 +63,8 @@ const Main = ({ drillSetData, wordMetadata, sourcesData }) => {
                                     key={idx}
                                     onClick={() => handleSources(src)}
                                     className={`px-4 py-2 rounded-lg font-bold text-sm transition-all ${source === src
-                                            ? 'bg-indigo-600 text-white shadow-md'
-                                            : 'text-slate-600 hover:bg-slate-100'
+                                        ? 'bg-indigo-600 text-white shadow-md'
+                                        : 'text-slate-600 hover:bg-slate-100'
                                         }`}
                                 >
                                     {src}
@@ -234,7 +234,7 @@ const Main = ({ drillSetData, wordMetadata, sourcesData }) => {
                             <div className="space-y-3">
                                 {wordData.data.examples.map((ex, index) => (
                                     <div key={index} className="p-4 bg-teal-50 rounded-xl border-l-4 border-teal-500">
-                                        <p className="text-slate-700 italic">"{ex.example}"</p>
+                                        <p className="text-slate-700 italic">&quot;{ex.example}&quot;</p>
                                     </div>
                                 ))}
                             </div>
