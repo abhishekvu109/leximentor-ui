@@ -16,7 +16,7 @@ const DRILL_TYPES = [
     { id: 'WS', label: 'Word Scramble', icon: Type, color: 'bg-green-100 text-green-700' },
     { id: 'IDENTIFY', label: 'Pronunciation', icon: Mic, color: 'bg-yellow-100 text-yellow-700' },
     { id: 'GUESS', label: 'Guess Word', icon: Brain, color: 'bg-pink-100 text-pink-700' },
-    { id: 'MATCH', label: 'Match Word', icon: CheckCircle, color: 'bg-indigo-100 text-indigo-700' },
+    { id: 'MW', label: 'Match Word', icon: CheckCircle, color: 'bg-indigo-100 text-indigo-700' },
     { id: 'FB', label: 'Flashcard Blitz', icon: Layers, color: 'bg-teal-100 text-teal-700' },
     { id: 'ST', label: 'Speed Typer', icon: Zap, color: 'bg-orange-100 text-orange-700' },
     { id: 'CM', label: 'Context Master', icon: FileText, color: 'bg-cyan-100 text-cyan-700' },
@@ -228,7 +228,7 @@ const Challenges = ({ data, drillId }) => {
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 border-b border-gray-100 pb-6">
                     <div>
                         <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
-                            <Link href="/dashboard/dashboard" className="hover:text-blue-600">Dashboard</Link>
+                            <Link href="/dashboard/dashboard2" className="hover:text-blue-600">Dashboard</Link>
                             <span>/</span>
                             <span>Drills</span>
                         </div>

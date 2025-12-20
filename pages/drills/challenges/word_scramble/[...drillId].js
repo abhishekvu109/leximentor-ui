@@ -46,7 +46,7 @@ const shuffleArray = (array) => {
     return newArr;
 };
 
-const WordScrambleChallenge = ({ drillSetData, drillSetWordData, challengeId, drillRefId }) => {
+const WordScrambleChallenge = ({ drillSetData, drillSetWordData, challengeId, drillRefId, challengeScores }) => {
 
     // --- State ---
     const [words, setWords] = useState([]);
@@ -63,13 +63,36 @@ const WordScrambleChallenge = ({ drillSetData, drillSetWordData, challengeId, dr
 
     // --- Init ---
     useEffect(() => {
-        if (drillSetWordData?.data) {
-            setWords(drillSetWordData.data);
-            if (drillSetWordData.data.length > 0) {
-                initializeWord(drillSetWordData.data[0]);
-            }
+        if (drillSetWordData?.data && challengeScores?.data && drillSetData?.data) {
+            initializeGame(drillSetWordData.data, challengeScores.data, drillSetData.data);
         }
-    }, [drillSetWordData]);
+    }, [drillSetWordData, challengeScores, drillSetData]);
+
+    const initializeGame = (data, scores, setData) => {
+        // Map scores to words using drillSetData join table
+        const mapped = scores.map(scoreItem => {
+            const setItem = setData.find(d => d.refId === scoreItem.drillSetRefId);
+            if (!setItem) return null;
+
+            const wordItem = data.find(w => w.refId === setItem.wordRefId);
+            if (!wordItem) return null;
+
+            return {
+                ...wordItem,
+                scoreRefId: scoreItem.refId,
+                drillChallengeRefId: challengeId,
+                drillSetRefId: scoreItem.drillSetRefId,
+            };
+        }).filter(Boolean);
+
+        setWords(mapped);
+        if (mapped.length > 0) {
+            setCurrentIndex(0);
+            initializeWord(mapped[0]);
+        }
+        setResponses([]);
+        setIsCompleted(false);
+    };
 
     const initializeWord = (wordData) => {
         const letters = wordData.word.split('').map((letter, idx) => ({
@@ -123,19 +146,25 @@ const WordScrambleChallenge = ({ drillSetData, drillSetWordData, challengeId, dr
             setIsCorrect(true);
 
             const newResponse = {
-                drillSetRefId: currentWord.refId,
+                refId: currentWord.scoreRefId,
                 drillChallengeRefId: challengeId,
-                response: userWord
+                drillSetRefId: currentWord.drillSetRefId,
+                question: currentWord.word,
+                response: userWord,
+                isCorrect: true,
+                correct: true
             };
-            setResponses([...responses, newResponse]);
+            const updatedResponses = [...responses, newResponse];
+            setResponses(updatedResponses);
 
             // Move to next after delay
             setTimeout(() => {
                 if (currentIndex < words.length - 1) {
-                    setCurrentIndex(currentIndex + 1);
-                    initializeWord(words[currentIndex + 1]);
+                    const nextIndex = currentIndex + 1;
+                    setCurrentIndex(nextIndex);
+                    initializeWord(words[nextIndex]);
                 } else {
-                    handleComplete([...responses, newResponse]);
+                    handleComplete(updatedResponses);
                 }
             }, 1500);
         } else {
@@ -144,6 +173,31 @@ const WordScrambleChallenge = ({ drillSetData, drillSetWordData, challengeId, dr
             setTimeout(() => {
                 setIsCorrect(null);
             }, 1000);
+        }
+    };
+
+    const handleSkip = () => {
+        const currentWord = words[currentIndex];
+
+        const newResponse = {
+            refId: currentWord.scoreRefId,
+            drillChallengeRefId: challengeId,
+            drillSetRefId: currentWord.drillSetRefId,
+            question: currentWord.word,
+            response: "Skipped",
+            isCorrect: false,
+            correct: false
+        };
+
+        const updatedResponses = [...responses, newResponse];
+        setResponses(updatedResponses);
+
+        if (currentIndex < words.length - 1) {
+            const nextIndex = currentIndex + 1;
+            setCurrentIndex(nextIndex);
+            initializeWord(words[nextIndex]);
+        } else {
+            handleComplete(updatedResponses);
         }
     };
 
@@ -303,7 +357,7 @@ const WordScrambleChallenge = ({ drillSetData, drillSetWordData, challengeId, dr
                             </div>
 
                             {/* Action Buttons */}
-                            <div className="flex gap-3">
+                            <div className="flex flex-col sm:flex-row gap-3">
                                 <button
                                     onClick={handleClear}
                                     className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold transition-colors flex items-center justify-center gap-2"
@@ -312,9 +366,15 @@ const WordScrambleChallenge = ({ drillSetData, drillSetWordData, challengeId, dr
                                     Clear
                                 </button>
                                 <button
+                                    onClick={handleSkip}
+                                    className="flex-1 py-3 bg-white border-2 border-slate-200 text-slate-500 hover:border-red-200 hover:text-red-500 hover:bg-red-50 rounded-xl font-bold transition-all flex items-center justify-center gap-2"
+                                >
+                                    Skip Word
+                                </button>
+                                <button
                                     onClick={handleSubmit}
                                     disabled={userAnswer.length === 0}
-                                    className={`flex-1 py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2 shadow-lg
+                                    className={`flex-[2] py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2 shadow-lg
                                         ${userAnswer.length === 0
                                             ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
                                             : isCorrect === true
@@ -336,7 +396,7 @@ const WordScrambleChallenge = ({ drillSetData, drillSetWordData, challengeId, dr
                                             Try Again
                                         </>
                                     ) : (
-                                        'Submit'
+                                        'Submit Answer'
                                     )}
                                 </button>
                             </div>
@@ -368,20 +428,35 @@ export default WordScrambleChallenge;
 export async function getServerSideProps(context) {
     const { params } = context;
     const drillId = params.drillId;
-    const drillRefId = drillId[0];
-    const challengeId = drillId[1];
+    const challengeId = drillId[0];
+    const drillRefId = drillId[1];
 
     try {
-        const drillSetData = await fetchData(`${API_LEXIMENTOR_BASE_URL}/drill/metadata/sets/${drillId[0]}`) || { data: [] };
-        const drillSetWordData = await fetchData(`${API_LEXIMENTOR_BASE_URL}/drill/metadata/sets/words/data/${drillId[1]}`) || { data: [] };
+        const [drillSetData, drillSetWordData, challengeScores] = await Promise.all([
+            fetchData(`${API_LEXIMENTOR_BASE_URL}/drill/metadata/sets/${drillRefId}`),
+            fetchData(`${API_LEXIMENTOR_BASE_URL}/drill/metadata/sets/words/data/${drillRefId}`),
+            fetchData(`${API_LEXIMENTOR_BASE_URL}/drill/metadata/challenges/challenge/${challengeId}/scores`)
+        ]);
 
         return {
-            props: { drillSetData, drillSetWordData, challengeId, drillRefId },
+            props: {
+                drillSetData: drillSetData || { data: [] },
+                drillSetWordData: drillSetWordData || { data: [] },
+                challengeId,
+                drillRefId,
+                challengeScores: challengeScores || { data: [] }
+            },
         };
     } catch (e) {
         console.error("Error fetching drill data:", e);
         return {
-            props: { drillSetData: { data: [] }, drillSetWordData: { data: [] }, challengeId, drillRefId },
+            props: {
+                drillSetData: { data: [] },
+                drillSetWordData: { data: [] },
+                challengeScores: { data: [] },
+                challengeId,
+                drillRefId
+            },
         };
     }
 }

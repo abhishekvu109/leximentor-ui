@@ -47,7 +47,7 @@ const shuffleArray = (array) => {
     return newArr;
 };
 
-const MatchMeaningChallenge = ({ drillSetData, drillSetWordData, challengeId, drillRefId }) => {
+const MatchMeaningChallenge = ({ drillSetData, drillSetWordData, challengeId, drillRefId, challengeScores }) => {
 
     // --- State ---
     const [words, setWords] = useState([]);
@@ -66,16 +66,34 @@ const MatchMeaningChallenge = ({ drillSetData, drillSetWordData, challengeId, dr
 
     // --- Init ---
     useEffect(() => {
-        if (drillSetWordData?.data) {
-            initializeGame(drillSetWordData.data);
+        if (drillSetWordData?.data && challengeScores?.data && drillSetData?.data) {
+            initializeGame(drillSetWordData.data, challengeScores.data, drillSetData.data);
         }
-    }, [drillSetWordData]);
+    }, [drillSetWordData, challengeScores, drillSetData]);
 
-    const initializeGame = (data) => {
-        setWords(data);
+    const initializeGame = (data, scores, setData) => {
+        // Map scores to words to get scoreRefId
+        const mapped = scores.map(scoreItem => {
+            // Find the join record in drillSetData
+            const setItem = setData.find(d => d.refId === scoreItem.drillSetRefId);
+            if (!setItem) return null;
 
-        // Extract meanings safely: item.meanings[0].meaning
-        const meaningsList = data.map(item => ({
+            // Find the full word data in drillSetWordData
+            const wordItem = data.find(w => w.refId === setItem.wordRefId);
+            if (!wordItem) return null;
+
+            return {
+                ...wordItem,
+                scoreRefId: scoreItem.refId,
+                drillChallengeRefId: challengeId,
+                drillSetRefId: scoreItem.drillSetRefId,
+            };
+        }).filter(Boolean);
+
+        setWords(mapped);
+
+        // Extract meanings safely
+        const meaningsList = mapped.map(item => ({
             refId: item.refId,
             text: item.meanings?.[0]?.meaning || item.meaning || item.description || "Definition unavailable"
         }));
@@ -153,9 +171,13 @@ const MatchMeaningChallenge = ({ drillSetData, drillSetWordData, challengeId, dr
         setIsCompleted(true);
         // Prepare submission
         const submissionData = words.map(w => ({
-            drillSetRefId: w.refId,
+            refId: w.scoreRefId,
             drillChallengeRefId: challengeId,
-            response: finalMatched.has(w.refId) ? (w.meanings?.[0]?.meaning || "Matched") : "Incorrect Match"
+            drillSetRefId: w.drillSetRefId,
+            question: w.word,
+            response: finalMatched.has(w.refId) ? (w.meanings?.[0]?.meaning || "Matched") : "Incorrect Match",
+            isCorrect: finalMatched.has(w.refId),
+            correct: finalMatched.has(w.refId)
         }));
 
         await submitResults(submissionData);
@@ -165,12 +187,16 @@ const MatchMeaningChallenge = ({ drillSetData, drillSetWordData, challengeId, dr
         setIsSubmitting(true);
         try {
             const URL = `${API_LEXIMENTOR_BASE_URL}/drill/metadata/challenges/challenge/${challengeId}/scores`;
-            await fetch(URL, {
+            const response = await fetch(URL, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(submissionData),
             });
-            setNotification({ visible: true, message: "Challenge Completed! Progress saved.", type: 'success' });
+            if (response.ok) {
+                setNotification({ visible: true, message: "Challenge Completed! Progress saved.", type: 'success' });
+            } else {
+                throw new Error("Failed to save progress.");
+            }
         } catch (error) {
             console.error(error);
             setNotification({ visible: true, message: "Failed to save progress.", type: 'error' });
@@ -263,7 +289,7 @@ const MatchMeaningChallenge = ({ drillSetData, drillSetWordData, challengeId, dr
                                 and missed <span className="font-bold text-red-500">{incorrectPairs.size}</span>.
                             </p>
                             <div className="flex justify-center gap-4">
-                                <button onClick={() => initializeGame(drillSetWordData.data)} className="px-6 py-3 bg-white border border-slate-300 rounded-xl font-bold text-slate-700 hover:bg-slate-50 transition-colors">
+                                <button onClick={() => initializeGame(drillSetWordData.data, challengeScores.data, drillSetData.data)} className="px-6 py-3 bg-white border border-slate-300 rounded-xl font-bold text-slate-700 hover:bg-slate-50 transition-colors">
                                     Play Again
                                 </button>
                                 <Link href={`/challenges/${drillRefId}`} className="px-6 py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 shadow-lg shadow-indigo-200 transition-all hover:scale-105">
@@ -384,20 +410,21 @@ export default MatchMeaningChallenge;
 export async function getServerSideProps(context) {
     const { params } = context;
     const drillId = params.drillId;
-    const drillRefId = drillId[0];
-    const challengeId = drillId[1];
+    const challengeId = drillId[0];
+    const drillRefId = drillId[1];
 
     try {
-        const drillSetData = await fetchData(`${API_LEXIMENTOR_BASE_URL}/drill/metadata/sets/${drillId[0]}`) || { data: [] };
-        const drillSetWordData = await fetchData(`${API_LEXIMENTOR_BASE_URL}/drill/metadata/sets/words/data/${drillId[0]}`) || { data: [] };
+        const drillSetData = await fetchData(`${API_LEXIMENTOR_BASE_URL}/drill/metadata/sets/${drillRefId}`) || { data: [] };
+        const drillSetWordData = await fetchData(`${API_LEXIMENTOR_BASE_URL}/drill/metadata/sets/words/data/${drillRefId}`) || { data: [] };
+        const challengeScores = await fetchData(`${API_LEXIMENTOR_BASE_URL}/drill/metadata/challenges/challenge/${challengeId}/scores`) || { data: [] };
 
         return {
-            props: { drillSetData, drillSetWordData, challengeId, drillRefId },
+            props: { drillSetData, drillSetWordData, challengeId, drillRefId, challengeScores },
         };
     } catch (e) {
         console.error("Error fetching drill data:", e);
         return {
-            props: { drillSetData: { data: [] }, drillSetWordData: { data: [] }, challengeId, drillRefId },
+            props: { drillSetData: { data: [] }, drillSetWordData: { data: [] }, challengeId, drillRefId, challengeScores: { data: [] } },
         };
     }
 }
