@@ -7,8 +7,12 @@ import Layout from "@/components/layout/Layout";
 import {
     Play, Trash2, CheckCircle, AlertCircle, BarChart2,
     Plus, RefreshCw, BookOpen, Mic, Brain, Hash, Type,
-    Layers, Zap, FileText
+    Layers, Zap, FileText, LayoutGrid, List, Sparkles
 } from "lucide-react";
+import {
+    LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+    PieChart, Pie, Cell, Legend, BarChart, Bar
+} from 'recharts';
 
 const DRILL_TYPES = [
     { id: 'MEANING', label: 'Meaning', icon: BookOpen, color: 'bg-blue-100 text-blue-700' },
@@ -100,6 +104,140 @@ const ChallengeCard = ({ challenge, drillRefId, onDelete, onTry, onEvaluate, onV
     );
 };
 
+const ChallengeAnalytics = ({ challenges }) => {
+    if (!challenges || challenges.length === 0) return null;
+
+    // Aggregations
+    const totalChallenges = challenges.length;
+    const completedChallenges = challenges.filter(c => c.status === 'Completed');
+    const avgScore = completedChallenges.length > 0
+        ? (completedChallenges.reduce((acc, c) => acc + (c.drillScore || 0), 0) / completedChallenges.length).toFixed(1)
+        : 0;
+    const masteryRate = completedChallenges.length > 0
+        ? ((completedChallenges.filter(c => c.drillScore > 70).length / completedChallenges.length) * 100).toFixed(0)
+        : 0;
+
+    // Trend Data
+    const trendData = [...completedChallenges]
+        .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))
+        .map((c, i) => ({
+            name: `Day ${i + 1}`,
+            score: c.drillScore,
+            date: new Date(c.createdAt).toLocaleDateString()
+        }));
+
+    // Type Data
+    const typeMap = challenges.reduce((acc, c) => {
+        const type = DRILL_TYPES.find(t => t.id === c.drillType)?.label || c.drillType;
+        acc[type] = (acc[type] || 0) + 1;
+        return acc;
+    }, {});
+    const typeData = Object.entries(typeMap).map(([name, value]) => ({ name, value }));
+    const COLORS = ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ec4899', '#06b6d4'];
+
+    // Trouble Areas (Mocked for now as we don't have per-word aggregate API yet, 
+    // but we can show which types have lowest scores)
+    const typePerformance = completedChallenges.reduce((acc, c) => {
+        const type = DRILL_TYPES.find(t => t.id === c.drillType)?.label || c.drillType;
+        if (!acc[type]) acc[type] = { name: type, total: 0, count: 0 };
+        acc[type].total += (c.drillScore || 0);
+        acc[type].count += 1;
+        return acc;
+    }, {});
+    const performanceData = Object.values(typePerformance)
+        .map(t => ({ name: t.name, score: Math.round(t.total / t.count) }))
+        .sort((a, b) => a.score - b.score);
+
+    return (
+        <div className="space-y-8 animate-in fade-in duration-700">
+            {/* Stats Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                {[
+                    { label: 'Total Drills', value: totalChallenges, icon: Layers, color: 'text-blue-600', bg: 'bg-blue-50' },
+                    { label: 'Avg Accuracy', value: `${avgScore}%`, icon: CheckCircle, color: 'text-green-600', bg: 'bg-green-50' },
+                    { label: 'Mastery Rate', value: `${masteryRate}%`, icon: Sparkles, color: 'text-purple-600', bg: 'bg-purple-50' },
+                    { label: 'Words Tested', value: completedChallenges.reduce((acc, c) => acc + (c.totalCorrect + c.totalWrong || 0), 0), icon: FileText, color: 'text-orange-600', bg: 'bg-orange-50' },
+                ].map((stat, i) => (
+                    <div key={i} className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm">
+                        <div className={`w-12 h-12 ${stat.bg} ${stat.color} rounded-2xl flex items-center justify-center mb-4`}>
+                            <stat.icon size={24} />
+                        </div>
+                        <div className="text-2xl font-black text-gray-900">{stat.value}</div>
+                        <div className="text-xs font-bold text-gray-400 uppercase tracking-wider">{stat.label}</div>
+                    </div>
+                ))}
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {/* Score Trend */}
+                <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm">
+                    <h3 className="text-sm font-black text-gray-900 uppercase tracking-widest mb-6 flex items-center gap-2">
+                        <BarChart2 size={16} className="text-blue-500" /> Performance Trend
+                    </h3>
+                    <div className="h-64 w-full">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <LineChart data={trendData}>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                <XAxis dataKey="name" hide />
+                                <YAxis domain={[0, 100]} stroke="#94a3b8" fontSize={12} tickFormatter={(v) => `${v}%`} />
+                                <Tooltip
+                                    contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                                    formatter={(v) => [`${v}%`, 'Score']}
+                                />
+                                <Line type="monotone" dataKey="score" stroke="#3b82f6" strokeWidth={4} dot={{ r: 4, fill: '#3b82f6', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 6 }} />
+                            </LineChart>
+                        </ResponsiveContainer>
+                    </div>
+                </div>
+
+                {/* Drill Type Breakdown */}
+                <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm">
+                    <h3 className="text-sm font-black text-gray-900 uppercase tracking-widest mb-6 flex items-center gap-2">
+                        <Plus size={16} className="text-purple-500" /> Drill Distribution
+                    </h3>
+                    <div className="h-64 w-full">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                                <Pie
+                                    data={typeData}
+                                    innerRadius={60}
+                                    outerRadius={80}
+                                    paddingAngle={5}
+                                    dataKey="value"
+                                >
+                                    {typeData.map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                    ))}
+                                </Pie>
+                                <Tooltip />
+                                <Legend verticalAlign="bottom" height={36} />
+                            </PieChart>
+                        </ResponsiveContainer>
+                    </div>
+                </div>
+
+                {/* Performance by Type */}
+                <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm lg:col-span-2">
+                    <h3 className="text-sm font-black text-gray-900 uppercase tracking-widest mb-6 flex items-center gap-2">
+                        <AlertCircle size={16} className="text-orange-500" /> Accuracy per Drill Type
+                    </h3>
+                    <div className="h-64 w-full">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={performanceData} layout="vertical">
+                                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
+                                <XAxis type="number" domain={[0, 100]} hide />
+                                <YAxis dataKey="name" type="category" stroke="#64748b" fontSize={12} width={120} />
+                                <Tooltip />
+                                <Bar dataKey="score" fill="#8b5cf6" radius={[0, 8, 8, 0]} barSize={20} />
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 const EvaluatorModal = ({ isVisible, onClose, evaluators, onSubmit, challengeId }) => {
     const [selectedEvaluator, setSelectedEvaluator] = useState('');
 
@@ -156,6 +294,9 @@ const Challenges = ({ data, drillId }) => {
 
     // Creation State
     const [creatingType, setCreatingType] = useState(null);
+
+    // View State
+    const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'analytics'
 
     useEffect(() => {
         if (typeof window !== "undefined" && window.initFlowbite) {
@@ -235,12 +376,28 @@ const Challenges = ({ data, drillId }) => {
                         <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Challenge Manager</h1>
                         <p className="text-gray-500">Create, track, and evaluate your learning drills.</p>
                     </div>
-                    <button
-                        onClick={loadChallenges}
-                        className="flex items-center gap-2 text-sm font-bold text-blue-600 hover:bg-blue-50 px-3 py-2 rounded-lg transition-colors"
-                    >
-                        <RefreshCw size={16} /> Refresh
-                    </button>
+                    <div className="flex items-center gap-3">
+                        <div className="flex bg-gray-100 p-1 rounded-xl mr-4">
+                            <button
+                                onClick={() => setViewMode('grid')}
+                                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${viewMode === 'grid' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+                            >
+                                <List size={14} /> Drills
+                            </button>
+                            <button
+                                onClick={() => setViewMode('analytics')}
+                                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${viewMode === 'analytics' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+                            >
+                                <BarChart2 size={14} /> Insights
+                            </button>
+                        </div>
+                        <button
+                            onClick={loadChallenges}
+                            className="flex items-center gap-2 text-sm font-bold text-blue-600 hover:bg-blue-50 px-3 py-2 rounded-lg transition-colors"
+                        >
+                            <RefreshCw size={16} /> Refresh
+                        </button>
+                    </div>
                 </div>
 
                 {/* Create Toolbar */}
@@ -269,29 +426,33 @@ const Challenges = ({ data, drillId }) => {
                     </div>
                 </div>
 
-                {/* Challenge Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                    {challengeData?.data?.length > 0 ? (
-                        challengeData.data.map((challenge) => (
-                            <ChallengeCard
-                                key={challenge.refId}
-                                challenge={challenge}
-                                drillRefId={drillRefId}
-                                onDelete={handleDelete}
-                                onTry={getDrillLink}
-                                onEvaluate={() => handleOpenEvaluator(challenge.refId)}
-                            />
-                        ))
-                    ) : (
-                        <div className="col-span-full py-20 text-center bg-gray-50 rounded-3xl border border-dashed border-gray-200">
-                            <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm text-gray-400">
-                                <Plus size={32} />
+                {/* View Conditional */}
+                {viewMode === 'analytics' ? (
+                    <ChallengeAnalytics challenges={challengeData?.data || []} />
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                        {challengeData?.data?.length > 0 ? (
+                            challengeData.data.map((challenge) => (
+                                <ChallengeCard
+                                    key={challenge.refId}
+                                    challenge={challenge}
+                                    drillRefId={drillRefId}
+                                    onDelete={handleDelete}
+                                    onTry={getDrillLink}
+                                    onEvaluate={() => handleOpenEvaluator(challenge.refId)}
+                                />
+                            ))
+                        ) : (
+                            <div className="col-span-full py-20 text-center bg-gray-50 rounded-3xl border border-dashed border-gray-200">
+                                <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm text-gray-400">
+                                    <Plus size={32} />
+                                </div>
+                                <h3 className="text-lg font-bold text-gray-900">No challenges yet</h3>
+                                <p className="text-gray-500 mb-6 max-w-sm mx-auto">Select a challenge type above to generate your first drill.</p>
                             </div>
-                            <h3 className="text-lg font-bold text-gray-900">No challenges yet</h3>
-                            <p className="text-gray-500 mb-6 max-w-sm mx-auto">Select a challenge type above to generate your first drill.</p>
-                        </div>
-                    )}
-                </div>
+                        )}
+                    </div>
+                )}
 
                 <EvaluatorModal
                     isVisible={isEvaluatorVisible}
