@@ -754,4 +754,10 @@ const FitmateMakeRoutine = () => {
     );
 }
 
-export default FitmateMakeRoutine;
+const RoutineBuilder = () => {
+    return (
+        <Layout content={<FitmateMakeRoutine />} />
+    );
+}
+
+export default RoutineBuilder;

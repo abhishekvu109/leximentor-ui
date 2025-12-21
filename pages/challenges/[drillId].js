@@ -4,6 +4,7 @@ import Link from "next/link";
 import { API_LEXIMENTOR_BASE_URL } from "@/constants";
 import { deleteData, fetchData, postData } from "@/dataService";
 import Layout from "@/components/layout/Layout";
+import { motion } from "framer-motion";
 import {
     Play, Trash2, CheckCircle, AlertCircle, BarChart2,
     Plus, RefreshCw, BookOpen, Mic, Brain, Hash, Type,
@@ -15,23 +16,57 @@ import {
 } from 'recharts';
 
 const DRILL_TYPES = [
-    { id: 'MEANING', label: 'Meaning', icon: BookOpen, color: 'bg-blue-100 text-blue-700' },
-    { id: 'POS', label: 'Identify POS', icon: Hash, color: 'bg-purple-100 text-purple-700' },
-    { id: 'WS', label: 'Word Scramble', icon: Type, color: 'bg-green-100 text-green-700' },
-    { id: 'IDENTIFY', label: 'Pronunciation', icon: Mic, color: 'bg-yellow-100 text-yellow-700' },
-    { id: 'GUESS', label: 'Guess Word', icon: Brain, color: 'bg-pink-100 text-pink-700' },
-    { id: 'MW', label: 'Match Word', icon: CheckCircle, color: 'bg-indigo-100 text-indigo-700' },
-    { id: 'FB', label: 'Flashcard Blitz', icon: Layers, color: 'bg-teal-100 text-teal-700' },
-    { id: 'ST', label: 'Speed Typer', icon: Zap, color: 'bg-orange-100 text-orange-700' },
-    { id: 'CM', label: 'Context Master', icon: FileText, color: 'bg-cyan-100 text-cyan-700' },
+    { id: 'MEANING', label: 'Meaning', icon: BookOpen, color: 'text-blue-600', bg: 'bg-blue-50', shadow: 'hover:shadow-blue-200/50' },
+    { id: 'POS', label: 'Identify POS', icon: Hash, color: 'text-purple-600', bg: 'bg-purple-50', shadow: 'hover:shadow-purple-200/50' },
+    { id: 'WS', label: 'Word Scramble', icon: Type, color: 'text-green-600', bg: 'bg-green-50', shadow: 'hover:shadow-green-200/50' },
+    { id: 'IDENTIFY', label: 'Pronunciation', icon: Mic, color: 'text-yellow-600', bg: 'bg-yellow-50', shadow: 'hover:shadow-yellow-200/50' },
+    { id: 'GUESS', label: 'Guess Word', icon: Brain, color: 'text-pink-600', bg: 'bg-pink-50', shadow: 'hover:shadow-pink-200/50' },
+    { id: 'MW', label: 'Match Word', icon: CheckCircle, color: 'text-indigo-600', bg: 'bg-indigo-50', shadow: 'hover:shadow-indigo-200/50' },
+    { id: 'FB', label: 'Flashcard Blitz', icon: Layers, color: 'text-teal-600', bg: 'bg-teal-50', shadow: 'hover:shadow-teal-200/50' },
+    { id: 'ST', label: 'Speed Typer', icon: Zap, color: 'text-orange-600', bg: 'bg-orange-50', shadow: 'hover:shadow-orange-200/50' },
+    { id: 'CM', label: 'Context Master', icon: FileText, color: 'text-cyan-600', bg: 'bg-cyan-50', shadow: 'hover:shadow-cyan-200/50' },
 ];
+
+const getDrillConfig = (typeId) => {
+    // Map longer backend IDs to standard config IDs
+    const mapping = {
+        'LEARN_MEANING': 'MEANING',
+        'LEARN_POS': 'POS',
+        'WORD_SCRAMBLE': 'WS',
+        'SCRAMBLE': 'WS',
+        'IDENTIFY_WORD': 'IDENTIFY',
+        'GUESS_WORD': 'GUESS',
+        'MATCH_WORD': 'MW',
+        'FLASHCARD_BLITZ': 'FB',
+        'FLASHCARD': 'FB',
+        'SPEED_TYPER': 'ST',
+        'SPEED': 'ST',
+        'CONTEXT_MASTER': 'CM',
+        'CONTEXT': 'CM'
+    };
+    const standardId = mapping[typeId] || typeId;
+    return DRILL_TYPES.find(t => t.id === standardId);
+};
+
+const formatLabel = (str) => {
+    if (!str) return "";
+    return str.replace(/_/g, ' ')
+        .toLowerCase()
+        .split(' ')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ');
+};
 
 const ChallengeCard = ({ challenge, drillRefId, onDelete, onTry, onEvaluate, onViewReport }) => {
     const isPassed = challenge.drillScore > 70;
     const isCompleted = challenge.status === 'Completed';
     const isEvaluated = challenge.evaluationStatus === 'Evaluated';
 
-    const typeConfig = DRILL_TYPES.find(t => t.id === challenge.drillType) || { label: challenge.drillType, color: 'bg-gray-100 text-gray-600', icon: BookOpen };
+    const typeConfig = getDrillConfig(challenge.drillType) || {
+        label: formatLabel(challenge.drillType),
+        color: 'bg-gray-100 text-gray-600',
+        icon: BookOpen
+    };
     const Icon = typeConfig.icon;
 
     return (
@@ -401,28 +436,50 @@ const Challenges = ({ data, drillId }) => {
                 </div>
 
                 {/* Create Toolbar */}
-                <div className="bg-gray-50 rounded-2xl p-6 border border-gray-200">
-                    <h3 className="text-xs font-bold text-gray-500 uppercase mb-4 flex items-center gap-2">
-                        <Plus size={14} /> Start New Challenge
-                    </h3>
-                    <div className="flex flex-wrap gap-3">
-                        {DRILL_TYPES.map(type => {
-                            const Icon = type.icon;
-                            const isCreating = creatingType === type.id;
-                            return (
-                                <button
-                                    key={type.id}
-                                    onClick={() => handleCreateChallenge(type.id)}
-                                    disabled={!!creatingType}
-                                    className={`flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-bold transition-all shadow-sm hover:shadow-md bg-white border border-gray-200 hover:border-gray-300 text-gray-700
-                                        ${isCreating ? 'opacity-50 cursor-wait' : 'active:scale-95'}
-                                    `}
-                                >
-                                    <Icon size={18} className={type.color.split(' ')[1]} />
-                                    {isCreating ? 'Creating...' : type.label}
-                                </button>
-                            )
-                        })}
+                <div className="relative group overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 to-purple-500/5 rounded-[2rem] blur-2xl group-hover:blur-3xl transition-all duration-700" />
+                    <div className="relative bg-white/40 backdrop-blur-xl rounded-[2.5rem] p-8 border border-white/60 shadow-[0_8px_32px_rgba(0,0,0,0.04)] ring-1 ring-black/5">
+                        <div className="flex items-center justify-between mb-8">
+                            <div>
+                                <h3 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Drill Workshop</h3>
+                                <p className="text-xl font-bold text-slate-800">Generate a New Challenge</p>
+                            </div>
+                            <div className="w-10 h-10 bg-blue-500 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-blue-200 animate-pulse">
+                                <Plus size={20} />
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                            {DRILL_TYPES.map((type, idx) => {
+                                const Icon = type.icon;
+                                const isCreating = creatingType === type.id;
+                                return (
+                                    <motion.button
+                                        key={type.id}
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ delay: idx * 0.05 }}
+                                        whileHover={{ y: -5, scale: 1.02 }}
+                                        whileTap={{ scale: 0.98 }}
+                                        onClick={() => handleCreateChallenge(type.id)}
+                                        disabled={!!creatingType}
+                                        className={`group/btn relative flex flex-col items-center gap-3 p-5 rounded-[2rem] transition-all bg-white border border-slate-100 hover:border-transparent shadow-sm hover:shadow-xl ${type.shadow}
+                                            ${isCreating ? 'opacity-50 cursor-wait' : ''}
+                                        `}
+                                    >
+                                        <div className={`w-14 h-14 ${type.bg} ${type.color} rounded-2xl flex items-center justify-center transition-transform group-hover/btn:scale-110 duration-300`}>
+                                            <Icon size={28} strokeWidth={2.5} />
+                                        </div>
+                                        <div className="flex flex-col items-center">
+                                            <span className="text-sm font-black text-slate-700 text-center leading-tight">
+                                                {isCreating ? 'Creating...' : type.label}
+                                            </span>
+                                            <div className="mt-1 h-1 w-0 group-hover/btn:w-8 bg-slate-200 rounded-full transition-all duration-300" />
+                                        </div>
+                                    </motion.button>
+                                )
+                            })}
+                        </div>
                     </div>
                 </div>
 

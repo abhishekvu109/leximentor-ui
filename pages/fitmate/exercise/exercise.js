@@ -6,8 +6,9 @@ import { API_FITMATE_BASE_URL } from "@/constants";
 import { fetchData, postDataAsJson, DeleteByObject } from "@/dataService";
 import {
     Search, Plus, Filter, Trash2, Edit2, Dumbbell,
-    MoreVertical, X, Check, AlertCircle, Loader2
+    MoreVertical, X, Check, AlertCircle, Loader2, Info
 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
 // --- Components ---
 
@@ -76,7 +77,7 @@ const ExerciseCard = ({ exercise, onDelete, onEdit }) => {
     );
 }
 
-const AddExerciseModal = ({ isOpen, onClose, onSuccess, data: { trainings, bodyParts, musclesAll } }) => {
+const AddExerciseModal = ({ isOpen, onClose, onSuccess, onNotification, data: { trainings, bodyParts, musclesAll } }) => {
     const [loading, setLoading] = useState(false);
     const [form, setForm] = useState({
         name: "",
@@ -128,11 +129,12 @@ const AddExerciseModal = ({ isOpen, onClose, onSuccess, data: { trainings, bodyP
             }];
 
             await postDataAsJson(`${API_FITMATE_BASE_URL}/exercises`, payload);
+            onNotification({ message: `Successfully added "${form.name}"`, type: 'success' });
             onSuccess();
             onClose();
         } catch (error) {
             console.error(error);
-            alert("Failed to create exercise");
+            onNotification({ message: "Failed to create exercise", type: 'error' });
         } finally {
             setLoading(false);
         }
@@ -302,6 +304,12 @@ const ExerciseLibrary = () => {
     const [search, setSearch] = useState("");
     const [filters, setFilters] = useState({ bodyPart: "", training: "" });
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+    const [notification, setNotification] = useState({ visible: false, message: "", type: "info" });
+
+    const showNotification = ({ message, type = "info" }) => {
+        setNotification({ visible: true, message, type });
+        setTimeout(() => setNotification(prev => ({ ...prev, visible: false })), 4000);
+    };
 
     // Fetch Data
     const loadData = async () => {
@@ -334,10 +342,10 @@ const ExerciseLibrary = () => {
         if (!confirm(`Permanently delete "${exercise.name}"?`)) return;
         try {
             await DeleteByObject(`${API_FITMATE_BASE_URL}/exercises/exercise`, [{ refId: exercise.refId }]);
-            // Optimistic update or reload
+            showNotification({ message: `Exercise "${exercise.name}" deleted`, type: 'success' });
             loadData();
         } catch (e) {
-            alert("Delete failed");
+            showNotification({ message: "Delete failed", type: 'error' });
         }
     };
 
@@ -436,8 +444,45 @@ const ExerciseLibrary = () => {
                 isOpen={isAddModalOpen}
                 onClose={() => setIsAddModalOpen(false)}
                 onSuccess={loadData}
+                onNotification={showNotification}
                 data={refData}
             />
+
+            {/* Notification Toast */}
+            <AnimatePresence>
+                {notification.visible && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 50, scale: 0.9 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                        className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[100] min-w-[320px]"
+                    >
+                        <div className={`
+                            px-6 py-4 rounded-2xl shadow-2xl backdrop-blur-xl border flex items-center gap-4
+                            ${notification.type === 'success'
+                                ? 'bg-green-500/90 border-green-400 text-white'
+                                : notification.type === 'error'
+                                    ? 'bg-red-500/90 border-red-400 text-white'
+                                    : 'bg-blue-600/90 border-blue-500 text-white'}
+                        `}>
+                            <div className="bg-white/20 p-2 rounded-xl">
+                                {notification.type === 'success' ? <Check size={20} /> :
+                                    notification.type === 'error' ? <AlertCircle size={20} /> :
+                                        <Info size={20} />}
+                            </div>
+                            <div className="flex-1">
+                                <p className="font-bold text-sm leading-tight">{notification.message}</p>
+                            </div>
+                            <button
+                                onClick={() => setNotification(prev => ({ ...prev, visible: false }))}
+                                className="p-1 hover:bg-white/20 rounded-lg transition-colors"
+                            >
+                                <X size={16} />
+                            </button>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 };
