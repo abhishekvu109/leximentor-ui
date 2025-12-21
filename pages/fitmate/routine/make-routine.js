@@ -1,6 +1,7 @@
 
 import Layout from "@/components/layout/Layout";
-import { ChevronDown, Option, CheckCircle2, MoreVertical, Plus, Trash2, Timer, Check, X, Dumbbell, Calendar, Save, Filter, Search, ArrowRight, Download, FileText } from "lucide-react";
+import { ChevronDown, Option, CheckCircle2, MoreVertical, Plus, Trash2, Timer, Check, X, Dumbbell, Calendar, Save, Filter, Search, ArrowRight, Download, FileText, History, Info, Clock } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState } from "react";
 import { API_FITMATE_BASE_URL } from "@/constants";
 import { fetchData, POST, postData } from "@/dataService";
@@ -25,6 +26,157 @@ const SuccessNotification = ({ message, onClose }) => {
                 <X className="w-4 h-4" />
             </button>
         </div>
+    );
+};
+
+// History Panel Component
+const HistoryPanel = ({ isOpen, onClose, exerciseName, historyData, loading }) => {
+    const [recordLimit, setRecordLimit] = useState(5);
+
+    const limits = [5, 10, 20, 'All'];
+
+    const displayData = historyData ? (recordLimit === 'All' ? historyData : historyData.slice(0, recordLimit)) : [];
+
+    return (
+        <AnimatePresence>
+            {isOpen && (
+                <>
+                    {/* Backdrop */}
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        onClick={onClose}
+                        className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[100]"
+                    />
+                    {/* Panel */}
+                    <motion.div
+                        initial={{ x: '100%' }}
+                        animate={{ x: 0 }}
+                        exit={{ x: '100%' }}
+                        transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+                        className="fixed right-0 top-0 h-full w-full max-w-md bg-white shadow-2xl z-[101] flex flex-col"
+                    >
+                        <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 bg-blue-100 text-blue-600 rounded-xl">
+                                    <History size={20} />
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-slate-800 leading-tight">Exercise History</h3>
+                                    <p className="text-xs text-slate-500 font-medium">{exerciseName}</p>
+                                </div>
+                            </div>
+                            <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-xl text-slate-400 transition-colors">
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        {/* Filter Bar */}
+                        <div className="px-6 py-3 border-b border-slate-50 flex items-center justify-between bg-white/80 sticky top-0 z-10">
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Show Records</span>
+                            <div className="flex bg-slate-100 p-1 rounded-xl">
+                                {limits.map(limit => (
+                                    <button
+                                        key={limit}
+                                        onClick={() => setRecordLimit(limit)}
+                                        className={`px-3 py-1 text-[10px] font-black rounded-lg transition-all ${recordLimit === limit ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                                    >
+                                        {limit}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto p-6">
+                            {loading ? (
+                                <div className="flex flex-col items-center justify-center h-40 gap-3">
+                                    <Clock className="w-8 h-8 text-blue-500 animate-pulse" />
+                                    <p className="text-sm font-bold text-slate-400">Fetching records...</p>
+                                </div>
+                            ) : displayData && displayData.length > 0 ? (
+                                <div className="space-y-4">
+                                    <div className="p-4 bg-blue-50/50 rounded-2xl border border-blue-100/50 mb-6">
+                                        <div className="flex items-center gap-2 mb-3">
+                                            <div className="w-2 h-2 bg-blue-500 rounded-full animate-ping" />
+                                            <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest">Latest Performance</span>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="bg-white p-3 rounded-xl shadow-sm border border-blue-50">
+                                                <p className="text-[10px] text-slate-400 font-bold uppercase mb-1">Measurement</p>
+                                                <div className="flex items-baseline gap-1">
+                                                    <span className="text-xl font-black text-slate-800">{displayData[0].measurement}</span>
+                                                    <span className="text-xs font-bold text-slate-500 uppercase">{displayData[0].unit}</span>
+                                                </div>
+                                            </div>
+                                            <div className="bg-white p-3 rounded-xl shadow-sm border border-blue-50">
+                                                <p className="text-[10px] text-slate-400 font-bold uppercase mb-1">Repetitions</p>
+                                                <div className="flex items-baseline gap-1">
+                                                    <span className="text-xl font-black text-slate-800">{displayData[0].repetition}</span>
+                                                    <span className="text-xs font-bold text-slate-500 uppercase">Reps</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        {displayData[0].notes && (
+                                            <div className="mt-4 p-3 bg-white/60 rounded-xl border border-blue-50">
+                                                <p className="text-[10px] text-slate-400 font-bold uppercase mb-1">Notes</p>
+                                                <p className="text-xs text-slate-600 font-medium italic">"{displayData[0].notes}"</p>
+                                            </div>
+                                        )}
+                                        <div className="mt-4 flex items-center justify-between text-[10px] text-slate-400 font-bold">
+                                            <span>Recording Unit: {displayData[0].measurementUnit}</span>
+                                            <span>{new Date(displayData[0].creationDate).toLocaleDateString()}</span>
+                                        </div>
+                                    </div>
+
+                                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4">Activity Stream ({displayData.length} records)</h4>
+                                    {displayData.slice(1).map((log, i) => (
+                                        <div key={i} className="group p-4 bg-white border border-slate-100 rounded-2xl hover:border-blue-200 hover:shadow-lg hover:shadow-blue-500/5 transition-all">
+                                            <div className="flex justify-between items-start mb-2">
+                                                <span className="text-[10px] font-bold text-slate-400">{new Date(log.creationDate).toLocaleDateString()}</span>
+                                                <span className="text-[10px] px-2 py-0.5 bg-slate-100 text-slate-600 rounded-full font-bold uppercase">{log.unit}</span>
+                                            </div>
+                                            <div className="flex items-center gap-6">
+                                                <div>
+                                                    <p className="text-[9px] text-slate-400 font-bold uppercase mb-0.5">Weight</p>
+                                                    <p className="text-sm font-black text-slate-700">{log.measurement}</p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-[9px] text-slate-400 font-bold uppercase mb-0.5">Reps</p>
+                                                    <p className="text-sm font-black text-slate-700">{log.repetition}</p>
+                                                </div>
+                                            </div>
+                                            {log.notes && (
+                                                <p className="mt-2 text-[10px] text-slate-500 italic">"{log.notes}"</p>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="flex flex-col items-center justify-center h-60 text-center space-y-4 opacity-40">
+                                    <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center">
+                                        <Info size={32} />
+                                    </div>
+                                    <div>
+                                        <p className="font-bold text-slate-600">No History Found</p>
+                                        <p className="text-xs max-w-[200px] mt-1">Start your first session to begin tracking performance.</p>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="p-6 border-t border-slate-100 bg-slate-50/50">
+                            <button
+                                onClick={onClose}
+                                className="w-full py-3 bg-slate-800 text-white font-black text-xs uppercase tracking-widest rounded-xl shadow-lg shadow-slate-200 hover:bg-slate-900 transition-all active:scale-95"
+                            >
+                                Close History
+                            </button>
+                        </div>
+                    </motion.div>
+                </>
+            )}
+        </AnimatePresence>
     );
 };
 
@@ -108,6 +260,20 @@ const UnifiedRoutineBuilder = ({
     const [selectedBodyPart, setSelectedBodyPart] = useState('Chest'); // Default to first?
     const [selectedMuscle, setSelectedMuscle] = useState(null);
     const [searchQuery, setSearchQuery] = useState('');
+
+    // --> History UI State
+    const [historyPanel, setHistoryPanel] = useState({ open: false, exercise: null, data: [], loading: false });
+
+    const openHistory = async (exerciseName) => {
+        setHistoryPanel({ open: true, exercise: exerciseName, data: [], loading: true });
+        try {
+            const res = await fetchData(`${API_FITMATE_BASE_URL}/drill/${encodeURIComponent(exerciseName)}`);
+            setHistoryPanel(prev => ({ ...prev, data: res.data || [], loading: false }));
+        } catch (e) {
+            console.error("Failed to fetch history:", e);
+            setHistoryPanel(prev => ({ ...prev, loading: false }));
+        }
+    };
 
     // Derived Data
     const bodyPartNames = bodyParts.map(b => b.name);
@@ -385,12 +551,21 @@ const UnifiedRoutineBuilder = ({
                                         <div className="flex-1 min-w-0">
                                             <div className="flex justify-between items-start">
                                                 <h3 className="font-bold text-lg text-gray-800 truncate pr-4">{item.exercise}</h3>
-                                                <button
-                                                    onClick={() => removeFromCart(exIdx)}
-                                                    className="text-gray-300 hover:text-red-500 transition-colors p-1"
-                                                >
-                                                    <Trash2 size={18} />
-                                                </button>
+                                                <div className="flex items-center gap-1">
+                                                    <button
+                                                        onClick={() => openHistory(item.exercise)}
+                                                        className="text-gray-300 hover:text-blue-500 transition-colors p-1"
+                                                        title="View History"
+                                                    >
+                                                        <History size={18} />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => removeFromCart(exIdx)}
+                                                        className="text-gray-300 hover:text-red-500 transition-colors p-1"
+                                                    >
+                                                        <Trash2 size={18} />
+                                                    </button>
+                                                </div>
                                             </div>
                                             <div className="flex items-center gap-3 mt-1">
                                                 <span className="text-xs font-semibold px-2 py-0.5 bg-blue-50 text-blue-700 rounded-md">
@@ -415,10 +590,10 @@ const UnifiedRoutineBuilder = ({
                                     <div className="border-t border-gray-100">
                                         <div className="grid grid-cols-12 gap-2 px-4 py-2 bg-gray-50/50 text-[10px] font-bold text-gray-400 uppercase tracking-widest text-center">
                                             <div className="col-span-1">Set</div>
-                                            <div className="col-span-3 text-left pl-2">Previous</div>
+                                            {/* <div className="col-span-3 text-left pl-2">Previous</div> */}
                                             <div className="col-span-3">Weight</div>
                                             <div className="col-span-2">Reps</div>
-                                            <div className="col-span-3">Actions</div>
+                                            <div className="col-span-6">Actions</div>
                                         </div>
 
                                         <div className="divide-y divide-gray-50">
@@ -428,7 +603,7 @@ const UnifiedRoutineBuilder = ({
                                                     className={`grid grid-cols-12 gap-2 px-4 py-2 items-center text-center group ${set.completed ? 'bg-green-50/50' : 'bg-white'}`}
                                                 >
                                                     <div className="col-span-1 font-bold text-blue-600 text-sm">{setIdx + 1}</div>
-                                                    <div className="col-span-3 text-left pl-2 text-gray-300 text-xs font-medium">-</div>
+                                                    {/* <div className="col-span-3 text-left pl-2 text-gray-300 text-xs font-medium">-</div> */}
                                                     <div className="col-span-3">
                                                         <div className="flex items-center justify-center gap-1">
                                                             <input
@@ -455,7 +630,7 @@ const UnifiedRoutineBuilder = ({
                                                             placeholder="0"
                                                         />
                                                     </div>
-                                                    <div className="col-span-3 flex justify-end gap-1 opacity-100 sm:opacity-40 sm:group-hover:opacity-100 transition-opacity">
+                                                    <div className="col-span-6 flex justify-center gap-1 opacity-100 sm:opacity-40 sm:group-hover:opacity-100 transition-opacity">
                                                         <button
                                                             onClick={() => handleToggleSet(exIdx, setIdx)}
                                                             className={`w-7 h-7 rounded-md flex items-center justify-center transition-all ${set.completed ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-400 hover:bg-green-100 hover:text-green-600'}`}
@@ -497,6 +672,15 @@ const UnifiedRoutineBuilder = ({
                     onClose={() => setShowSuccess(false)}
                 />
             )}
+
+            {/* History Panel */}
+            <HistoryPanel
+                isOpen={historyPanel.open}
+                onClose={() => setHistoryPanel(prev => ({ ...prev, open: false }))}
+                exerciseName={historyPanel.exercise}
+                historyData={historyPanel.data}
+                loading={historyPanel.loading}
+            />
         </div>
     );
 };
