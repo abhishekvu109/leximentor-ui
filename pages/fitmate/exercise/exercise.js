@@ -6,22 +6,63 @@ import { API_FITMATE_BASE_URL } from "@/constants";
 import { fetchData, postDataAsJson, DeleteByObject } from "@/dataService";
 import {
     Search, Plus, Filter, Trash2, Edit2, Dumbbell,
-    MoreVertical, X, Check, AlertCircle, Loader2, Info
+    MoreVertical, X, Check, AlertCircle, Loader2, Info, Camera
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 // --- Components ---
 
-const ExerciseCard = ({ exercise, onDelete, onEdit }) => {
+const ExerciseCard = ({ exercise, onDelete, onEdit, onThumbnailUpload }) => {
+    const [uploading, setUploading] = useState(false);
+    const [thumbUrl, setThumbUrl] = useState(null);
+
+    useEffect(() => {
+        const fetchThumb = async () => {
+            try {
+                const res = await fetch(`${API_FITMATE_BASE_URL}/exercises/exercise/resources/resource?refId=${exercise.refId}&placeholder=THUMBNAIL&resourceId=`);
+                if (!res.ok) return;
+                const blob = await res.blob();
+                if (blob.size > 0 && blob.type.startsWith('image/')) {
+                    setThumbUrl(URL.createObjectURL(blob));
+                }
+            } catch (e) {
+                console.error("Thumb fetch failed", e);
+            }
+        };
+        if (exercise.refId) fetchThumb();
+
+        return () => {
+            if (thumbUrl) URL.revokeObjectURL(thumbUrl);
+        };
+    }, [exercise.refId]);
+
+    const handleFileChange = async (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        setUploading(true);
+        try {
+            await onThumbnailUpload(exercise.refId, file);
+        } finally {
+            setUploading(false);
+        }
+    };
     return (
         <div className="group bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden flex flex-col relative cursor-pointer">
             <Link href={`/fitmate/exercise/view/${exercise.refId}`} className="flex-1 flex flex-col">
-                <div className="relative aspect-[4/3] bg-gray-50 overflow-hidden">
-                    <img
-                        src={`https://placehold.co/400x300/e2e8f0/1e293b?text=${encodeURIComponent(exercise.name.substring(0, 2))}`}
-                        alt={exercise.name}
-                        className="w-full h-full object-cover mix-blend-multiply opacity-90 group-hover:scale-105 transition-transform duration-500"
-                    />
+                <div className="relative aspect-[4/3] bg-gray-50 overflow-hidden flex items-center justify-center">
+                    {thumbUrl ? (
+                        <img
+                            src={thumbUrl}
+                            alt={exercise.name}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        />
+                    ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-slate-50">
+                            <h2 className="text-4xl font-black text-slate-200 leading-tight tracking-tight">
+                                {exercise.name.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase()}
+                            </h2>
+                        </div>
+                    )}
                     <div className="absolute bottom-2 left-2">
                         <span className="px-2 py-1 bg-black/60 backdrop-blur-sm text-white text-[10px] font-bold uppercase tracking-wider rounded-md">
                             {exercise.bodyPart?.name || 'General'}
@@ -61,6 +102,10 @@ const ExerciseCard = ({ exercise, onDelete, onEdit }) => {
             </Link>
 
             <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1 z-10">
+                <label className="p-2 bg-white/90 rounded-full text-blue-600 hover:text-blue-700 shadow-sm backdrop-blur-sm cursor-pointer" title="Upload Thumbnail">
+                    <input type="file" className="hidden" accept="image/*" onChange={handleFileChange} disabled={uploading} />
+                    {uploading ? <Loader2 size={14} className="animate-spin" /> : <Camera size={14} />}
+                </label>
                 <button
                     onClick={(e) => {
                         e.preventDefault();
@@ -349,6 +394,28 @@ const ExerciseLibrary = () => {
         }
     };
 
+    const handleThumbnailUpload = async (refId, file) => {
+        const formData = new FormData();
+        formData.append('files', file);
+
+        try {
+            const res = await fetch(`${API_FITMATE_BASE_URL}/exercises/exercise/resources?refId=${refId}&placeholder=THUMBNAIL`, {
+                method: 'PUT',
+                body: formData
+            });
+
+            if (res.ok) {
+                showNotification({ message: "Thumbnail uploaded successfully", type: 'success' });
+                loadData();
+            } else {
+                throw new Error("Upload failed");
+            }
+        } catch (error) {
+            console.error(error);
+            showNotification({ message: "Failed to upload thumbnail", type: 'error' });
+        }
+    };
+
     // Derived State
     const filteredExercises = useMemo(() => {
         let res = exercises;
@@ -434,7 +501,13 @@ const ExerciseLibrary = () => {
             ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                     {filteredExercises.map((ex, i) => (
-                        <ExerciseCard key={i} exercise={ex} onDelete={handleDelete} onEdit={() => { }} />
+                        <ExerciseCard
+                            key={i}
+                            exercise={ex}
+                            onDelete={handleDelete}
+                            onEdit={() => { }}
+                            onThumbnailUpload={handleThumbnailUpload}
+                        />
                     ))}
                 </div>
             )}

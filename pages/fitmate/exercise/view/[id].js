@@ -229,7 +229,7 @@ const ExerciseDetailContent = () => {
 
     const fetchExerciseImage = async (refId) => {
         try {
-            const res = await fetch(`${API_FITMATE_BASE_URL}/exercises/exercise/resources/resource?refId=${refId}&resourceId=`);
+            const res = await fetch(`${API_FITMATE_BASE_URL}/exercises/exercise/resources/resource?refId=${refId}&placeholder=GIF&resourceId=`);
             if (!res.ok) throw new Error("Image fetch failed");
 
             // The API returns binary data direttamente, not JSON
@@ -314,6 +314,36 @@ const ExerciseDetailContent = () => {
         } catch (error) {
             console.error(error);
             showNotification({ message: "Failed to upload image", type: 'error' });
+        } finally {
+            setUploading(false);
+        }
+    };
+
+    const handleThumbnailUpload = async (e) => {
+        const file = e.target.files?.[0];
+        if (!file || !exercise) return;
+
+        setUploading(true);
+        const formData = new FormData();
+        formData.append('files', file);
+
+        try {
+            const res = await fetch(`${API_FITMATE_BASE_URL}/exercises/exercise/resources?refId=${exercise.refId}&placeholder=THUMBNAIL`, {
+                method: 'PUT',
+                body: formData
+            });
+
+            if (res.ok) {
+                showNotification({ message: "Thumbnail updated successfully", type: 'success' });
+                // We don't necessarily need to reload all data if the thumb isn't shown here, 
+                // but good for consistency.
+                loadExerciseData();
+            } else {
+                throw new Error("Thumbnail upload failed");
+            }
+        } catch (error) {
+            console.error(error);
+            showNotification({ message: "Failed to upload thumbnail", type: 'error' });
         } finally {
             setUploading(false);
         }
@@ -419,6 +449,22 @@ const ExerciseDetailContent = () => {
                             <p className="font-semibold text-gray-800 break-words">
                                 {exercise.equipments?.join(', ') || 'None'}
                             </p>
+                        </div>
+                        <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100 relative group">
+                            <div className="flex items-center justify-between mb-1 text-gray-400">
+                                <div className="flex items-center gap-2">
+                                    <Camera size={16} />
+                                    <span className="text-xs font-bold uppercase">Thumbnail</span>
+                                </div>
+                                <label className="cursor-pointer text-blue-600 hover:text-blue-700 transition-colors">
+                                    <input type="file" className="hidden" accept="image/*" onChange={handleThumbnailUpload} disabled={uploading} />
+                                    {uploading ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                                </label>
+                            </div>
+                            <p className="font-semibold text-gray-800">
+                                {exercise.resources?.some(r => r.placeholder === 'THUMBNAIL') ? 'Uploaded' : 'Not Set'}
+                            </p>
+                            <span className="absolute right-0 -top-8 px-2 py-1 bg-black text-white text-[10px] font-bold rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">Upload Thumbnail</span>
                         </div>
                     </div>
 

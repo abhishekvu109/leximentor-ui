@@ -29,7 +29,45 @@ const SuccessNotification = ({ message, onClose }) => {
     );
 };
 
-// History Panel Component
+// Cart Exercise Thumbnail Component
+const CartExerciseThumb = ({ refId, name }) => {
+    const [thumbUrl, setThumbUrl] = useState(null);
+
+    useEffect(() => {
+        const fetchThumb = async () => {
+            try {
+                const res = await fetch(`${API_FITMATE_BASE_URL}/exercises/exercise/resources/resource?refId=${refId}&placeholder=THUMBNAIL&resourceId=`);
+                if (!res.ok) return;
+                const blob = await res.blob();
+                if (blob.size > 0 && blob.type.startsWith('image/')) {
+                    setThumbUrl(URL.createObjectURL(blob));
+                }
+            } catch (e) {
+                console.error("Cart thumb fetch failed", e);
+            }
+        };
+        if (refId) fetchThumb();
+        return () => { if (thumbUrl) URL.revokeObjectURL(thumbUrl); };
+    }, [refId]);
+
+    if (thumbUrl) {
+        return (
+            <img
+                src={thumbUrl}
+                alt={name}
+                className="w-full h-full object-cover rounded-lg"
+            />
+        );
+    }
+
+    return (
+        <div className="w-full h-full flex items-center justify-center bg-slate-50 rounded-lg">
+            <span className="text-xl font-bold text-slate-400">
+                {name.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase()}
+            </span>
+        </div>
+    );
+};
 const HistoryPanel = ({ isOpen, onClose, exerciseName, historyData, loading }) => {
     const [recordLimit, setRecordLimit] = useState(5);
 
@@ -209,7 +247,26 @@ const CompactCardSelector = ({ label, items, selected, onSelect, type = 'text' }
     )
 }
 
-const ExerciseGridItem = ({ name, isSelected, onClick }) => {
+const ExerciseGridItem = ({ name, refId, isSelected, onClick }) => {
+    const [thumbUrl, setThumbUrl] = useState(null);
+
+    useEffect(() => {
+        const fetchThumb = async () => {
+            try {
+                const res = await fetch(`${API_FITMATE_BASE_URL}/exercises/exercise/resources/resource?refId=${refId}&placeholder=THUMBNAIL&resourceId=`);
+                if (!res.ok) return;
+                const blob = await res.blob();
+                if (blob.size > 0 && blob.type.startsWith('image/')) {
+                    setThumbUrl(URL.createObjectURL(blob));
+                }
+            } catch (e) {
+                console.error("Grid item thumb fetch failed", e);
+            }
+        };
+        if (refId) fetchThumb();
+        return () => { if (thumbUrl) URL.revokeObjectURL(thumbUrl); };
+    }, [refId]);
+
     return (
         <div
             onClick={onClick}
@@ -218,12 +275,20 @@ const ExerciseGridItem = ({ name, isSelected, onClick }) => {
                 ${isSelected ? 'ring-2 ring-blue-500 border-blue-500 shadow-md' : 'border-gray-100 hover:shadow-lg hover:-translate-y-1'}
             `}
         >
-            <div className="aspect-[4/3] bg-gray-50 relative">
-                <img
-                    src={`https://placehold.co/300x200/e2e8f0/64748b?text=${encodeURIComponent(name.substring(0, 2))}`}
-                    alt={name}
-                    className="w-full h-full object-cover mix-blend-multiply opacity-90 group-hover:opacity-100 transition-opacity"
-                />
+            <div className="aspect-[4/3] bg-gray-50 relative flex items-center justify-center">
+                {thumbUrl ? (
+                    <img
+                        src={thumbUrl}
+                        alt={name}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
+                ) : (
+                    <div className="w-full h-full flex items-center justify-center bg-slate-50">
+                        <h2 className="text-4xl font-black text-slate-200 leading-tight tracking-tight">
+                            {name.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase()}
+                        </h2>
+                    </div>
+                )}
                 {isSelected && (
                     <div className="absolute inset-0 bg-blue-900/10 flex items-center justify-center">
                         <div className="bg-blue-600 text-white p-1 rounded-full shadow-lg">
@@ -320,6 +385,7 @@ const UnifiedRoutineBuilder = ({
             // Let's just append for now.
             return [...prev, {
                 exercise: exercise.name,
+                refId: exercise.refId,
                 bodyPart: selectedBodyPart,
                 muscle: selectedMuscle || exercise.targetMuscles?.[0]?.name,
                 sets: [{
@@ -509,6 +575,7 @@ const UnifiedRoutineBuilder = ({
                                     <ExerciseGridItem
                                         key={i}
                                         name={ex.name}
+                                        refId={ex.refId}
                                         isSelected={false}
                                         onClick={() => addToCart(ex)}
                                     />
@@ -542,11 +609,7 @@ const UnifiedRoutineBuilder = ({
                                     {/* Card Header */}
                                     <div className="p-4 flex gap-5 items-start bg-gradient-to-r from-white to-gray-50/30">
                                         <div className="w-16 h-16 bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden shrink-0 flex items-center justify-center p-1">
-                                            <img
-                                                src={`https://placehold.co/100x120/e2e8f0/1e293b?text=${encodeURIComponent(item.exercise.substring(0, 2))}`}
-                                                alt={item.exercise}
-                                                className="w-full h-full object-cover rounded-lg mix-blend-multiply opacity-80"
-                                            />
+                                            <CartExerciseThumb refId={item.refId} name={item.exercise} />
                                         </div>
                                         <div className="flex-1 min-w-0">
                                             <div className="flex justify-between items-start">
