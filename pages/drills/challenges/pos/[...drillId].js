@@ -224,7 +224,7 @@ const LoadPosDrillChallenge = ({ drillSetData, drillSetWordData, challengeScores
                                         </div>
                                         <div>
                                             <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Example</h3>
-                                            <p className="text-slate-700 italic leading-relaxed">"{currentQuestion.example}"</p>
+                                            <p className="text-slate-700 italic leading-relaxed">&quot;{currentQuestion.example}&quot;</p>
                                         </div>
                                     </div>
                                 </div>

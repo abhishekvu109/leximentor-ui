@@ -158,7 +158,7 @@ const HistoryPanel = ({ isOpen, onClose, exerciseName, historyData, loading }) =
                                         {displayData[0].notes && (
                                             <div className="mt-4 p-3 bg-white/60 rounded-xl border border-blue-50">
                                                 <p className="text-[10px] text-slate-400 font-bold uppercase mb-1">Notes</p>
-                                                <p className="text-xs text-slate-600 font-medium italic">"{displayData[0].notes}"</p>
+                                                <p className="text-xs text-slate-600 font-medium italic">&quot;{displayData[0].notes}&quot;</p>
                                             </div>
                                         )}
                                         <div className="mt-4 flex items-center justify-between text-[10px] text-slate-400 font-bold">
@@ -185,7 +185,7 @@ const HistoryPanel = ({ isOpen, onClose, exerciseName, historyData, loading }) =
                                                 </div>
                                             </div>
                                             {log.notes && (
-                                                <p className="mt-2 text-[10px] text-slate-500 italic">"{log.notes}"</p>
+                                                <p className="mt-2 text-[10px] text-slate-500 italic">&quot;{log.notes}&quot;</p>
                                             )}
                                         </div>
                                     ))}
