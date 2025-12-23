@@ -1,221 +1,300 @@
-import {useState} from 'react';
+import { useState, useEffect } from 'react';
 import axios from 'axios';
-import Script from "next/script";
-import {API_LEXIMENTOR_BASE_URL, API_TEXT_TO_SPEECH} from "@/constants";
-import {fetchData} from "@/dataService";
+import Link from "next/link";
+import Layout from "@/components/layout/Layout";
+import { API_LEXIMENTOR_BASE_URL, API_TEXT_TO_SPEECH } from "@/constants";
+import { fetchData } from "@/dataService";
+import {
+    ArrowLeftIcon,
+    CheckCircleIcon,
+    XCircleIcon,
+    SpeakerWaveIcon,
+    ArrowPathIcon,
+    PaperAirplaneIcon,
+    MusicalNoteIcon
+} from "@heroicons/react/24/outline";
 
-const LoadIdentifyWordDrillChallenge = ({drillSetData, challengeId}) => {
-    const [formData, setFormData] = useState(drillSetData.data.map(item => ({
-        drillSetRefId: item.refId, drillChallengeRefId: challengeId, response: '',
-    })));
+// --- Components ---
 
-    const [notificationVisible, setNotificationVisible] = useState(false);
-    const [notificationMessage, setNotificationMessage] = useState("");
-    const [notificationSuccess, setNotificationSuccess] = useState(false);
+const Notification = ({ message, type, onClose }) => {
+    if (!message) return null;
+    const isSuccess = type === 'success';
 
-    const NotificationClose = () => {
-        setNotificationVisible(false);
+    return (
+        <div className={`fixed bottom-6 right-6 max-w-sm w-full bg-white rounded-xl shadow-2xl border-l-4 p-4 flex items-start gap-4 z-50 animate-in slide-in-from-right-10 fade-in duration-300 ${isSuccess ? 'border-green-500' : 'border-red-500'}`}>
+            <div className={`shrink-0 ${isSuccess ? 'text-green-500' : 'text-red-500'}`}>
+                {isSuccess ? <CheckCircleIcon className="w-6 h-6" /> : <XCircleIcon className="w-6 h-6" />}
+            </div>
+            <div className="flex-1 pt-0.5">
+                <h3 className="font-bold text-slate-800 text-sm mb-1">{isSuccess ? "Success" : "Error"}</h3>
+                <p className="text-slate-600 text-sm leading-snug">{message}</p>
+            </div>
+            <button onClick={onClose} className="text-slate-400 hover:text-slate-600">
+                <span className="sr-only">Close</span>
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+        </div>
+    );
+};
+
+const ChallengeCard = ({ item, index, onChange, value, onPlayAudio }) => {
+    const [isPlaying, setIsPlaying] = useState(false);
+
+    const handlePlay = async () => {
+        setIsPlaying(true);
+        await onPlayAudio(item.word);
+        setIsPlaying(false);
     };
-    const ShowNotification = ({isVisible, message, isSuccess}) => {
-        if (isVisible) {
-            if (!isSuccess) {
-                return <>
-                    <div id="alert-border-2"
-                         className="flex items-center  p-4 mb-4 text-red-800 border-t-4 border-red-300 bg-red-50 dark:text-red-400 dark:bg-gray-800 dark:border-red-800"
-                         role="alert">
-                        <svg className="flex-shrink-0 w-4 h-4" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
-                             fill="currentColor" viewBox="0 0 20 20">
-                            <path
-                                d="M10 .5a9.5 9.5 0 1 0 9.5 9.5A9.51 9.51 0 0 0 10 .5ZM9.5 4a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3ZM12 15H8a1 1 0 0 1 0-2h1v-3H8a1 1 0 0 1 0-2h2a1 1 0 0 1 1 1v4h1a1 1 0 0 1 0 2Z"/>
-                        </svg>
-                        <div className="ms-3 text-sm font-medium">
-                            {message}
-                        </div>
-                        <button type="button" onClick={NotificationClose}
-                                className="ms-auto -mx-1.5 -my-1.5 bg-red-50 text-red-500 rounded-lg focus:ring-2 focus:ring-red-400 p-1.5 hover:bg-red-200 inline-flex items-center justify-center h-8 w-8 dark:bg-gray-800 dark:text-red-400 dark:hover:bg-gray-700"
-                                data-dismiss-target="#alert-border-2" aria-label="Close">
-                            <span className="sr-only">Dismiss</span>
-                            <svg className="w-3 h-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none"
-                                 viewBox="0 0 14 14">
-                                <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"
-                                      strokeWidth="2" d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"/>
-                            </svg>
-                        </button>
-                    </div>
-                </>
-            } else {
-                return <>
-                    <div id="alert-border-3"
-                         className="flex items-center p-4 mb-4 text-green-800 border-t-4 border-green-300 bg-green-50 dark:text-green-400 dark:bg-gray-800 dark:border-green-800"
-                         role="alert">
-                        <svg className="flex-shrink-0 w-4 h-4" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
-                             fill="currentColor" viewBox="0 0 20 20">
-                            <path
-                                d="M10 .5a9.5 9.5 0 1 0 9.5 9.5A9.51 9.51 0 0 0 10 .5ZM9.5 4a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3ZM12 15H8a1 1 0 0 1 0-2h1v-3H8a1 1 0 0 1 0-2h2a1 1 0 0 1 1 1v4h1a1 1 0 0 1 0 2Z"/>
-                        </svg>
-                        <div className="ms-3 text-sm font-medium">
-                            {message}
-                        </div>
-                        <button type="button" onClick={NotificationClose}
-                                className="ms-auto -mx-1.5 -my-1.5 bg-green-50 text-green-500 rounded-lg focus:ring-2 focus:ring-green-400 p-1.5 hover:bg-green-200 inline-flex items-center justify-center h-8 w-8 dark:bg-gray-800 dark:text-green-400 dark:hover:bg-gray-700"
-                                data-dismiss-target="#alert-border-3" aria-label="Close">
-                            <span className="sr-only">Dismiss</span>
-                            <svg className="w-3 h-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none"
-                                 viewBox="0 0 14 14">
-                                <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"
-                                      strokeWidth="2" d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"/>
-                            </svg>
-                        </button>
-                    </div>
-                </>
-            }
 
-        }
-    };
+    return (
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden hover:border-indigo-200 transition-all duration-300">
+            <div className="bg-slate-50 border-b border-slate-100 px-6 py-4 flex justify-between items-center">
+                <div className="flex items-center gap-3">
+                    <span className="bg-indigo-100 text-indigo-700 text-xs font-bold px-2 py-1 rounded-md">Q{index + 1}</span>
+                    <span className="text-sm font-bold text-slate-500 uppercase tracking-wide">Listen & Type</span>
+                </div>
+            </div>
+            <div className="p-6 flex flex-col sm:flex-row gap-6 items-start sm:items-center">
+
+                {/* Audio Button */}
+                <button
+                    type="button"
+                    onClick={handlePlay}
+                    disabled={isPlaying}
+                    className="shrink-0 w-16 h-16 rounded-2xl bg-indigo-50 hover:bg-indigo-100 text-indigo-600 flex items-center justify-center transition-all hover:scale-105 active:scale-95 disabled:opacity-70 disabled:scale-100"
+                    title="Play Audio"
+                >
+                    {isPlaying ? <div className="w-6 h-6 border-2 border-indigo-600/30 border-t-indigo-600 rounded-full animate-spin" /> : <SpeakerWaveIcon className="w-8 h-8" />}
+                </button>
+
+                {/* Input Area */}
+                <div className="flex-1 w-full space-y-2">
+                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider">
+                        What word did you hear?
+                    </label>
+                    <input
+                        type="text"
+                        value={value || ''}
+                        name="response"
+                        onChange={(e) => onChange(index, 'response', e.target.value)}
+                        className="w-full rounded-lg border-slate-300 bg-slate-50 focus:bg-white focus:border-indigo-500 focus:ring-indigo-500 transition-all text-slate-700 text-lg font-medium p-3"
+                        placeholder="Type the word here..."
+                        autoComplete="off"
+                    />
+                </div>
+            </div>
+        </div>
+    );
+};
+
+const LoadIdentifyWordDrillChallenge = ({ drillSetData, drillSetWordData, challengeId, drillRefId, challengeScores }) => {
+
+    // --- State ---
+    const [questions, setQuestions] = useState([]);
+    const [formData, setFormData] = useState([]);
+    const [notification, setNotification] = useState({ visible: false, message: '', type: '' });
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    // --- Init ---
+    useEffect(() => {
+        if (!drillSetWordData?.data || !challengeScores?.data || !drillSetData?.data) return;
+
+        const generatedQuestions = challengeScores.data.map(scoreItem => {
+            const setItem = drillSetData.data.find(d => d.refId === scoreItem.drillSetRefId);
+            if (!setItem) return null;
+
+            const wordItem = drillSetWordData.data.find(w => w.refId === setItem.wordRefId);
+            if (!wordItem) return null;
+
+            return {
+                refId: scoreItem.refId,
+                drillChallengeRefId: challengeId,
+                drillSetRefId: scoreItem.drillSetRefId,
+                word: wordItem.word,
+            };
+        }).filter(q => q !== null);
+
+        setQuestions(generatedQuestions);
+        setFormData(generatedQuestions.map(q => ({
+            refId: q.refId,
+            drillChallengeRefId: challengeId,
+            drillSetRefId: q.drillSetRefId,
+            response: '',
+        })));
+    }, [drillSetData, drillSetWordData, challengeScores, challengeId]);
+
+    // --- Handlers ---
+
+    const closeNotification = () => setNotification({ ...notification, visible: false });
 
     const handleChange = (index, name, value) => {
-        setFormData(prevFormData => {
-            const updatedFormData = [...prevFormData];
-            updatedFormData[index] = {...updatedFormData[index], [name]: value};
-            return updatedFormData;
+        setFormData(prev => {
+            const updated = [...prev];
+            updated[index] = { ...updated[index], [name]: value };
+            return updated;
         });
     };
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        console.log(formData);
-        try {
-            const URL = `${API_LEXIMENTOR_BASE_URL}/drill/metadata/challenges/challenge/${challengeId}/scores`;
-            console.log('The URL is ' + URL)
-            const response = await fetch(URL, {
-                method: 'PUT', headers: {
-                    'Content-Type': 'application/json',
-                }, body: JSON.stringify(formData),
-            });
-
-            if (!response.ok) {
-                setNotificationSuccess(false);
-                setNotificationMessage("Network response was not ok");
-                setNotificationVisible(true);
-                throw new Error('Network response was not ok');
-            }
-
-            // Handle successful response
-            const data = await response.json();
-            console.log('Response data:', data);
-            setNotificationSuccess(true);
-            setNotificationMessage("Response has been updated.");
-            setNotificationVisible(true);
-        } catch (error) {
-            console.error('Error:', error);
-            setNotificationSuccess(false);
-            setNotificationMessage("Network response was not ok " + error);
-            setNotificationVisible(true);
+    const handleReset = () => {
+        if (confirm("Are you sure you want to clear your answers?")) {
+            setFormData(questions.map(q => ({
+                refId: q.refId,
+                drillChallengeRefId: challengeId,
+                drillSetRefId: q.drillSetRefId,
+                response: '',
+            })));
         }
     };
 
     const handleConvertToSpeech = async (text) => {
         try {
-            const response = await axios.post(API_TEXT_TO_SPEECH, {text}, {responseType: 'arraybuffer'});
+            const response = await axios.post(API_TEXT_TO_SPEECH, { text }, { responseType: 'arraybuffer' });
             const audioUrl = URL.createObjectURL(new Blob([response.data]));
             const audio = new Audio(audioUrl);
-            audio.play();
+            await audio.play();
         } catch (error) {
             console.error('Error converting text to speech:', error);
+            setNotification({ visible: true, message: "Could not play audio. Please check connections.", type: 'error' });
+            setTimeout(closeNotification, 3000);
         }
     };
 
-    return (<>
-        <Script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></Script>
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setIsSubmitting(true);
+        try {
+            const URL = `${API_LEXIMENTOR_BASE_URL}/drill/metadata/challenges/challenge/${challengeId}/scores`;
+            const response = await fetch(URL, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(formData),
+            });
 
-        <div className="alert alert-dark w-full font-bold text-center" role="alert">
-            Identify the right word from the Speech.
-        </div>
-    {notificationVisible ? (<ShowNotification isVisible={notificationVisible} isSuccess={notificationSuccess}
-                                              message={notificationMessage}/>) : (
-        <ShowNotification isVisible={false} isSuccess={notificationSuccess}
-                          message={notificationMessage}/>)}
-        <form className="p-4 md:p-5" onSubmit={handleSubmit}>
-            <div className="container border-1">
-                <table className="table-auto w-full" cellPadding="10" cellSpacing="10">
-                    <tbody>
-                    {drillSetData.data.map((item, index) => (<>
-                            <tr className="bg-blue-300 border-2 border-blue-600" key={index}>
-                                <td>
-                                    <label className="font-semibold mr-3 my-2">Word:</label>
-                                    <button type="button" className=" text-gray-900 bg-gradient-to-r from-teal-200 to-lime-200
-                                hover:bg-gradient-to-l hover:from-teal-200 hover:to-lime-200 focus:ring-4
-                                focus:outline-none focus:ring-lime-200 dark:focus
-                        :ring-teal-700 font-medium rounded-lg text-sm px-5 py-2.5 text-center me-2 mb-2"
-                                            onClick={() => handleConvertToSpeech(item.word)}>Click to listen
-                                    </button>
-                                </td>
-                            </tr>
-                            <tr className="bg-gray-100 border-2 border-gray-600" key={`${item.refId}-response`}>
-                                <td>
-                                <textarea
-                                    className="form-control"
-                                    name="response"
-                                    value={item.response}
-                                    onChange={(e) => handleChange(index, e.target.name, e.target.value)}
-                                />
-                                </td>
-                            </tr>
-                        </>))}
-                    </tbody>
-                </table>
-                <div className="flex flex-row my-4">
-                    <div className="basis-1/12">
-                        <button type="submit" className="btn btn-primary bg-blue-400 w-3/4 font-semibold">Submit
-                        </button>
-                    </div>
-                    <div className="basis-1/12">
-                        <button type="reset" className="btn btn-danger bg-red-400 w-3/4 font-semibold">Reset</button>
-                    </div>
-                    <div className="basis-10/12">
+            if (!response.ok) throw new Error("Network response was not ok");
+
+            setNotification({ visible: true, message: "Drill submitted successfully!", type: 'success' });
+        } catch (error) {
+            console.error('Error:', error);
+            setNotification({ visible: true, message: "Submission failed. Please try again.", type: 'error' });
+        } finally {
+            setIsSubmitting(false);
+            setTimeout(closeNotification, 5000);
+        }
+    };
+
+    return (
+        <Layout content={
+            <div className="min-h-screen bg-slate-50 pb-20 font-sans">
+
+                {/* Header */}
+                <div className="bg-white border-b border-slate-200">
+                    <div className="max-w-4xl mx-auto px-6 py-8">
+                        <div className="mb-6 flex items-center gap-2">
+                            <Link href={`/challenges/${drillRefId}`} className="text-slate-400 hover:text-indigo-600 transition-colors flex items-center gap-1 text-sm font-medium">
+                                <ArrowLeftIcon className="w-4 h-4" />
+                                Back to Drill
+                            </Link>
+                        </div>
+
+                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                            <div>
+                                <h1 className="text-3xl font-extrabold text-slate-800 mb-2 flex items-center gap-3">
+                                    <MusicalNoteIcon className="w-8 h-8 text-indigo-600" />
+                                    Listening Practice
+                                </h1>
+                                <p className="text-slate-500 text-lg">
+                                    Listen to the pronunciation and type the word you hear.
+                                </p>
+                            </div>
+                        </div>
                     </div>
                 </div>
+
+                {/* Content */}
+                <main className="max-w-4xl mx-auto px-6 py-10">
+                    <form onSubmit={handleSubmit} className="space-y-6">
+                        {questions.map((item, index) => (
+                            <ChallengeCard
+                                key={item.refId}
+                                item={item}
+                                index={index}
+                                value={formData[index]?.response}
+                                onChange={handleChange}
+                                onPlayAudio={handleConvertToSpeech}
+                            />
+                        ))}
+
+                        {/* Actions */}
+                        <div className="sticky bottom-6 z-10 bg-white/80 backdrop-blur-md border border-slate-200 shadow-xl rounded-2xl p-4 flex justify-between items-center mt-10 animate-in slide-in-from-bottom-4 duration-500">
+                            <button
+                                type="button"
+                                onClick={handleReset}
+                                className="flex items-center gap-2 px-6 py-3 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-xl font-bold transition-all"
+                            >
+                                <ArrowPathIcon className="w-5 h-5" />
+                                Reset
+                            </button>
+
+                            <button
+                                type="submit"
+                                disabled={isSubmitting}
+                                className="flex items-center gap-2 px-8 py-3 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl font-bold shadow-lg shadow-indigo-200 transition-all hover:scale-105 active:scale-95"
+                            >
+                                {isSubmitting ? (
+                                    <>
+                                        <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                        Submitting...
+                                    </>
+                                ) : (
+                                    <>
+                                        <PaperAirplaneIcon className="w-5 h-5" />
+                                        Submit Answers
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    </form>
+                </main>
+
+                {notification.visible && (
+                    <Notification
+                        message={notification.message}
+                        type={notification.type}
+                        onClose={closeNotification}
+                    />
+                )}
+
             </div>
-        </form>
-    </>);
-}
+        } />
+    );
+};
 
 export default LoadIdentifyWordDrillChallenge;
 
 export async function getServerSideProps(context) {
-    const {params} = context;
-
-    // Accessing the array of values
+    const { params } = context;
     const drillId = params.drillId;
-    const challengeId = drillId[1];
-    const drillSetData = await fetchData(`${API_LEXIMENTOR_BASE_URL}/drill/metadata/sets/${drillId[0]}`)
-    return {
-        props: {
-            drillSetData, challengeId
-        },
-    };
+    const challengeId = drillId[0];
+    const drillRefId = drillId[1];
 
+    try {
+        const drillSetData = await fetchData(`${API_LEXIMENTOR_BASE_URL}/drill/metadata/sets/${drillRefId}`) || { data: [] };
+        const drillSetWordData = await fetchData(`${API_LEXIMENTOR_BASE_URL}/drill/metadata/sets/words/data/${drillRefId}`) || { data: [] };
+        const challengeScores = await fetchData(`${API_LEXIMENTOR_BASE_URL}/drill/metadata/challenges/challenge/${challengeId}/scores`) || { data: [] };
+
+        return {
+            props: { drillSetData, drillSetWordData, challengeId, drillRefId, challengeScores },
+        };
+    } catch (e) {
+        console.error("Error fetching drill data:", e);
+        return {
+            props: {
+                drillSetData: { data: [] },
+                drillSetWordData: { data: [] },
+                challengeId,
+                drillRefId,
+                challengeScores: { data: [] }
+            },
+        };
+    }
 }
-
-
-// export default function Home() {
-//     const [text, setText] = useState('');
-//
-//     const handleConvertToSpeech = async () => {
-//         try {
-//             const response = await axios.post('http://192.168.1.5:8300/text-to-speech', { text }, { responseType: 'arraybuffer' });
-//             const audioUrl = URL.createObjectURL(new Blob([response.data]));
-//             const audio = new Audio(audioUrl);
-//             audio.play();
-//         } catch (error) {
-//             console.error('Error converting text to speech:', error);
-//         }
-//     };
-//
-//     return (
-//         <div>
-//             <textarea value={text} onChange={(e) => setText(e.target.value)} />
-//             <button onClick={handleConvertToSpeech}>Convert to Speech</button>
-//         </div>
-//     );
-// }

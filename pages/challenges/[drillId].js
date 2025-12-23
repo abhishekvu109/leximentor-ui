@@ -1,19 +1,337 @@
-// pages/[id].js
 
-import React, {useCallback, useEffect, useState} from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import {API_LEXIMENTOR_BASE_URL} from "@/constants";
-import {deleteData, fetchData, postData} from "@/dataService";
-import DashboardCard from "@/components/widgets/DashboardCard";
+import { API_LEXIMENTOR_BASE_URL } from "@/constants";
+import { deleteData, fetchData, postData } from "@/dataService";
 import Layout from "@/components/layout/Layout";
+import { motion } from "framer-motion";
+import {
+    Play, Trash2, CheckCircle, AlertCircle, BarChart2,
+    Plus, RefreshCw, BookOpen, Mic, Brain, Hash, Type,
+    Layers, Zap, FileText, LayoutGrid, List, Sparkles
+} from "lucide-react";
+import {
+    LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+    PieChart, Pie, Cell, Legend, BarChart, Bar
+} from 'recharts';
 
-const Challenges = ({data, drillId}) => {
+const DRILL_TYPES = [
+    { id: 'MEANING', label: 'Meaning', icon: BookOpen, color: 'text-blue-600', bg: 'bg-blue-50', shadow: 'hover:shadow-blue-200/50' },
+    { id: 'POS', label: 'Identify POS', icon: Hash, color: 'text-purple-600', bg: 'bg-purple-50', shadow: 'hover:shadow-purple-200/50' },
+    { id: 'WS', label: 'Word Scramble', icon: Type, color: 'text-green-600', bg: 'bg-green-50', shadow: 'hover:shadow-green-200/50' },
+    { id: 'IDENTIFY', label: 'Pronunciation', icon: Mic, color: 'text-yellow-600', bg: 'bg-yellow-50', shadow: 'hover:shadow-yellow-200/50' },
+    { id: 'GUESS', label: 'Guess Word', icon: Brain, color: 'text-pink-600', bg: 'bg-pink-50', shadow: 'hover:shadow-pink-200/50' },
+    { id: 'MW', label: 'Match Word', icon: CheckCircle, color: 'text-indigo-600', bg: 'bg-indigo-50', shadow: 'hover:shadow-indigo-200/50' },
+    { id: 'FB', label: 'Flashcard Blitz', icon: Layers, color: 'text-teal-600', bg: 'bg-teal-50', shadow: 'hover:shadow-teal-200/50' },
+    { id: 'ST', label: 'Speed Typer', icon: Zap, color: 'text-orange-600', bg: 'bg-orange-50', shadow: 'hover:shadow-orange-200/50' },
+    { id: 'CM', label: 'Context Master', icon: FileText, color: 'text-cyan-600', bg: 'bg-cyan-50', shadow: 'hover:shadow-cyan-200/50' },
+];
+
+const getDrillConfig = (typeId) => {
+    // Map longer backend IDs to standard config IDs
+    const mapping = {
+        'LEARN_MEANING': 'MEANING',
+        'LEARN_POS': 'POS',
+        'WORD_SCRAMBLE': 'WS',
+        'SCRAMBLE': 'WS',
+        'IDENTIFY_WORD': 'IDENTIFY',
+        'GUESS_WORD': 'GUESS',
+        'MATCH_WORD': 'MW',
+        'FLASHCARD_BLITZ': 'FB',
+        'FLASHCARD': 'FB',
+        'SPEED_TYPER': 'ST',
+        'SPEED': 'ST',
+        'CONTEXT_MASTER': 'CM',
+        'CONTEXT': 'CM'
+    };
+    const standardId = mapping[typeId] || typeId;
+    return DRILL_TYPES.find(t => t.id === standardId);
+};
+
+const formatLabel = (str) => {
+    if (!str) return "";
+    return str.replace(/_/g, ' ')
+        .toLowerCase()
+        .split(' ')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ');
+};
+
+const ChallengeCard = ({ challenge, drillRefId, onDelete, onTry, onEvaluate, onViewReport }) => {
+    const isPassed = challenge.drillScore > 70;
+    const isCompleted = challenge.status === 'Completed';
+    const isEvaluated = challenge.evaluationStatus === 'Evaluated';
+
+    const typeConfig = getDrillConfig(challenge.drillType) || {
+        label: formatLabel(challenge.drillType),
+        color: 'bg-gray-100 text-gray-600',
+        icon: BookOpen
+    };
+    const Icon = typeConfig.icon;
+
+    return (
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all p-5 flex flex-col h-full group relative">
+            <div className="flex justify-between items-start mb-4">
+                <div className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide flex items-center gap-2 ${typeConfig.color}`}>
+                    <Icon size={12} />
+                    {typeConfig.label}
+                </div>
+                {isCompleted && (
+                    <div className={`flex flex-col items-end`}>
+                        <span className={`text-2xl font-bold ${isPassed ? 'text-green-600' : 'text-red-500'}`}>
+                            {challenge.drillScore}%
+                        </span>
+                        <span className="text-[10px] uppercase font-bold text-gray-400">Score</span>
+                    </div>
+                )}
+            </div>
+
+            <div className="flex-1 mb-4">
+                <div className="text-xs text-gray-400 mb-1 font-mono">{challenge.refId}</div>
+                <div className="flex items-center gap-4 text-sm text-gray-600">
+                    <div className="flex flex-col">
+                        <span className="font-bold text-gray-900">{challenge.totalCorrect || 0}</span>
+                        <span className="text-xs text-gray-400">Correct</span>
+                    </div>
+                    <div className="w-px h-8 bg-gray-100"></div>
+                    <div className="flex flex-col">
+                        <span className="font-bold text-gray-900">{challenge.totalWrong || 0}</span>
+                        <span className="text-xs text-gray-400">Wrong</span>
+                    </div>
+                </div>
+            </div>
+
+            {/* Actions */}
+            <div className="pt-4 border-t border-gray-100 flex items-center gap-2">
+                {!isCompleted ? (
+                    <Link href={onTry(challenge.drillType, challenge.refId)} className="flex-1">
+                        <button className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-colors">
+                            <Play size={16} /> Start
+                        </button>
+                    </Link>
+                ) : !isEvaluated ? (
+                    <button
+                        onClick={() => onEvaluate(challenge)}
+                        className="flex-1 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-colors"
+                    >
+                        <BarChart2 size={16} /> Evaluate
+                    </button>
+                ) : (
+                    <Link
+                        href={`/evaluation_report/${challenge.drillType === 'CM' ? 'context-master' : 'meaning_report'}/${challenge.refId}`}
+                        className="flex-1"
+                    >
+                        <button className="w-full py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-colors">
+                            <BookOpen size={16} /> Report
+                        </button>
+                    </Link>
+                )}
+
+                <button
+                    onClick={() => onDelete(challenge.refId)}
+                    className="p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-colors"
+                    title="Delete Challenge"
+                >
+                    <Trash2 size={18} />
+                </button>
+            </div>
+        </div>
+    );
+};
+
+const ChallengeAnalytics = ({ challenges }) => {
+    if (!challenges || challenges.length === 0) return null;
+
+    // Aggregations
+    const totalChallenges = challenges.length;
+    const completedChallenges = challenges.filter(c => c.status === 'Completed');
+    const avgScore = completedChallenges.length > 0
+        ? (completedChallenges.reduce((acc, c) => acc + (c.drillScore || 0), 0) / completedChallenges.length).toFixed(1)
+        : 0;
+    const masteryRate = completedChallenges.length > 0
+        ? ((completedChallenges.filter(c => c.drillScore > 70).length / completedChallenges.length) * 100).toFixed(0)
+        : 0;
+
+    // Trend Data
+    const trendData = [...completedChallenges]
+        .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))
+        .map((c, i) => ({
+            name: `Day ${i + 1}`,
+            score: c.drillScore,
+            date: new Date(c.createdAt).toLocaleDateString()
+        }));
+
+    // Type Data
+    const typeMap = challenges.reduce((acc, c) => {
+        const type = DRILL_TYPES.find(t => t.id === c.drillType)?.label || c.drillType;
+        acc[type] = (acc[type] || 0) + 1;
+        return acc;
+    }, {});
+    const typeData = Object.entries(typeMap).map(([name, value]) => ({ name, value }));
+    const COLORS = ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ec4899', '#06b6d4'];
+
+    // Trouble Areas (Mocked for now as we don't have per-word aggregate API yet, 
+    // but we can show which types have lowest scores)
+    const typePerformance = completedChallenges.reduce((acc, c) => {
+        const type = DRILL_TYPES.find(t => t.id === c.drillType)?.label || c.drillType;
+        if (!acc[type]) acc[type] = { name: type, total: 0, count: 0 };
+        acc[type].total += (c.drillScore || 0);
+        acc[type].count += 1;
+        return acc;
+    }, {});
+    const performanceData = Object.values(typePerformance)
+        .map(t => ({ name: t.name, score: Math.round(t.total / t.count) }))
+        .sort((a, b) => a.score - b.score);
+
+    return (
+        <div className="space-y-8 animate-in fade-in duration-700">
+            {/* Stats Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                {[
+                    { label: 'Total Drills', value: totalChallenges, icon: Layers, color: 'text-blue-600', bg: 'bg-blue-50' },
+                    { label: 'Avg Accuracy', value: `${avgScore}%`, icon: CheckCircle, color: 'text-green-600', bg: 'bg-green-50' },
+                    { label: 'Mastery Rate', value: `${masteryRate}%`, icon: Sparkles, color: 'text-purple-600', bg: 'bg-purple-50' },
+                    { label: 'Words Tested', value: completedChallenges.reduce((acc, c) => acc + (c.totalCorrect + c.totalWrong || 0), 0), icon: FileText, color: 'text-orange-600', bg: 'bg-orange-50' },
+                ].map((stat, i) => (
+                    <div key={i} className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm">
+                        <div className={`w-12 h-12 ${stat.bg} ${stat.color} rounded-2xl flex items-center justify-center mb-4`}>
+                            <stat.icon size={24} />
+                        </div>
+                        <div className="text-2xl font-black text-gray-900">{stat.value}</div>
+                        <div className="text-xs font-bold text-gray-400 uppercase tracking-wider">{stat.label}</div>
+                    </div>
+                ))}
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {/* Score Trend */}
+                <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm">
+                    <h3 className="text-sm font-black text-gray-900 uppercase tracking-widest mb-6 flex items-center gap-2">
+                        <BarChart2 size={16} className="text-blue-500" /> Performance Trend
+                    </h3>
+                    <div className="h-64 w-full">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <LineChart data={trendData}>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                <XAxis dataKey="name" hide />
+                                <YAxis domain={[0, 100]} stroke="#94a3b8" fontSize={12} tickFormatter={(v) => `${v}%`} />
+                                <Tooltip
+                                    contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                                    formatter={(v) => [`${v}%`, 'Score']}
+                                />
+                                <Line type="monotone" dataKey="score" stroke="#3b82f6" strokeWidth={4} dot={{ r: 4, fill: '#3b82f6', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 6 }} />
+                            </LineChart>
+                        </ResponsiveContainer>
+                    </div>
+                </div>
+
+                {/* Drill Type Breakdown */}
+                <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm">
+                    <h3 className="text-sm font-black text-gray-900 uppercase tracking-widest mb-6 flex items-center gap-2">
+                        <Plus size={16} className="text-purple-500" /> Drill Distribution
+                    </h3>
+                    <div className="h-64 w-full">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                                <Pie
+                                    data={typeData}
+                                    innerRadius={60}
+                                    outerRadius={80}
+                                    paddingAngle={5}
+                                    dataKey="value"
+                                >
+                                    {typeData.map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                    ))}
+                                </Pie>
+                                <Tooltip />
+                                <Legend verticalAlign="bottom" height={36} />
+                            </PieChart>
+                        </ResponsiveContainer>
+                    </div>
+                </div>
+
+                {/* Performance by Type */}
+                <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm lg:col-span-2">
+                    <h3 className="text-sm font-black text-gray-900 uppercase tracking-widest mb-6 flex items-center gap-2">
+                        <AlertCircle size={16} className="text-orange-500" /> Accuracy per Drill Type
+                    </h3>
+                    <div className="h-64 w-full">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={performanceData} layout="vertical">
+                                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
+                                <XAxis type="number" domain={[0, 100]} hide />
+                                <YAxis dataKey="name" type="category" stroke="#64748b" fontSize={12} width={120} />
+                                <Tooltip />
+                                <Bar dataKey="score" fill="#8b5cf6" radius={[0, 8, 8, 0]} barSize={20} />
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+const EvaluatorModal = ({ isVisible, onClose, evaluators, onSubmit, challengeId }) => {
+    const [selectedEvaluator, setSelectedEvaluator] = useState('');
+
+    if (!isVisible) return null;
+
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        onSubmit(challengeId, selectedEvaluator);
+    };
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in">
+            <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
+                <div className="p-4 border-b flex justify-between items-center">
+                    <h3 className="font-bold text-gray-800">Submit for Evaluation</h3>
+                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><Trash2 className="hidden" /><span className="text-xl">&times;</span></button>
+                </div>
+                <form onSubmit={handleSubmit} className="p-6 space-y-4">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Challenge ID</label>
+                        <input type="text" value={challengeId} disabled className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-500" />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Select Evaluator</label>
+                        <select
+                            required
+                            value={selectedEvaluator}
+                            onChange={(e) => setSelectedEvaluator(e.target.value)}
+                            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500"
+                        >
+                            <option value="">Choose...</option>
+                            {evaluators?.data?.map((ev, i) => (
+                                <option key={i} value={ev.name}>{ev.name}</option>
+                            ))}
+                        </select>
+                    </div>
+                    <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded-xl transition-colors">
+                        Evaluate
+                    </button>
+                </form>
+            </div>
+        </div>
+    );
+};
+
+const Challenges = ({ data, drillId }) => {
     const [challengeData, setChallengeData] = useState(data);
     const [drillRefId, setDrillRefId] = useState(drillId);
+
+    // Evaluation State
     const [isEvaluatorVisible, setIsEvaluatorVisible] = useState(false);
     const [challengeEvaluators, setChallengeEvaluators] = useState(null);
-    const [challengeRequestData, setChallengeRequestData] = useState({drillId: drillId, drillType: ''});
-    const [evaluationData, setEvaluationData] = useState({challengeId: "", evaluator: ""});
+    const [activeChallengeId, setActiveChallengeId] = useState(null);
+
+    // Creation State
+    const [creatingType, setCreatingType] = useState(null);
+
+    // View State
+    const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'analytics'
 
     useEffect(() => {
         if (typeof window !== "undefined" && window.initFlowbite) {
@@ -21,925 +339,211 @@ const Challenges = ({data, drillId}) => {
         }
     }, []);
 
-    const handleChange = (e) => {
-        // Update form data state when input fields change
-        setEvaluationData({...evaluationData, [e.target.name]: e.target.value});
-    };
-    const handleEvaluatorModel = async (isOpen, challengeId) => {
-        setIsEvaluatorVisible(isOpen);
-        const URL = `${API_LEXIMENTOR_BASE_URL}/drill/metadata/challenges/challenge/evaluators?challengeRefId=${challengeId}`;
-        const challengeEvalData = await fetchData(URL);
-        console.log(challengeEvalData);
-        setChallengeEvaluators(challengeEvalData);
-        setEvaluationData({challengeId: `${challengeId}`, evaluator: ''});
+    const loadChallenges = async () => {
+        const URL = `${API_LEXIMENTOR_BASE_URL}/drill/metadata/challenges/${drillRefId}`;
+        const res = await fetchData(URL);
+        setChallengeData(res);
     };
 
-    const getDrillTypeLink = (drillType) => {
-        if (drillType == 'LEARN_MEANING') return '/drills/challenges/meaning/'; else if (drillType == 'LEARN_POS') return '/drills/challenges/pos/'; else if (drillType == 'IDENTIFY_WORD') return '/drills/challenges/identify_word/'; else if (drillType == 'GUESS_WORD') return '/drills/challenges/guess_word/'; else return '/drills/challenges/meaning/';
-    };
-
-    const handleChallengeRequestData = async (drillName) => {
-        setChallengeRequestData((prevState) => {
-            return {...prevState, drillType: drillName};
-        });
-    };
-
-    useEffect(() => {
-        // This code block will execute after the state has been updated
-        if (challengeRequestData.drillType != null && challengeRequestData.drillType.length > 0) {
-            createChallenge();
+    const handleCreateChallenge = async (type) => {
+        setCreatingType(type);
+        try {
+            const URL = `${API_LEXIMENTOR_BASE_URL}/drill/metadata/challenges/challenge?drillId=${drillRefId}&drillType=${type}`;
+            await postData(URL);
+            await loadChallenges();
+        } catch (error) {
+            console.error(error);
+            alert("Failed to create challenge");
+        } finally {
+            setCreatingType(null);
         }
-    }, [challengeRequestData]); // Add challengeRequestData as a dependency
-
-    const LoadTable = async () => {
-        const URL = `${API_LEXIMENTOR_BASE_URL}/drill/metadata/challenges/${drillRefId}`;
-        const challengeDataFromDb = await fetchData(URL)
-        setChallengeData(challengeDataFromDb);
-    };
-    // const createChallenge = async () => {
-    //     const queryString = new URLSearchParams(challengeRequestData).toString();
-    //     const URL = `${API_LEXIMENTOR_BASE_URL}/drill/metadata/challenges/challenge?${queryString}`;
-    //     const saveChallengeSavedData = await postData(URL);
-    //     await LoadTable();
-    // };
-    const createChallenge = useCallback(async () => {
-        const queryString = new URLSearchParams(challengeRequestData).toString();
-        const URL = `${API_LEXIMENTOR_BASE_URL}/drill/metadata/challenges/challenge?${queryString}`;
-        const saveChallengeSavedData = await postData(URL);
-        await LoadTable();
-    }, [challengeRequestData, LoadTable]); // include dependencies here
-
-    const deleteChallenge = async (drillRefId) => {
-        const URL = `${API_LEXIMENTOR_BASE_URL}/drill/metadata/challenges/${drillRefId}`;
-        const saveChallengeSavedData = await deleteData(URL);
-        await LoadTable();
     };
 
-    const Evaluate = async (e) => {
-        e.preventDefault();
-        const queryString = new URLSearchParams(evaluationData).toString();
-        const URL = `${API_LEXIMENTOR_BASE_URL}/drill/metadata/challenges/challenge/${evaluationData.challengeId}/evaluate?${queryString}`;
-        const evaluateFormData = await postData(URL);
-        await handleEvaluatorModel(false, '');
+    const handleDelete = async (refId) => {
+        if (!confirm("Are you sure you want to delete this challenge?")) return;
+        const URL = `${API_LEXIMENTOR_BASE_URL}/drill/metadata/challenges/${refId}`;
+        await deleteData(URL);
+        await loadChallenges();
     };
 
+    const handleOpenEvaluator = async (challengeId) => {
+        setActiveChallengeId(challengeId);
+        setIsEvaluatorVisible(true);
+        const URL = `${API_LEXIMENTOR_BASE_URL}/drill/metadata/challenges/challenge/evaluators?challengeRefId=${challengeId}`;
+        const res = await fetchData(URL);
+        setChallengeEvaluators(res);
+    };
 
-    const EvaluatorSelectorModalComponent = ({isVisible}) => {
-        if (isVisible) {
-            return <>
-                <div id="create-new-drill-modal-form" tabIndex="-1" aria-hidden="true" data-modal-placement="center"
-                     className="overflow-y-auto overflow-x-hidden fixed inset-0 z-50 flex justify-center items-center">
-                    <div className="relative p-4 w-full max-w-md max-h-full">
-                        {/*Modal content*/}
-                        <div className="relative bg-white rounded-lg shadow dark:bg-gray-700">
-                            {/*Modal header*/}
-                            <div
-                                className="flex items-center justify-between p-4 md:p-5 border-b rounded-t dark:border-gray-600">
-                                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                                    Create New Drill
-                                </h3>
-                                <button type="button" onClick={() => handleEvaluatorModel(false, '')}
-                                        className="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm w-8 h-8 ms-auto inline-flex justify-center items-center dark:hover:bg-gray-600 dark:hover:text-white"
-                                        data-modal-toggle="create-new-drill-modal-form">
-                                    <svg className="w-3 h-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
-                                         fill="none"
-                                         viewBox="0 0 14 14">
-                                        <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"
-                                              strokeWidth="2" d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"/>
-                                    </svg>
-                                    <span className="sr-only">Close modal</span>
-                                </button>
+    const handleSubmitEvaluation = async (challengeId, evaluator) => {
+        const URL = `${API_LEXIMENTOR_BASE_URL}/drill/metadata/challenges/challenge/${challengeId}/evaluate?challengeId=${challengeId}&evaluator=${evaluator}`;
+        await postData(URL);
+        setIsEvaluatorVisible(false);
+        setActiveChallengeId(null);
+        alert("Evaluation submitted!"); // Replace with toast
+        await loadChallenges();
+    };
+
+    const getDrillLink = (type, refId) => {
+        const base = type === 'LEARN_MEANING' ? '/drills/challenges/meaning/' :
+            type === 'LEARN_POS' ? '/drills/challenges/pos/' :
+                type === 'IDENTIFY_WORD' ? '/drills/challenges/identify_word/' :
+                    type === 'GUESS_WORD' ? '/drills/challenges/guess_word/' :
+                        type === 'MATCH_WORD' || type === 'MATCH_WORD' ? '/drills/challenges/match_meaning/' :
+                            type === 'CONTEXT' || type === 'CONTEXT_MASTER' ? '/drills/challenges/context_master/' :
+                                type === 'SPEED' || type === 'SPEED_TYPER' ? '/drills/challenges/speed_typer/' :
+                                    type === 'FLASHCARD' || type === 'FLASHCARD_BLITZ' ? '/drills/challenges/flashcard_blitz/' :
+                                        type === 'SCRAMBLE' || type === 'WORD_SCRAMBLE' ? '/drills/challenges/word_scramble/' :
+                                            '/drills/challenges/meaning/';
+        return `${base}${refId}/${drillRefId}`;
+    };
+
+    return (
+        <Layout content={
+            <div className="max-w-7xl mx-auto px-4 py-8 space-y-8">
+                {/* Header */}
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 border-b border-gray-100 pb-6">
+                    <div>
+                        <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
+                            <Link href="/dashboard/dashboard2" className="hover:text-blue-600">Dashboard</Link>
+                            <span>/</span>
+                            <span>Drills</span>
+                        </div>
+                        <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Challenge Manager</h1>
+                        <p className="text-gray-500">Create, track, and evaluate your learning drills.</p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                        <div className="flex bg-gray-100 p-1 rounded-xl mr-4">
+                            <button
+                                onClick={() => setViewMode('grid')}
+                                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${viewMode === 'grid' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+                            >
+                                <List size={14} /> Drills
+                            </button>
+                            <button
+                                onClick={() => setViewMode('analytics')}
+                                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${viewMode === 'analytics' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+                            >
+                                <BarChart2 size={14} /> Insights
+                            </button>
+                        </div>
+                        <button
+                            onClick={loadChallenges}
+                            className="flex items-center gap-2 text-sm font-bold text-blue-600 hover:bg-blue-50 px-3 py-2 rounded-lg transition-colors"
+                        >
+                            <RefreshCw size={16} /> Refresh
+                        </button>
+                    </div>
+                </div>
+
+                {/* Create Toolbar */}
+                <div className="relative group overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 to-purple-500/5 rounded-[2rem] blur-2xl group-hover:blur-3xl transition-all duration-700" />
+                    <div className="relative bg-white/40 backdrop-blur-xl rounded-[2.5rem] p-8 border border-white/60 shadow-[0_8px_32px_rgba(0,0,0,0.04)] ring-1 ring-black/5">
+                        <div className="flex items-center justify-between mb-8">
+                            <div>
+                                <h3 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Drill Workshop</h3>
+                                <p className="text-xl font-bold text-slate-800">Generate a New Challenge</p>
                             </div>
-                            {/*Modal body*/}
-                            <form className="p-4 md:p-5" onSubmit={Evaluate}>
-                                <div className="grid gap-4 mb-4 grid-cols-1">
-                                    <div className="col-span-2 sm:col-span-1">
-                                        <label htmlFor="limit"
-                                               className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Challenge
-                                            ID</label>
-                                        <input type="text" name="challengeId" id="challengeId" disabled={true}
-                                               value={evaluationData.challengeId} onChange={handleChange}
-                                               className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500"
-                                               placeholder="" required=""/>
-                                    </div>
-                                    <div className="col-span-2 sm:col-span-1">
-                                        <label htmlFor="evaluator"
-                                               className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
-                                            Evaluator
-                                        </label>
-                                        {(challengeEvaluators && challengeEvaluators.data && challengeEvaluators.data.length > 0) ? (
-                                            <select id="evaluator" name="evaluator" value={evaluationData.evaluator}
-                                                    onChange={handleChange}
-                                                    className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500"
-                                                    required>
-                                                <option value="">Select Evaluator</option>
-                                                {challengeEvaluators.data.map((item, index) => (
-                                                    <option key={index} value={item.name}>
-                                                        {item.name}
-                                                    </option>))}
-                                            </select>) : (
-                                            <p className="text-sm text-gray-500">No evaluators available.</p>)}
-                                    </div>
-                                </div>
-                                <button type="submit"
-                                        className="text-white inline-flex items-center bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800">
-                                    <svg className="me-1 -ms-1 w-5 h-5" fill="currentColor" viewBox="0 0 20 20"
-                                         xmlns="http://www.w3.org/2000/svg">
-                                        <path fillRule="evenodd"
-                                              d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z"
-                                              clipRule="evenodd"></path>
-                                    </svg>
-                                    Evaluate
-                                </button>
-                            </form>
+                            <div className="w-10 h-10 bg-blue-500 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-blue-200 animate-pulse">
+                                <Plus size={20} />
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                            {DRILL_TYPES.map((type, idx) => {
+                                const Icon = type.icon;
+                                const isCreating = creatingType === type.id;
+                                return (
+                                    <motion.button
+                                        key={type.id}
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ delay: idx * 0.05 }}
+                                        whileHover={{ y: -5, scale: 1.02 }}
+                                        whileTap={{ scale: 0.98 }}
+                                        onClick={() => handleCreateChallenge(type.id)}
+                                        disabled={!!creatingType}
+                                        className={`group/btn relative flex flex-col items-center gap-3 p-5 rounded-[2rem] transition-all bg-white border border-slate-100 hover:border-transparent shadow-sm hover:shadow-xl ${type.shadow}
+                                            ${isCreating ? 'opacity-50 cursor-wait' : ''}
+                                        `}
+                                    >
+                                        <div className={`w-14 h-14 ${type.bg} ${type.color} rounded-2xl flex items-center justify-center transition-transform group-hover/btn:scale-110 duration-300`}>
+                                            <Icon size={28} strokeWidth={2.5} />
+                                        </div>
+                                        <div className="flex flex-col items-center">
+                                            <span className="text-sm font-black text-slate-700 text-center leading-tight">
+                                                {isCreating ? 'Creating...' : type.label}
+                                            </span>
+                                            <div className="mt-1 h-1 w-0 group-hover/btn:w-8 bg-slate-200 rounded-full transition-all duration-300" />
+                                        </div>
+                                    </motion.button>
+                                )
+                            })}
                         </div>
                     </div>
                 </div>
 
-            </>
-        }
-    };
-
-
-    return (<><Layout content={<>
-        <div className="container mt-5">
-            <DashboardCard title="REVENUE"
-                           amount="$12,500"
-                           percentageChange="+24%"
-                           changeText="since last week"
-                           icon="M9 5v14m8-7h-2m0 0h-2m2 0v2m0-2v-2M3 11h6m-6 4h6m11 4H4c-.55228 0-1-.4477-1-1V6c0-.55228.44772-1 1-1h16c.5523 0 1 .44772 1 1v12c0 .5523-.4477 1-1 1Z"
-                           variant="green"/>
-        </div>
-        <div className="container mt-5">
-            <div className="container mt-2 text-center border border-1 border-gray-200 w-11/12">
-               <span
-                   className="bg-blue-100 mt-2 text-blue-800 text-xs font-medium inline-flex items-center px-2.5 py-0.5 rounded-sm dark:bg-gray-700 dark:text-blue-400 border border-blue-400">
-                <svg className="w-2.5 h-2.5 me-1.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
-                     fill="currentColor"
-                     viewBox="0 0 20 20">
-                <path
-                    d="M10 0a10 10 0 1 0 10 10A10.011 10.011 0 0 0 10 0Zm3.982 13.982a1 1 0 0 1-1.414 0l-3.274-3.274A1.012 1.012 0 0 1 9 10V6a1 1 0 0 1 2 0v3.586l2.982 2.982a1 1 0 0 1 0 1.414Z"/>
-                </svg>
-                Add new challenge
-                </span>
-                <div className="container mt-2 text-center">
-                    <div className="inline-flex space-x-2 rounded-lg shadow-lg bg-gray-100 dark:bg-gray-800 p-1"
-                         role="group">
-                        {/* Dashboard Button */}
-                        <Link href="/dashboard/dashboard">
-                            <button
-                                type="button"
-                                className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-gray-900  border border-gray-900 rounded-lg hover:bg-gray-700 hover:text-white focus:outline-none focus:ring-2 focus:ring-gray-500 dark:border-white dark:text-white dark:hover:bg-black dark:focus:bg-black transition-all ease-in-out duration-300"
-                            >
-                                <svg className="w-3 h-3 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                                    <path
-                                        d="M3 3h14a2 2 0 0 1 2 2v2H1V5a2 2 0 0 1 2-2Zm16 5v7a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8h18Zm-7 2H8v2h4v-2Z"/>
-                                </svg>
-                                Dashboard
-                            </button>
-                        </Link>
-
-                        {/* Meaning Button */}
-                        <button
-                            onClick={(e) => {
-                                e.preventDefault();
-                                handleChallengeRequestData('MEANING');
-                            }}
-                            className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-gray-900  border border-gray-900 rounded-lg hover:bg-gray-700 hover:text-white focus:outline-none focus:ring-2 focus:ring-gray-500 dark:border-white dark:text-white dark:hover:bg-black dark:focus:bg-black transition-all ease-in-out duration-300"
-                        >
-                            <svg className="w-3 h-3 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                                <path
-                                    d="M10 3a7 7 0 0 1 7 7c0 2.9-3 6.6-5.3 8.7a1 1 0 0 1-1.4 0C6.9 16.6 4 12.9 4 10a6 6 0 0 1 6-7Z"/>
-                            </svg>
-                            Meaning
-                        </button>
-
-                        {/* Identify POS Button */}
-                        <button
-                            onClick={(e) => {
-                                e.preventDefault();
-                                handleChallengeRequestData('POS');
-                            }}
-                            className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-gray-900  border border-gray-900 rounded-lg hover:bg-gray-700 hover:text-white focus:outline-none focus:ring-2 focus:ring-gray-500 dark:border-white dark:text-white dark:hover:bg-black dark:focus:bg-black transition-all ease-in-out duration-300"
-                        >
-                            <svg className="w-3 h-3 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                                <path d="M5 4h10v2H5V4Zm0 4h10v2H5V8Zm0 4h6v2H5v-2Z"/>
-                            </svg>
-                            Identify POS
-                        </button>
-
-                        {/* Spell Jumble Button */}
-                        <button
-                            onClick={(e) => {
-                                e.preventDefault();
-                                handleChallengeRequestData('SPELL');
-                            }}
-                            className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-gray-900 bg-transparent border border-gray-900 rounded-lg hover:bg-gray-700 hover:text-white focus:outline-none focus:ring-2 focus:ring-gray-500 dark:border-white dark:text-white dark:hover:bg-black dark:focus:bg-black transition-all ease-in-out duration-300"
-                        >
-                            <svg className="w-3 h-3 mr-2" fill="currentColor" viewBox="currentColor" width="20"
-                                 height="20">
-                                <path
-                                    d="M12 18c-2.21 0-4-1.79-4-4h2a2 2 0 1 0 4 0 2 2 0 0 0-4 0H6a6 6 0 1 1 12 0c0 3.31-2.69 6-6 6Z"/>
-                            </svg>
-                            Spell Jumble
-                        </button>
-
-                        {/* Spell it from Pronunciation Button */}
-                        <button
-                            onClick={(e) => {
-                                e.preventDefault();
-                                handleChallengeRequestData('IDENTIFY');
-                            }}
-                            className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-gray-900  border border-gray-900 rounded-lg hover:bg-gray-700 hover:text-white focus:outline-none focus:ring-2 focus:ring-gray-500 dark:border-white dark:text-white dark:hover:bg-black dark:focus:bg-black transition-all ease-in-out duration-300"
-                        >
-                            <svg className="w-3 h-3 mr-2" fill="currentColor" viewBox="0 0 24 24">
-                                <path
-                                    d="M12 2a10 10 0 0 1 0 20v-2a8 8 0 1 0-8-8H2A10 10 0 0 1 12 2Zm0 6a2 2 0 1 0 0 4 2 2 0 0 0 0-4Z"/>
-                            </svg>
-                            Spell it from pronunciation
-                        </button>
-
-                        {/* Guess Word from Meaning Button */}
-                        <button
-                            onClick={(e) => {
-                                e.preventDefault();
-                                handleChallengeRequestData('GUESS');
-                            }}
-                            className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-gray-900  border border-gray-900 rounded-lg hover:bg-gray-700 hover:text-white focus:outline-none focus:ring-2 focus:ring-gray-500 dark:border-white dark:text-white dark:hover:bg-black dark:focus:bg-black transition-all ease-in-out duration-300"
-                        >
-                            <svg className="w-3 h-3 mr-2" fill="currentColor" viewBox="0 0 24 24">
-                                <path
-                                    d="M10 2a8 8 0 0 1 8 8c0 2.2-1.1 4.2-2.9 5.3L15 18H9v-2h4.1c.9-.7 1.4-1.8 1.4-3a6 6 0 1 0-6 6v2a8 8 0 0 1 2-15.9Z"/>
-                            </svg>
-                            Guess word from meaning
-                        </button>
-
-                        {/* Match the Right Word Button */}
-                        <button
-                            onClick={(e) => {
-                                e.preventDefault();
-                                handleChallengeRequestData('MATCH');
-                            }}
-                            className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-gray-900  border border-gray-900 rounded-lg hover:bg-gray-700 hover:text-white focus:outline-none focus:ring-2 focus:ring-gray-500 dark:border-white dark:text-white dark:hover:bg-black dark:focus:bg-black transition-all ease-in-out duration-300"
-                        >
-                            <svg className="w-3 h-3 mr-2" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M3 6h18v2H3V6Zm0 5h18v2H3v-2Zm0 5h12v2H3v-2Z"/>
-                            </svg>
-                            Match the right word
-                        </button>
-
-                        {/* Reload Button */}
-                        <button
-                            onClick={LoadTable}
-                            className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-gray-900  border border-gray-900 rounded-lg hover:bg-gray-700 hover:text-white focus:outline-none focus:ring-2 focus:ring-gray-500 dark:border-white dark:text-white dark:hover:bg-black dark:focus:bg-black transition-all ease-in-out duration-300"
-                        >
-                            <svg className="w-3 h-3 mr-2" fill="currentColor" viewBox="0 0 24 24">
-                                <path
-                                    d="M17 1H7a2 2 0 0 0-2 2v3h2V4h10v16H7v-2H5v3a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3a2 2 0 0 0-2-2ZM9 12l-4 4 4 4v-3h6v-2H9v-3Z"/>
-                            </svg>
-                            Reload
-                        </button>
+                {/* View Conditional */}
+                {viewMode === 'analytics' ? (
+                    <ChallengeAnalytics challenges={challengeData?.data || []} />
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                        {challengeData?.data?.length > 0 ? (
+                            challengeData.data.map((challenge) => (
+                                <ChallengeCard
+                                    key={challenge.refId}
+                                    challenge={challenge}
+                                    drillRefId={drillRefId}
+                                    onDelete={handleDelete}
+                                    onTry={getDrillLink}
+                                    onEvaluate={() => handleOpenEvaluator(challenge.refId)}
+                                />
+                            ))
+                        ) : (
+                            <div className="col-span-full py-20 text-center bg-gray-50 rounded-3xl border border-dashed border-gray-200">
+                                <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm text-gray-400">
+                                    <Plus size={32} />
+                                </div>
+                                <h3 className="text-lg font-bold text-gray-900">No challenges yet</h3>
+                                <p className="text-gray-500 mb-6 max-w-sm mx-auto">Select a challenge type above to generate your first drill.</p>
+                            </div>
+                        )}
                     </div>
-                </div>
+                )}
+
+                <EvaluatorModal
+                    isVisible={isEvaluatorVisible}
+                    onClose={() => setIsEvaluatorVisible(false)}
+                    evaluators={challengeEvaluators}
+                    challengeId={activeChallengeId}
+                    onSubmit={handleSubmitEvaluation}
+                />
             </div>
-            <div className="container mt-2 text-center">
-                <EvaluatorSelectorModalComponent isVisible={isEvaluatorVisible}/>
-                <div className="relative overflow-x-auto shadow-md sm:rounded-lg mt-7">
-                    <table className="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
-                        <thead
-                            className="text-xs text-gray-700 uppercase bg-gray-200 dark:bg-gray-700 dark:text-gray-400">
-                        <tr>
-                            <th scope="col" className="px-6 py-3 text-center">
-                                Serial
-                            </th>
-                            <th scope="col" className="px-6 py-3 text-center">
-                                Challenge ID
-                            </th>
-                            <th scope="col" className="px-6 py-3 text-center">
-                                Drill Type
-                            </th>
-                            <th scope="col" className="px-6 py-3 text-center">
-                                Drill Score
-                            </th>
-                            <th scope="col" className="px-6 py-3 text-center">
-                                Passed
-                            </th>
-                            <th scope="col" className="px-6 py-3 text-center">
-                                Correct
-                            </th>
-                            <th scope="col" className="px-6 py-3 text-center">
-                                Incorrect
-                            </th>
-                            <th scope="col" className="px-6 py-3 text-center">
-                                Status
-                            </th>
-                            <th scope="col" className="px-6 py-3 text-center">
-                                Evaluation status
-                            </th>
-                            <th scope="col" className="px-6 py-3 text-center">
-                                Delete
-                            </th>
-                            <th scope="col" className="px-6 py-3 text-center">
-                                Try
-                            </th>
-                            <th scope="col" className="px-6 py-3 text-center">
-                                Evaluate
-                            </th>
-                            <th scope="col" className="px-6 py-3 text-center">
-                                Report
-                            </th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        {challengeData.data != null && challengeData.data.length > 0 ? (challengeData.data.map((item, index) => (
-                            <tr key={item.refId}>
-                                <td scope="row"
-                                    className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white text-center">{index + 1}</td>
-                                <td className="px-6 py-4 text-center text-xs">{item.refId}</td>
-                                <td className="px-6 py-4 text-center text-xs font-sans text-blue-700 text-decoration-underline">{item.drillType}</td>
-                                <td className="px-6 py-4 text-center"><span
-                                    className="inline-flex items-center justify-center w-7 h-7 ms-2 text-xs font-semibold text-blue-800 bg-blue-200 rounded-full">
-                                            {item.drillScore}
-                                            </span>
-                                </td>
-                                <td className="px-6 py-4 text-center">
-                                    <label>{(item.evaluationStatus != 'Evaluated') ? (<>NA</>) : (<>{item.drillScore > 70 ? (<>
-                                            <span
-                                                className="bg-green-100 text-green-800 text-xs font-medium me-2 px-2.5 py-0.5 rounded dark:bg-gray-700 dark:text-green-400 border border-green-400">Passed</span>
-                                    </>) : (<><span
-                                        className="bg-red-100 text-red-800 text-xs font-medium me-2 px-2.5 py-0.5 rounded dark:bg-gray-700 dark:text-red-400 border border-red-400">Failed</span></>)}</>)}</label>
-                                </td>
-                                <td className="px-6 py-4 text-center">{item.totalCorrect}</td>
-                                <td className="px-6 py-4 text-center">{item.totalWrong}</td>
-                                <td className="px-6 py-4 text-center text-xs">{item.status}</td>
-                                <td className="px-6 py-4 text-center text-xs">{item.evaluationStatus}</td>
-                                <td className="px-6 py-4 text-center">
-                                    <Link className="font-medium text-blue-600 dark:text-blue-500 hover:underline"
-                                          onClick={() => deleteChallenge(item.refId)}
-                                          href="#">Delete</Link>
-                                </td>
-                                <td className="px-6 py-4 text-center">
-                                    {(item.status != 'Completed') ? (<Link
-                                        className="font-medium text-blue-600 dark:text-blue-500 hover:underline"
-                                        href={(getDrillTypeLink(item.drillType)) + drillRefId + "/" + item.refId}>
-                                        Try
-                                    </Link>) : (<Link
-                                        className="font-medium text-gray-300 dark:text-blue-500 hover:underline"
-                                        href="#">
-                                        Try
-                                    </Link>)}
-                                </td>
-                                <td className="px-6 py-4 text-center">
-                                    {(item.status == 'Not Initiated') ? (<Link
-                                        className="font-medium text-gray-300 dark:text-blue-500 hover:underline"
-                                        href="#">
-                                        Evaluate
-                                    </Link>) : item.evaluationStatus === 'Evaluated' ? (<Link
-                                        className="font-medium text-blue-600 dark:text-blue-500 hover:underline"
-                                        onClick={() => handleEvaluatorModel(true, item.refId)}
-                                        href="#"
-                                    >
-                                        Retry
-                                    </Link>) : (<Link
-                                        className="font-medium text-blue-600 dark:text-blue-500 hover:underline"
-                                        onClick={() => handleEvaluatorModel(true, item.refId)}
-                                        href="#"
-                                    >
-                                        Evaluate
-                                    </Link>)}
-                                </td>
-                                <td className="px-6 py-4 text-center">
-                                    {(item.evaluationStatus != 'Evaluated') ? (<Link
-                                        className="font-medium text-gray-300 dark:text-blue-500 hover:underline"
-                                        href="#">
-                                        Click
-                                    </Link>) : (<Link
-                                        className="font-medium text-blue-600 dark:text-blue-500 hover:underline"
-                                        href={"/evaluation_report/meaning_report/" + item.refId}>
-                                        Click
-                                    </Link>)}
-                                </td>
-                            </tr>))) : (<tr>
-                            <td scope="col" className="px-6 py-4 text-center">
-                            </td>
-                            <td scope="col" className="px-6 py-4 text-center">
-                            </td>
-                            <td scope="col" className="px-6 py-4 text-center">
-                            </td>
-                            <td scope="col" className="px-6 py-4 text-center">
-                            </td>
-                            <td scope="col" className="px-6 py-4 text-center">
-                            </td>
-                            <td scope="col" className="px-6 py-4 text-center">
-                                <h6 className="text-lg font-bold dark:text-white">No data found</h6>
-                            </td>
-                            <td scope="col" className="px-6 py-4 text-center">
-                            </td>
-                            <td scope="col" className="px-6 py-4 text-center">
-                            </td>
-                            <td scope="col" className="px-6 py-4 text-center">
-                            </td>
-                            <td scope="col" className="px-6 py-4 text-center">
-                            </td>
-                        </tr>)}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </>}>
-    </Layout>
-
-        {/*<h2 className="text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-purple-500 to-blue-500 mb-6 text-center hover:shadow-xl transition-shadow duration-300 ease-in-out">*/}
-        {/*    List of challenges for the drill*/}
-        {/*</h2>*/}
-        {/*<div className="container mt-5 text-center">*/}
-        {/*    <div className="inline-flex rounded-md shadow-xs" role="group">*/}
-        {/*        <Link href="/dashboard/dashboard">*/}
-        {/*            <button*/}
-        {/*                type="button"*/}
-        {/*                className="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-900  border-t border-b border-l border-r border-gray-900 rounded-s-lg hover:bg-black hover:text-white focus:z-10 focus:ring-2 focus:ring-gray-500 dark:border-white dark:text-white dark:hover:bg-black dark:focus:bg-black"*/}
-        {/*            >*/}
-        {/*                <svg className="w-4 h-4 me-2" fill="currentColor" viewBox="0 0 20 20">*/}
-        {/*                    <path*/}
-        {/*                        d="M3 3h14a2 2 0 0 1 2 2v2H1V5a2 2 0 0 1 2-2Zm16 5v7a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8h18Zm-7 2H8v2h4v-2Z"/>*/}
-        {/*                </svg>*/}
-        {/*                Dashboard*/}
-        {/*            </button>*/}
-        {/*        </Link>*/}
-
-        {/*        <button*/}
-        {/*            onClick={(e) => {*/}
-        {/*                e.preventDefault();*/}
-        {/*                handleChallengeRequestData('MEANING');*/}
-        {/*            }}*/}
-        {/*            className="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-900  border-t border-b border-r border-gray-900 hover:bg-black hover:text-white focus:z-10 focus:ring-2 focus:ring-gray-500 dark:border-white dark:text-white dark:hover:bg-black dark:focus:bg-black"*/}
-        {/*        >*/}
-        {/*            <svg className="w-4 h-4 me-2" fill="currentColor" viewBox="0 0 20 20">*/}
-        {/*                <path*/}
-        {/*                    d="M10 3a7 7 0 0 1 7 7c0 2.9-3 6.6-5.3 8.7a1 1 0 0 1-1.4 0C6.9 16.6 4 12.9 4 10a6 6 0 0 1 6-7Z"/>*/}
-        {/*            </svg>*/}
-        {/*            Meaning*/}
-        {/*        </button>*/}
-
-        {/*        <button*/}
-        {/*            onClick={(e) => {*/}
-        {/*                e.preventDefault();*/}
-        {/*                handleChallengeRequestData('POS');*/}
-        {/*            }}*/}
-        {/*            className="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-900  border-t border-b border-r border-gray-900 hover:bg-black hover:text-white focus:z-10 focus:ring-2 focus:ring-gray-500 dark:border-white dark:text-white dark:hover:bg-black dark:focus:bg-black"*/}
-        {/*        >*/}
-        {/*            <svg className="w-4 h-4 me-2" fill="currentColor" viewBox="0 0 20 20">*/}
-        {/*                <path d="M5 4h10v2H5V4Zm0 4h10v2H5V8Zm0 4h6v2H5v-2Z"/>*/}
-        {/*            </svg>*/}
-        {/*            Identify POS*/}
-        {/*        </button>*/}
-
-        {/*        <button*/}
-        {/*            className="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-900  border-t border-b border-r border-gray-900 hover:bg-black hover:text-white focus:z-10 focus:ring-2 focus:ring-gray-500 dark:border-white dark:text-white dark:hover:bg-black dark:focus:bg-black"*/}
-        {/*        >*/}
-        {/*            <svg className="w-4 h-4 me-2" fill="currentColor" viewBox="0 0 24 24">*/}
-        {/*                <path*/}
-        {/*                    d="M12 18c-2.21 0-4-1.79-4-4h2a2 2 0 1 0 4 0 2 2 0 0 0-4 0H6a6 6 0 1 1 12 0c0 3.31-2.69 6-6 6Z"/>*/}
-        {/*            </svg>*/}
-        {/*            Spell Jumble*/}
-        {/*        </button>*/}
-
-        {/*        <button*/}
-        {/*            onClick={(e) => {*/}
-        {/*                e.preventDefault();*/}
-        {/*                handleChallengeRequestData('IDENTIFY');*/}
-        {/*            }}*/}
-        {/*            className="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-900  border-t border-b border-r border-gray-900 hover:bg-black hover:text-white focus:z-10 focus:ring-2 focus:ring-gray-500 dark:border-white dark:text-white dark:hover:bg-black dark:focus:bg-black"*/}
-        {/*        >*/}
-        {/*            <svg className="w-4 h-4 me-2" fill="currentColor" viewBox="0 0 24 24">*/}
-        {/*                <path*/}
-        {/*                    d="M12 2a10 10 0 0 1 0 20v-2a8 8 0 1 0-8-8H2A10 10 0 0 1 12 2Zm0 6a2 2 0 1 0 0 4 2 2 0 0 0 0-4Z"/>*/}
-        {/*            </svg>*/}
-        {/*            Spell it from pronunciation*/}
-        {/*        </button>*/}
-
-        {/*        <button*/}
-        {/*            onClick={(e) => {*/}
-        {/*                e.preventDefault();*/}
-        {/*                handleChallengeRequestData('GUESS');*/}
-        {/*            }}*/}
-        {/*            className="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-900 border-t border-b border-r border-gray-900 hover:bg-black hover:text-white focus:z-10 focus:ring-2 focus:ring-gray-500 dark:border-white dark:text-white dark:hover:bg-black dark:focus:bg-black"*/}
-        {/*        >*/}
-        {/*            <svg className="w-4 h-4 me-2" fill="currentColor" viewBox="0 0 24 24">*/}
-        {/*                <path*/}
-        {/*                    d="M10 2a8 8 0 0 1 8 8c0 2.2-1.1 4.2-2.9 5.3L15 18H9v-2h4.1c.9-.7 1.4-1.8 1.4-3a6 6 0 1 0-6 6v2a8 8 0 0 1 2-15.9Z"/>*/}
-        {/*            </svg>*/}
-        {/*            Guess word from meaning*/}
-        {/*        </button>*/}
-
-        {/*        <button*/}
-        {/*            className="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-900  border-t border-b border-r border-gray-900 hover:bg-black hover:text-white focus:z-10 focus:ring-2 focus:ring-gray-500 dark:border-white dark:text-white dark:hover:bg-black dark:focus:bg-black"*/}
-        {/*        >*/}
-        {/*            <svg className="w-4 h-4 me-2" fill="currentColor" viewBox="0 0 24 24">*/}
-        {/*                <path d="M3 6h18v2H3V6Zm0 5h18v2H3v-2Zm0 5h12v2H3v-2Z"/>*/}
-        {/*            </svg>*/}
-        {/*            Match the right word*/}
-        {/*        </button>*/}
-
-        {/*        <button*/}
-        {/*            onClick={LoadTable}*/}
-        {/*            className="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-900 border-t border-b  border-r border-gray-900 rounded-e-lg hover:bg-black hover:text-white focus:z-10 focus:ring-2 focus:ring-gray-500 dark:border-white dark:text-white dark:hover:bg-black dark:focus:bg-black"*/}
-        {/*        >*/}
-        {/*            <svg className="w-4 h-4 me-2" fill="currentColor" viewBox="0 0 24 24">*/}
-        {/*                <path*/}
-        {/*                    d="M17 1H7a2 2 0 0 0-2 2v3h2V4h10v16H7v-2H5v3a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3a2 2 0 0 0-2-2ZM9 12l-4 4 4 4v-3h6v-2H9v-3Z"/>*/}
-        {/*            </svg>*/}
-        {/*            Reload*/}
-        {/*        </button>*/}
-        {/*    </div>*/}
-        {/*    <EvaluatorSelectorModalComponent isVisible={isEvaluatorVisible}/>*/}
-        {/*    <div className="relative overflow-x-auto shadow-md sm:rounded-lg mt-2">*/}
-        {/*        <table className="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">*/}
-        {/*            <thead className="text-xs text-gray-700 uppercase bg-gray-200 dark:bg-gray-700 dark:text-gray-400">*/}
-        {/*            <tr>*/}
-        {/*                <th scope="col" className="px-6 py-3 text-center">*/}
-        {/*                    Serial*/}
-        {/*                </th>*/}
-        {/*                <th scope="col" className="px-6 py-3 text-center">*/}
-        {/*                    Challenge ID*/}
-        {/*                </th>*/}
-        {/*                <th scope="col" className="px-6 py-3 text-center">*/}
-        {/*                    Drill Type*/}
-        {/*                </th>*/}
-        {/*                <th scope="col" className="px-6 py-3 text-center">*/}
-        {/*                    Drill Score*/}
-        {/*                </th>*/}
-        {/*                <th scope="col" className="px-6 py-3 text-center">*/}
-        {/*                    Passed*/}
-        {/*                </th>*/}
-        {/*                <th scope="col" className="px-6 py-3 text-center">*/}
-        {/*                    Correct*/}
-        {/*                </th>*/}
-        {/*                <th scope="col" className="px-6 py-3 text-center">*/}
-        {/*                    Incorrect*/}
-        {/*                </th>*/}
-        {/*                <th scope="col" className="px-6 py-3 text-center">*/}
-        {/*                    Status*/}
-        {/*                </th>*/}
-        {/*                <th scope="col" className="px-6 py-3 text-center">*/}
-        {/*                    Evaluation status*/}
-        {/*                </th>*/}
-        {/*                <th scope="col" className="px-6 py-3 text-center">*/}
-        {/*                    Delete*/}
-        {/*                </th>*/}
-        {/*                <th scope="col" className="px-6 py-3 text-center">*/}
-        {/*                    Try*/}
-        {/*                </th>*/}
-        {/*                <th scope="col" className="px-6 py-3 text-center">*/}
-        {/*                    Evaluate*/}
-        {/*                </th>*/}
-        {/*                <th scope="col" className="px-6 py-3 text-center">*/}
-        {/*                    Report*/}
-        {/*                </th>*/}
-        {/*            </tr>*/}
-        {/*            </thead>*/}
-        {/*            <tbody>*/}
-        {/*            {challengeData.data != null && challengeData.data.length > 0 ? (challengeData.data.map((item, index) => (*/}
-        {/*                <tr key={item.refId}>*/}
-        {/*                    <td scope="row"*/}
-        {/*                        className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white text-center">{index + 1}</td>*/}
-        {/*                    <td className="px-6 py-4 text-center text-xs">{item.refId}</td>*/}
-        {/*                    <td className="px-6 py-4 text-center text-xs font-sans text-blue-700 text-decoration-underline">{item.drillType}</td>*/}
-        {/*                    <td className="px-6 py-4 text-center"><span*/}
-        {/*                        className="inline-flex items-center justify-center w-7 h-7 ms-2 text-xs font-semibold text-blue-800 bg-blue-200 rounded-full">*/}
-        {/*                            {item.drillScore}*/}
-        {/*                            </span>*/}
-        {/*                    </td>*/}
-        {/*                    <td className="px-6 py-4 text-center">*/}
-        {/*                        <label>{(item.evaluationStatus != 'Evaluated') ? (<>NA</>) : (<>{item.drillScore > 70 ? (<>*/}
-        {/*                            <span*/}
-        {/*                                className="bg-green-100 text-green-800 text-xs font-medium me-2 px-2.5 py-0.5 rounded dark:bg-gray-700 dark:text-green-400 border border-green-400">Passed</span>*/}
-        {/*                        </>) : (<><span*/}
-        {/*                            className="bg-red-100 text-red-800 text-xs font-medium me-2 px-2.5 py-0.5 rounded dark:bg-gray-700 dark:text-red-400 border border-red-400">Failed</span></>)}</>)}</label>*/}
-        {/*                    </td>*/}
-        {/*                    <td className="px-6 py-4 text-center">{item.totalCorrect}</td>*/}
-        {/*                    <td className="px-6 py-4 text-center">{item.totalWrong}</td>*/}
-        {/*                    <td className="px-6 py-4 text-center text-xs">{item.status}</td>*/}
-        {/*                    <td className="px-6 py-4 text-center text-xs">{item.evaluationStatus}</td>*/}
-        {/*                    <td className="px-6 py-4 text-center">*/}
-        {/*                        <Link className="font-medium text-blue-600 dark:text-blue-500 hover:underline"*/}
-        {/*                              onClick={() => deleteChallenge(item.refId)}*/}
-        {/*                              href="#">Delete</Link>*/}
-        {/*                    </td>*/}
-        {/*                    <td className="px-6 py-4 text-center">*/}
-        {/*                        {(item.status != 'Completed') ? (<Link*/}
-        {/*                            className="font-medium text-blue-600 dark:text-blue-500 hover:underline"*/}
-        {/*                            href={(getDrillTypeLink(item.drillType)) + drillRefId + "/" + item.refId}>*/}
-        {/*                            Try*/}
-        {/*                        </Link>) : (<Link*/}
-        {/*                            className="font-medium text-gray-300 dark:text-blue-500 hover:underline" href="#">*/}
-        {/*                            Try*/}
-        {/*                        </Link>)}*/}
-        {/*                    </td>*/}
-        {/*                    <td className="px-6 py-4 text-center">*/}
-        {/*                        {(item.status == 'Not Initiated') ? (<Link*/}
-        {/*                            className="font-medium text-gray-300 dark:text-blue-500 hover:underline"*/}
-        {/*                            href="#">*/}
-        {/*                            Evaluate*/}
-        {/*                        </Link>) : item.evaluationStatus === 'Evaluated' ? (<Link*/}
-        {/*                            className="font-medium text-blue-600 dark:text-blue-500 hover:underline"*/}
-        {/*                            onClick={() => handleEvaluatorModel(true, item.refId)}*/}
-        {/*                            href="#"*/}
-        {/*                        >*/}
-        {/*                            Retry*/}
-        {/*                        </Link>) : (<Link*/}
-        {/*                            className="font-medium text-blue-600 dark:text-blue-500 hover:underline"*/}
-        {/*                            onClick={() => handleEvaluatorModel(true, item.refId)}*/}
-        {/*                            href="#"*/}
-        {/*                        >*/}
-        {/*                            Evaluate*/}
-        {/*                        </Link>)}*/}
-        {/*                    </td>*/}
-        {/*                    <td className="px-6 py-4 text-center">*/}
-        {/*                        {(item.evaluationStatus != 'Evaluated') ? (<Link*/}
-        {/*                            className="font-medium text-gray-300 dark:text-blue-500 hover:underline"*/}
-        {/*                            href="#">*/}
-        {/*                            Click*/}
-        {/*                        </Link>) : (<Link*/}
-        {/*                            className="font-medium text-blue-600 dark:text-blue-500 hover:underline"*/}
-        {/*                            href={"/evaluation_report/meaning_report/" + item.refId}>*/}
-        {/*                            Click*/}
-        {/*                        </Link>)}*/}
-        {/*                    </td>*/}
-        {/*                </tr>))) : (<tr>*/}
-        {/*                <td scope="col" className="px-6 py-4 text-center">*/}
-        {/*                </td>*/}
-        {/*                <td scope="col" className="px-6 py-4 text-center">*/}
-        {/*                </td>*/}
-        {/*                <td scope="col" className="px-6 py-4 text-center">*/}
-        {/*                </td>*/}
-        {/*                <td scope="col" className="px-6 py-4 text-center">*/}
-        {/*                </td>*/}
-        {/*                <td scope="col" className="px-6 py-4 text-center">*/}
-        {/*                </td>*/}
-        {/*                <td scope="col" className="px-6 py-4 text-center">*/}
-        {/*                    <h6 className="text-lg font-bold dark:text-white">No data found</h6>*/}
-        {/*                </td>*/}
-        {/*                <td scope="col" className="px-6 py-4 text-center">*/}
-        {/*                </td>*/}
-        {/*                <td scope="col" className="px-6 py-4 text-center">*/}
-        {/*                </td>*/}
-        {/*                <td scope="col" className="px-6 py-4 text-center">*/}
-        {/*                </td>*/}
-        {/*                <td scope="col" className="px-6 py-4 text-center">*/}
-        {/*                </td>*/}
-        {/*            </tr>)}*/}
-        {/*            </tbody>*/}
-        {/*        </table>*/}
-        {/*    </div>*/}
-        {/*</div>*/}
-        {/*<div className="container mt-5">*/}
-        {/*    <Link href="/dashboard/dashboard">*/}
-        {/*        <button type="button" data-modal-target="create-new-drill-modal-form"*/}
-        {/*                data-model-toggle="create-new-drill-modal-form"*/}
-        {/*                className="px-2 py-1.5 m-2 text-base text-sm font-medium text-white inline-flex items-center bg-cyan-400 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 rounded-lg text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800">*/}
-        {/*            <svg className="w-4 h-4 text-white me-2" aria-hidden="true"*/}
-        {/*                 xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="none" viewBox="0 0 24 24">*/}
-        {/*                <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"*/}
-        {/*                      d="M12 7.757v8.486M7.757 12h8.486M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>*/}
-        {/*            </svg>*/}
-        {/*            Dashboard*/}
-        {/*        </button>*/}
-        {/*    </Link>*/}
-        {/*    <button type="button" data-modal-target="create-new-drill-modal-form"*/}
-        {/*            onClick={(e) => {*/}
-        {/*                e.preventDefault();*/}
-        {/*                handleChallengeRequestData('MEANING')*/}
-        {/*            }}*/}
-        {/*            data-model-toggle="create-new-drill-modal-form"*/}
-        {/*            className="px-6 py-3.5 m-2 text-base font-medium text-white inline-flex items-center bg-violet-400 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 rounded-lg text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800">*/}
-        {/*        <svg className="w-4 h-4 text-white me-2" aria-hidden="true"*/}
-        {/*             xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">*/}
-        {/*            <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"*/}
-        {/*                  d="M12 7.757v8.486M7.757 12h8.486M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>*/}
-        {/*        </svg>*/}
-        {/*        Meaning*/}
-        {/*    </button>*/}
-        {/*    <button type="button" onClick={(e) => {*/}
-        {/*        e.preventDefault();*/}
-        {/*        handleChallengeRequestData('POS')*/}
-        {/*    }}*/}
-        {/*            className="px-6 py-3.5 m-2 text-base font-medium text-white inline-flex items-center bg-red-400 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 rounded-lg text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800">*/}
-        {/*        <svg className="w-4 h-4 text-white me-2" aria-hidden="true"*/}
-        {/*             xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">*/}
-        {/*            <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"*/}
-        {/*                  d="M12 7.757v8.486M7.757 12h8.486M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>*/}
-        {/*        </svg>*/}
-        {/*        Identify POS*/}
-        {/*    </button>*/}
-        {/*    <button type="button"*/}
-        {/*            className="px-6 py-3.5 m-2 text-base font-medium text-white inline-flex items-center bg-green-400 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 rounded-lg text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800">*/}
-        {/*        <svg className="w-4 h-4 text-white me-2" aria-hidden="true"*/}
-        {/*             xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">*/}
-        {/*            <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"*/}
-        {/*                  d="M12 7.757v8.486M7.757 12h8.486M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>*/}
-        {/*        </svg>*/}
-        {/*        Spell Jumble*/}
-        {/*    </button>*/}
-
-        {/*    <button type="button" onClick={(e) => {*/}
-        {/*        e.preventDefault();*/}
-        {/*        handleChallengeRequestData('IDENTIFY')*/}
-        {/*    }}*/}
-        {/*            className="px-6 py-3.5 m-2 text-base font-medium text-white inline-flex items-center bg-yellow-400 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 rounded-lg text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800">*/}
-        {/*        <svg className="w-4 h-4 text-white me-2" aria-hidden="true"*/}
-        {/*             xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">*/}
-        {/*            <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"*/}
-        {/*                  d="M12 7.757v8.486M7.757 12h8.486M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>*/}
-        {/*        </svg>*/}
-        {/*        Spell it from pronunciation.*/}
-        {/*    </button>*/}
-
-        {/*    <button type="button" onClick={(e) => {*/}
-        {/*        e.preventDefault();*/}
-        {/*        handleChallengeRequestData('GUESS')*/}
-        {/*    }}*/}
-        {/*            className="px-6 py-3.5 m-2 text-base font-medium text-white inline-flex items-center bg-orange-400 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 rounded-lg text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800">*/}
-        {/*        <svg className="w-4 h-4 text-white me-2" aria-hidden="true"*/}
-        {/*             xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">*/}
-        {/*            <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"*/}
-        {/*                  d="M12 7.757v8.486M7.757 12h8.486M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>*/}
-        {/*        </svg>*/}
-        {/*        Guess word from meaning*/}
-        {/*    </button>*/}
-
-        {/*    <button type="button"*/}
-        {/*            className="px-6 py-3.5 m-2 text-base font-medium text-white inline-flex items-center bg-sky-400 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 rounded-lg text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800">*/}
-        {/*        <svg className="w-4 h-4 text-white me-2" aria-hidden="true"*/}
-        {/*             xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">*/}
-        {/*            <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"*/}
-        {/*                  d="M12 7.757v8.486M7.757 12h8.486M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>*/}
-        {/*        </svg>*/}
-        {/*        Match the right word*/}
-        {/*    </button>*/}
-
-        {/*    <button type="button" onClick={LoadTable}*/}
-        {/*            className="px-6 py-3.5 m-2 text-base font-medium text-white inline-flex items-center bg-amber-400 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 rounded-lg text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800">*/}
-        {/*        <svg className="w-4 h-4 text-white me-2" aria-hidden="true"*/}
-        {/*             xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">*/}
-        {/*            <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"*/}
-        {/*                  d="M17.651 7.65a7.131 7.131 0 0 0-12.68 3.15M18.001 4v4h-4m-7.652 8.35a7.13 7.13 0 0 0 12.68-3.15M6 20v-4h4"/>*/}
-        {/*        </svg>*/}
-        {/*        Reload*/}
-        {/*    </button>*/}
-        {/*    <EvaluatorSelectorModalComponent isVisible={isEvaluatorVisible}/>*/}
-        {/*    <div className="relative overflow-x-auto shadow-md sm:rounded-lg mt-2">*/}
-        {/*        <table className="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">*/}
-        {/*            <thead className="text-xs text-gray-700 uppercase bg-gray-200 dark:bg-gray-700 dark:text-gray-400">*/}
-        {/*            <tr>*/}
-        {/*                <th scope="col" className="px-6 py-3 text-center">*/}
-        {/*                    Serial*/}
-        {/*                </th>*/}
-        {/*                <th scope="col" className="px-6 py-3 text-center">*/}
-        {/*                    Challenge ID*/}
-        {/*                </th>*/}
-        {/*                <th scope="col" className="px-6 py-3 text-center">*/}
-        {/*                    Drill Type*/}
-        {/*                </th>*/}
-        {/*                <th scope="col" className="px-6 py-3 text-center">*/}
-        {/*                    Drill Score*/}
-        {/*                </th>*/}
-        {/*                <th scope="col" className="px-6 py-3 text-center">*/}
-        {/*                    Passed*/}
-        {/*                </th>*/}
-        {/*                <th scope="col" className="px-6 py-3 text-center">*/}
-        {/*                    Correct*/}
-        {/*                </th>*/}
-        {/*                <th scope="col" className="px-6 py-3 text-center">*/}
-        {/*                    Incorrect*/}
-        {/*                </th>*/}
-        {/*                <th scope="col" className="px-6 py-3 text-center">*/}
-        {/*                    Status*/}
-        {/*                </th>*/}
-        {/*                <th scope="col" className="px-6 py-3 text-center">*/}
-        {/*                    Evaluation status*/}
-        {/*                </th>*/}
-        {/*                <th scope="col" className="px-6 py-3 text-center">*/}
-        {/*                    Delete*/}
-        {/*                </th>*/}
-        {/*                <th scope="col" className="px-6 py-3 text-center">*/}
-        {/*                    Try*/}
-        {/*                </th>*/}
-        {/*                <th scope="col" className="px-6 py-3 text-center">*/}
-        {/*                    Evaluate*/}
-        {/*                </th>*/}
-        {/*                <th scope="col" className="px-6 py-3 text-center">*/}
-        {/*                    Report*/}
-        {/*                </th>*/}
-        {/*            </tr>*/}
-        {/*            </thead>*/}
-        {/*            <tbody>*/}
-        {/*            {challengeData.data != null && challengeData.data.length > 0 ? (challengeData.data.map((item, index) => (*/}
-        {/*                <tr key={item.refId}>*/}
-        {/*                    <td scope="row"*/}
-        {/*                        className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white text-center">{index + 1}</td>*/}
-        {/*                    <td className="px-6 py-4 text-center text-xs">{item.refId}</td>*/}
-        {/*                    <td className="px-6 py-4 text-center text-xs font-sans text-blue-700 text-decoration-underline">{item.drillType}</td>*/}
-        {/*                    <td className="px-6 py-4 text-center"><span*/}
-        {/*                        className="inline-flex items-center justify-center w-7 h-7 ms-2 text-xs font-semibold text-blue-800 bg-blue-200 rounded-full">*/}
-        {/*                        {item.drillScore}*/}
-        {/*                        </span>*/}
-        {/*                    </td>*/}
-        {/*                    <td className="px-6 py-4 text-center">*/}
-        {/*                        <label>{(item.evaluationStatus != 'Evaluated') ? (<>NA</>) : (<>{item.drillScore > 70 ? (<>*/}
-        {/*                        <span*/}
-        {/*                            className="bg-green-100 text-green-800 text-xs font-medium me-2 px-2.5 py-0.5 rounded dark:bg-gray-700 dark:text-green-400 border border-green-400">Passed</span>*/}
-        {/*                        </>) : (<><span*/}
-        {/*                            className="bg-red-100 text-red-800 text-xs font-medium me-2 px-2.5 py-0.5 rounded dark:bg-gray-700 dark:text-red-400 border border-red-400">Failed</span></>)}</>)}</label>*/}
-        {/*                    </td>*/}
-        {/*                    <td className="px-6 py-4 text-center">{item.totalCorrect}</td>*/}
-        {/*                    <td className="px-6 py-4 text-center">{item.totalWrong}</td>*/}
-        {/*                    <td className="px-6 py-4 text-center text-xs">{item.status}</td>*/}
-        {/*                    <td className="px-6 py-4 text-center text-xs">{item.evaluationStatus}</td>*/}
-        {/*                    <td className="px-6 py-4 text-center">*/}
-        {/*                        <Link className="font-medium text-blue-600 dark:text-blue-500 hover:underline"*/}
-        {/*                              onClick={() => deleteChallenge(item.refId)}*/}
-        {/*                              href="#">Delete</Link>*/}
-        {/*                    </td>*/}
-        {/*                    <td className="px-6 py-4 text-center">*/}
-        {/*                        {(item.status != 'Completed') ? (<Link*/}
-        {/*                            className="font-medium text-blue-600 dark:text-blue-500 hover:underline"*/}
-        {/*                            href={(getDrillTypeLink(item.drillType)) + drillRefId + "/" + item.refId}>*/}
-        {/*                            Try*/}
-        {/*                        </Link>) : (<Link*/}
-        {/*                            className="font-medium text-gray-300 dark:text-blue-500 hover:underline" href="#">*/}
-        {/*                            Try*/}
-        {/*                        </Link>)}*/}
-        {/*                    </td>*/}
-        {/*                    <td className="px-6 py-4 text-center">*/}
-        {/*                        {(item.status == 'Not Initiated') ? (<Link*/}
-        {/*                            className="font-medium text-gray-300 dark:text-blue-500 hover:underline"*/}
-        {/*                            href="#">*/}
-        {/*                            Evaluate*/}
-        {/*                        </Link>) : item.evaluationStatus === 'Evaluated' ? (<Link*/}
-        {/*                                className="font-medium text-blue-600 dark:text-blue-500 hover:underline"*/}
-        {/*                                onClick={() => handleEvaluatorModel(true, item.refId)}*/}
-        {/*                                href="#"*/}
-        {/*                            >*/}
-        {/*                                Retry*/}
-        {/*                            </Link>) : (<Link*/}
-        {/*                                className="font-medium text-blue-600 dark:text-blue-500 hover:underline"*/}
-        {/*                                onClick={() => handleEvaluatorModel(true, item.refId)}*/}
-        {/*                                href="#"*/}
-        {/*                            >*/}
-        {/*                                Evaluate*/}
-        {/*                            </Link>)}*/}
-        {/*                    </td>*/}
-        {/*                    <td className="px-6 py-4 text-center">*/}
-        {/*                        {(item.evaluationStatus != 'Evaluated') ? (<Link*/}
-        {/*                            className="font-medium text-gray-300 dark:text-blue-500 hover:underline"*/}
-        {/*                            href="#">*/}
-        {/*                            Click*/}
-        {/*                        </Link>) : (<Link*/}
-        {/*                            className="font-medium text-blue-600 dark:text-blue-500 hover:underline"*/}
-        {/*                            href={"/evaluation_report/meaning_report/" + item.refId}>*/}
-        {/*                            Click*/}
-        {/*                        </Link>)}*/}
-        {/*                    </td>*/}
-        {/*                </tr>))) : (<tr>*/}
-        {/*                <td scope="col" className="px-6 py-4 text-center">*/}
-        {/*                </td>*/}
-        {/*                <td scope="col" className="px-6 py-4 text-center">*/}
-        {/*                </td>*/}
-        {/*                <td scope="col" className="px-6 py-4 text-center">*/}
-        {/*                </td>*/}
-        {/*                <td scope="col" className="px-6 py-4 text-center">*/}
-        {/*                </td>*/}
-        {/*                <td scope="col" className="px-6 py-4 text-center">*/}
-        {/*                </td>*/}
-        {/*                <td scope="col" className="px-6 py-4 text-center">*/}
-        {/*                    <h6 className="text-lg font-bold dark:text-white">No data found</h6>*/}
-        {/*                </td>*/}
-        {/*                <td scope="col" className="px-6 py-4 text-center">*/}
-        {/*                </td>*/}
-        {/*                <td scope="col" className="px-6 py-4 text-center">*/}
-        {/*                </td>*/}
-        {/*                <td scope="col" className="px-6 py-4 text-center">*/}
-        {/*                </td>*/}
-        {/*                <td scope="col" className="px-6 py-4 text-center">*/}
-        {/*                </td>*/}
-        {/*            </tr>)}*/}
-        {/*            </tbody>*/}
-        {/*        </table>*/}
-        {/*    </div>*/}
-        {/*</div>*/}
-    </>);
+        } />
+    );
 };
 
 export default Challenges;
 
 export async function getServerSideProps(context) {
-    const {drillId} = context.params;
-    const data = await fetchData(`${API_LEXIMENTOR_BASE_URL}/drill/metadata/challenges/${drillId}`);
-    return {
-        props: {
-            data, drillId
-        },
-    };
+    const { drillId } = context.params;
+    try {
+        const URL = `${API_LEXIMENTOR_BASE_URL}/drill/metadata/challenges/${drillId}`;
+        const res = await fetch(URL, { headers: { 'Content-Type': 'application/json' } });
+        const data = await res.json();
+        return {
+            props: {
+                data: data,
+                drillId: drillId
+            }
+        };
+    } catch (e) {
+        console.error("Failed to load challenges", e);
+        return {
+            props: {
+                data: null,
+                drillId: drillId
+            }
+        };
+    }
 }

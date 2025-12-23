@@ -1,19 +1,18 @@
 import "../styles/globals.css";
 import Script from "next/script";
+import { QueryClient, QueryClientProvider } from 'react-query';
+
+const queryClient = new QueryClient();
 
 function App({Component, pageProps}) {
-    return (<>
-        <Script
-            src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" strategy="beforeInteractive"
-        />
-        <Script
-            src="https://cdn.jsdelivr.net/npm/flowbite@3.1.2/dist/flowbite.min.js" strategy="beforeInteractive"
-        />
-        <Script
-            src="https://cdn.jsdelivr.net/npm/apexcharts@3.46.0/dist/apexcharts.min.js" strategy="beforeInteractive"
-        />
-        <Component {...pageProps} />
-    </>);
+    return (
+        <QueryClientProvider client={queryClient}>
+            <Script
+                src="https://cdn.jsdelivr.net/npm/apexcharts@3.46.0/dist/apexcharts.min.js" strategy="beforeInteractive"
+            />
+            <Component {...pageProps} />
+        </QueryClientProvider>
+    );
 }
 
 export default App;

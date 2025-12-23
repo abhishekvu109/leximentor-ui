@@ -1,247 +1,298 @@
-import {useState} from "react";
-import Script from "next/script";
-import {API_LEXIMENTOR_BASE_URL} from "@/constants";
-import {fetchData} from "@/dataService";
+import { useState, useEffect } from "react";
 import Link from "next/link";
+import Layout from "@/components/layout/Layout";
+import { API_LEXIMENTOR_BASE_URL } from "@/constants";
+import { fetchData } from "@/dataService";
+import {
+    ArrowLeftIcon,
+    CheckCircleIcon,
+    XCircleIcon,
+    SparklesIcon,
+    ArrowPathIcon,
+    BookOpenIcon,
+    ChatBubbleBottomCenterTextIcon
+} from "@heroicons/react/24/outline";
 
-const LoadPosDrillChallenge = ({drillSetData, challengeId, drillSetWordData,drillRefId}) => {
-    const [formData, setFormData] = useState(drillSetData.data.map(item => ({
-        drillSetRefId: item.refId, drillChallengeRefId: challengeId, response: '',
-    })));
+const POS_OPTIONS = [
+    'Noun', 'Verb', 'Adjective', 'Adverb',
+    'Pronoun', 'Preposition', 'Conjunction', 'Interjection'
+];
 
-    const [notificationVisible, setNotificationVisible] = useState(false);
-    const [notificationMessage, setNotificationMessage] = useState("");
-    const [notificationSuccess, setNotificationSuccess] = useState(false);
+const Notification = ({ message, type, onClose }) => {
+    if (!message) return null;
+    const isSuccess = type === 'success';
 
-    const NotificationClose = () => {
-        setNotificationVisible(false);
+    return (
+        <div className={`fixed bottom-6 right-6 max-w-sm w-full bg-white rounded-xl shadow-2xl border-l-4 p-4 flex items-start gap-4 z-50 animate-in slide-in-from-right-10 fade-in duration-300 ${isSuccess ? 'border-green-500' : 'border-red-500'}`}>
+            <div className={`shrink-0 ${isSuccess ? 'text-green-500' : 'text-red-500'}`}>
+                {isSuccess ? <CheckCircleIcon className="w-6 h-6" /> : <XCircleIcon className="w-6 h-6" />}
+            </div>
+            <div className="flex-1 pt-0.5">
+                <h3 className="font-bold text-slate-800 text-sm mb-1">{isSuccess ? "Success" : "Error"}</h3>
+                <p className="text-slate-600 text-sm leading-snug">{message}</p>
+            </div>
+            <button onClick={onClose} className="text-slate-400 hover:text-slate-600">
+                <span className="sr-only">Close</span>
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+        </div>
+    );
+};
+
+const LoadPosDrillChallenge = ({ drillSetData, drillSetWordData, challengeScores, challengeId, drillRefId }) => {
+    const [questions, setQuestions] = useState([]);
+    const [currentIndex, setCurrentIndex] = useState(0);
+    const [answers, setAnswers] = useState([]);
+    const [isCompleted, setIsCompleted] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [notification, setNotification] = useState({ visible: false, message: '', type: '' });
+
+    useEffect(() => {
+        if (drillSetWordData?.data && challengeScores?.data && drillSetData?.data) {
+            initializeGame();
+        }
+    }, [drillSetWordData, challengeScores, drillSetData]);
+
+    const initializeGame = () => {
+        const generatedQuestions = challengeScores.data.map(scoreItem => {
+            const setItem = drillSetData.data.find(d => d.refId === scoreItem.drillSetRefId);
+            if (!setItem) return null;
+
+            const wordItem = drillSetWordData.data.find(w => w.refId === setItem.wordRefId);
+            if (!wordItem) return null;
+
+            return {
+                scoreRefId: scoreItem.refId,
+                drillSetRefId: scoreItem.drillSetRefId,
+                word: wordItem.word,
+                meaning: wordItem.meanings?.[0]?.meaning || "No meaning available",
+                example: wordItem.examples?.[0]?.example || `Context: The word "${wordItem.word}" is used in various sentences.`,
+                correctPos: wordItem.pos?.toLowerCase() || 'noun' // Backend's expected/stored POS
+            };
+        }).filter(Boolean);
+
+        setQuestions(generatedQuestions);
+        setCurrentIndex(0);
+        setAnswers([]);
+        setIsCompleted(false);
     };
 
-    const GetWordData = (wordRefId) => {
-        return drillSetWordData.data.find(item => item.refId === wordRefId);
-    };
-    const ShowNotification = ({isVisible, message, isSuccess}) => {
-        if (isVisible) {
-            if (!isSuccess) {
-                return <>
-                    <div id="alert-border-2"
-                         className="flex items-center  p-4 mb-4 text-red-800 border-t-4 border-red-300 bg-red-50 dark:text-red-400 dark:bg-gray-800 dark:border-red-800"
-                         role="alert">
-                        <svg className="flex-shrink-0 w-4 h-4" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
-                             fill="currentColor" viewBox="0 0 20 20">
-                            <path
-                                d="M10 .5a9.5 9.5 0 1 0 9.5 9.5A9.51 9.51 0 0 0 10 .5ZM9.5 4a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3ZM12 15H8a1 1 0 0 1 0-2h1v-3H8a1 1 0 0 1 0-2h2a1 1 0 0 1 1 1v4h1a1 1 0 0 1 0 2Z"/>
-                        </svg>
-                        <div className="ms-3 text-sm font-medium">
-                            {message}
-                        </div>
-                        <button type="button" onClick={NotificationClose}
-                                className="ms-auto -mx-1.5 -my-1.5 bg-red-50 text-red-500 rounded-lg focus:ring-2 focus:ring-red-400 p-1.5 hover:bg-red-200 inline-flex items-center justify-center h-8 w-8 dark:bg-gray-800 dark:text-red-400 dark:hover:bg-gray-700"
-                                data-dismiss-target="#alert-border-2" aria-label="Close">
-                            <span className="sr-only">Dismiss</span>
-                            <svg className="w-3 h-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none"
-                                 viewBox="0 0 14 14">
-                                <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"
-                                      strokeWidth="2" d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"/>
-                            </svg>
-                        </button>
-                    </div>
-                </>
-            } else {
-                return <>
-                    <div id="alert-border-3"
-                         className="flex items-center p-4 mb-4 text-green-800 border-t-4 border-green-300 bg-green-50 dark:text-green-400 dark:bg-gray-800 dark:border-green-800"
-                         role="alert">
-                        <svg className="flex-shrink-0 w-4 h-4" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
-                             fill="currentColor" viewBox="0 0 20 20">
-                            <path
-                                d="M10 .5a9.5 9.5 0 1 0 9.5 9.5A9.51 9.51 0 0 0 10 .5ZM9.5 4a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3ZM12 15H8a1 1 0 0 1 0-2h1v-3H8a1 1 0 0 1 0-2h2a1 1 0 0 1 1 1v4h1a1 1 0 0 1 0 2Z"/>
-                        </svg>
-                        <div className="ms-3 text-sm font-medium">
-                            {message}
-                        </div>
-                        <button type="button" onClick={NotificationClose}
-                                className="ms-auto -mx-1.5 -my-1.5 bg-green-50 text-green-500 rounded-lg focus:ring-2 focus:ring-green-400 p-1.5 hover:bg-green-200 inline-flex items-center justify-center h-8 w-8 dark:bg-gray-800 dark:text-green-400 dark:hover:bg-gray-700"
-                                data-dismiss-target="#alert-border-3" aria-label="Close">
-                            <span className="sr-only">Dismiss</span>
-                            <svg className="w-3 h-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none"
-                                 viewBox="0 0 14 14">
-                                <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"
-                                      strokeWidth="2" d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"/>
-                            </svg>
-                        </button>
-                    </div>
-                </>
-            }
+    const handlePosSelect = (selectedPos) => {
+        const currentQuestion = questions[currentIndex];
+        const isCorrect = selectedPos.toLowerCase() === currentQuestion.correctPos.toLowerCase();
 
+        const newAnswer = {
+            refId: currentQuestion.scoreRefId,
+            drillChallengeRefId: challengeId,
+            drillSetRefId: currentQuestion.drillSetRefId,
+            question: currentQuestion.word,
+            response: selectedPos,
+            isCorrect: isCorrect,
+            correct: isCorrect
+        };
+
+        const updatedAnswers = [...answers, newAnswer];
+        setAnswers(updatedAnswers);
+
+        if (currentIndex < questions.length - 1) {
+            setCurrentIndex(currentIndex + 1);
+        } else {
+            handleComplete(updatedAnswers);
         }
     };
 
-    const handleChange = (index, name, value) => {
-        setFormData(prevFormData => {
-            const updatedFormData = [...prevFormData];
-            updatedFormData[index] = {...updatedFormData[index], [name]: value};
-            return updatedFormData;
-        });
+    const handleComplete = async (finalAnswers) => {
+        setIsCompleted(true);
+        await submitResults(finalAnswers);
     };
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        console.log(formData);
+    const submitResults = async (submissionData) => {
+        setIsSubmitting(true);
         try {
             const URL = `${API_LEXIMENTOR_BASE_URL}/drill/metadata/challenges/challenge/${challengeId}/scores`;
-            console.log('The URL is ' + URL)
             const response = await fetch(URL, {
-                method: 'PUT', headers: {
-                    'Content-Type': 'application/json',
-                }, body: JSON.stringify(formData),
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(submissionData),
             });
 
-            if (!response.ok) {
-                setNotificationSuccess(false);
-                setNotificationMessage("Network response was not ok");
-                setNotificationVisible(true);
-                throw new Error('Network response was not ok');
+            if (response.ok) {
+                setNotification({ visible: true, message: "Progress saved successfully!", type: 'success' });
+            } else {
+                throw new Error("Failed to save progress.");
             }
-
-            // Handle successful response
-            const data = await response.json();
-            console.log('Response data:', data);
-            setNotificationSuccess(true);
-            setNotificationMessage("Response has been updated.");
-            setNotificationVisible(true);
         } catch (error) {
-            console.error('Error:', error);
-            setNotificationSuccess(false);
-            setNotificationMessage("Network response was not ok " + error);
-            setNotificationVisible(true);
+            console.error(error);
+            setNotification({ visible: true, message: "Failed to save progress.", type: 'error' });
+        } finally {
+            setIsSubmitting(false);
+            setTimeout(() => setNotification({ visible: false, message: '', type: '' }), 5000);
         }
     };
 
-    return (<>
-        <Script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></Script>
+    const currentQuestion = questions[currentIndex];
+    const progress = questions.length > 0 ? ((currentIndex + 1) / questions.length) * 100 : 0;
 
-        <div className="alert alert-dark w-full font-bold text-center" role="alert">
-            Practice Parts of Speech.
-        </div>
-        {notificationVisible ? (<ShowNotification isVisible={notificationVisible} isSuccess={notificationSuccess}
-                                                  message={notificationMessage}/>) : (
-            <ShowNotification isVisible={false} isSuccess={notificationSuccess}
-                              message={notificationMessage}/>)}
-        <div className="container mx-auto my-4 px-3 py-3 border-1 border-gray-300">
-            <div className="flex flex-row ...">
-                <div>
-                    <Link href="/dashboard/dashboard">
-                        <button type="button"
-                                className="px-3 py-2 mr-3 text-xs font-medium text-center inline-flex items-center text-white bg-blue-700 rounded-lg hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800">
-                            <svg className="w-3 h-3 text-white me-2" aria-hidden="true"
-                                 xmlns="http://www.w3.org/2000/svg"
-                                 fill="currentColor" viewBox="0 0 20 16">
-                                <path fillRule="evenodd"
-                                      d="M11.293 3.293a1 1 0 0 1 1.414 0l6 6 2 2a1 1 0 0 1-1.414 1.414L19 12.414V19a2 2 0 0 1-2 2h-3a1 1 0 0 1-1-1v-3h-2v3a1 1 0 0 1-1 1H7a2 2 0 0 1-2-2v-6.586l-.293.293a1 1 0 0 1-1.414-1.414l2-2 6-6Z"
-                                      clipRule="evenodd"/>
-                            </svg>
-                            Dashboard
-                        </button>
-                    </Link>
+    if (questions.length === 0) {
+        return (
+            <Layout content={
+                <div className="min-h-screen flex items-center justify-center bg-slate-50">
+                    <div className="text-center">
+                        <ArrowPathIcon className="w-10 h-10 text-indigo-400 animate-spin mx-auto mb-4" />
+                        <p className="text-slate-500 font-bold">Initialing Challenge...</p>
+                    </div>
                 </div>
-                <div>
-                    <Link href={`/challenges/${drillRefId}`}>
-                        <button type="button"
-                                className="px-3 py-2 mr-3 text-xs font-medium text-center inline-flex items-center text-white bg-blue-700 rounded-lg hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800">
-                            <svg className="w-4 h-4 text-white me-2" aria-hidden="true"
-                                 xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none"
-                                 viewBox="0 0 24 24">
-                                <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"
-                                      strokeWidth="2"
-                                      d="M5 12h14M5 12l4-4m-4 4 4 4"/>
-                            </svg>
-                            Go back
-                        </button>
-                    </Link>
+            } />
+        );
+    }
 
-                </div>
-            </div>
-        </div>
-        <form className="p-4 md:p-5" onSubmit={handleSubmit}>
-            <div className="container border-1">
-                <table className="table-auto w-full" cellPadding="10" cellSpacing="10">
-                    <tbody>
-                    {drillSetData.data.map((item, index) => (<>
-                        <tr className="bg-blue-300 border-2 border-blue-600" key={index}>
-                            <td>
-                                <label className="font-semibold mr-3 my-2">Word:</label>
-                                <label>{item.word}</label>
-                            </td>
-                        </tr>
-                        <tr className="bg-yellow-100 border-2 border-yellow-600" key={index}>
-                            <td>
-                                <label className="font-semibold mr-3 my-2">Meaning:</label>
-                                <label>{GetWordData(item.wordRefId).meanings[0].meaning}</label>
-                            </td>
-                        </tr>
-                        <tr className="bg-gray-100 border-2 border-gray-600" key={`${item.refId}-response`}>
-                            <td>
-                                <input
-                                    type="text"
-                                    name="refId"
-                                    value={item.refId}
-                                    onChange={(e) => handleChange(index, e.target.name, e.target.value)}
-                                    className="hidden"
-                                />
-                                <textarea
-                                    className="form-control"
-                                    name="response"
-                                    value={item.response}
-                                    onChange={(e) => handleChange(index, e.target.name, e.target.value)}
-                                />
-                                {/*<input*/}
-                                {/*    type="radio"*/}
-                                {/*    radioGroup="posGroup"*/}
-                                {/*    id={`response_${index}_1`}*/}
-                                {/*    name={`response_${index}`}*/}
-                                {/*    value="Option 1"*/}
-                                {/*    checked={item.response === 'Option 1'}*/}
-                                {/*    onChange={() => handleChange(index, 'Option 1')}*/}
-                                {/*/>*/}
-                                {/*<label htmlFor={`response_${index}_1`}>Option 1</label>*/}
-                            </td>
-                        </tr>
-                    </>))}
-                    </tbody>
-                </table>
-                <div className="flex flex-row my-4">
-                    <div className="basis-1/12">
-                        <button type="submit" className="btn btn-primary bg-blue-400 w-3/4 font-semibold">Submit
-                        </button>
+    return (
+        <Layout content={
+            <div className="min-h-screen bg-slate-50 pb-20 font-sans">
+                {/* Header */}
+                <div className="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
+                    <div className="max-w-4xl mx-auto px-6 py-3">
+                        <div className="flex justify-between items-center">
+                            <div className="flex items-center gap-4">
+                                <Link href={`/challenges/${drillRefId}`} className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-400 hover:text-indigo-600">
+                                    <ArrowLeftIcon className="w-5 h-5" />
+                                </Link>
+                                <div>
+                                    <h1 className="text-lg font-extrabold text-slate-800 flex items-center gap-2">
+                                        Identify POS
+                                    </h1>
+                                    <div className="text-xs text-slate-500 font-bold">
+                                        Word {currentIndex + 1} / {questions.length}
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <Link href="/dashboard/dashboard2" className="text-xs font-bold text-slate-500 hover:text-slate-900 border border-slate-200 px-3 py-1.5 rounded-lg hover:bg-slate-50">
+                                    Exit
+                                </Link>
+                            </div>
+                        </div>
                     </div>
-                    <div className="basis-1/12">
-                        <button type="reset" className="btn btn-danger bg-red-400 w-3/4 font-semibold">Reset</button>
-                    </div>
-                    <div className="basis-10/12">
+                    {/* Progress Bar */}
+                    <div className="h-1 bg-slate-100 w-full relative">
+                        <div
+                            className="h-full bg-indigo-500 transition-all duration-500 ease-out absolute left-0 top-0"
+                            style={{ width: `${progress}%` }}
+                        />
                     </div>
                 </div>
+
+                <main className="max-w-2xl mx-auto px-6 py-10">
+                    {isCompleted ? (
+                        <div className="text-center py-20 animate-in zoom-in duration-500 bg-white rounded-3xl shadow-sm border border-slate-100 p-10">
+                            <SparklesIcon className="w-20 h-20 text-indigo-600 mx-auto mb-6" />
+                            <h2 className="text-4xl font-black text-slate-800 mb-4">Complete!</h2>
+                            <p className="text-slate-500 text-lg mb-8">
+                                You have finished the Part of Speech challenge.
+                            </p>
+                            <div className="flex justify-center gap-4">
+                                <button onClick={initializeGame} className="px-6 py-3 bg-white border border-slate-300 rounded-xl font-bold text-slate-700 hover:bg-slate-50 transition-colors">
+                                    Restart
+                                </button>
+                                <Link href={`/challenges/${drillRefId}`} className="px-6 py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 shadow-lg shadow-indigo-200 transition-all">
+                                    Back to Drills
+                                </Link>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                            {/* Card */}
+                            <div className="bg-white rounded-3xl shadow-xl border border-slate-100 overflow-hidden">
+                                <div className="bg-indigo-600 px-8 py-6 text-white">
+                                    <span className="text-indigo-100 text-xs font-bold uppercase tracking-widest mb-2 block">The Word</span>
+                                    <h2 className="text-5xl font-black">{currentQuestion.word}</h2>
+                                </div>
+                                <div className="p-8 space-y-6">
+                                    <div className="flex gap-4">
+                                        <div className="shrink-0 w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center">
+                                            <BookOpenIcon className="w-5 h-5" />
+                                        </div>
+                                        <div>
+                                            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Meaning</h3>
+                                            <p className="text-slate-700 font-medium leading-relaxed">{currentQuestion.meaning}</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex gap-4">
+                                        <div className="shrink-0 w-10 h-10 bg-orange-50 text-orange-600 rounded-xl flex items-center justify-center">
+                                            <ChatBubbleBottomCenterTextIcon className="w-5 h-5" />
+                                        </div>
+                                        <div>
+                                            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Example</h3>
+                                            <p className="text-slate-700 italic leading-relaxed">"{currentQuestion.example}"</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Options */}
+                            <div className="space-y-4">
+                                <h3 className="text-center text-xs font-black text-slate-400 uppercase tracking-[0.2em]">Select Part of Speech</h3>
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                    {POS_OPTIONS.map((pos) => (
+                                        <button
+                                            key={pos}
+                                            onClick={() => handlePosSelect(pos)}
+                                            className="px-4 py-4 bg-white border-2 border-slate-200 rounded-2xl font-bold text-slate-600 hover:border-indigo-600 hover:text-indigo-600 transition-all hover:shadow-md active:scale-95"
+                                        >
+                                            {pos}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </main>
+
+                <Notification
+                    message={notification.message}
+                    type={notification.type}
+                    onClose={() => setNotification({ ...notification, visible: false })}
+                />
             </div>
-        </form>
-    </>);
+        } />
+    );
 };
 
 export default LoadPosDrillChallenge;
 
-
 export async function getServerSideProps(context) {
-    const {params} = context;
-
-    // Accessing the array of values
+    const { params } = context;
     const drillId = params.drillId;
-    const drillRefId=drillId[0];
-    const challengeId = drillId[1];
-    const drillSetData = await fetchData(`${API_LEXIMENTOR_BASE_URL}/drill/metadata/sets/${drillId[0]}`)
-    const drillSetWordData = await fetchData(`${API_LEXIMENTOR_BASE_URL}/drill/metadata/sets/words/data/${drillId[0]}`)
-    return {
-        props: {
-            drillSetData, challengeId, drillSetWordData,drillRefId
-        },
-    };
+    const challengeId = drillId[0];
+    const drillRefId = drillId[1];
 
+    try {
+        const [drillSetData, drillSetWordData, challengeScores] = await Promise.all([
+            fetchData(`${API_LEXIMENTOR_BASE_URL}/drill/metadata/sets/${drillRefId}`),
+            fetchData(`${API_LEXIMENTOR_BASE_URL}/drill/metadata/sets/words/data/${drillRefId}`),
+            fetchData(`${API_LEXIMENTOR_BASE_URL}/drill/metadata/challenges/challenge/${challengeId}/scores`)
+        ]);
+
+        return {
+            props: {
+                drillSetData: drillSetData || { data: [] },
+                drillSetWordData: drillSetWordData || { data: [] },
+                challengeScores: challengeScores || { data: [] },
+                challengeId,
+                drillRefId
+            },
+        };
+    } catch (e) {
+        console.error("Error fetching POS challenge data:", e);
+        return {
+            props: {
+                drillSetData: { data: [] },
+                drillSetWordData: { data: [] },
+                challengeScores: { data: [] },
+                challengeId,
+                drillRefId
+            },
+        };
+    }
 }
