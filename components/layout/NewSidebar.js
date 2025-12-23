@@ -1,17 +1,19 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import {
-    PieChart,
-    ShoppingCart,
-    LayoutGrid,
-    Mail,
+    LayoutDashboard,
+    BookOpen,
+    PenTool,
+    Dumbbell,
     Users,
     ShoppingBag,
     LogIn,
-    FileSignature,
+    UserPlus,
     ChevronDown,
     ChevronRight,
-    Search
+    Search,
+    Zap,
+    MessageSquare
 } from 'lucide-react';
 
 const NewSidebar = () => {
@@ -28,13 +30,13 @@ const NewSidebar = () => {
         {
             type: 'link',
             label: 'Dashboard',
-            icon: PieChart,
+            icon: LayoutDashboard,
             href: '/dashboard/dashboard2'
         },
         {
             type: 'category', // Collapsible
             label: 'LexiMentor',
-            icon: ShoppingCart,
+            icon: BookOpen,
             id: 'leximentor',
             subItems: [
                 { label: 'Dashboard', href: '/dashboard/dashboard2' },
@@ -46,7 +48,7 @@ const NewSidebar = () => {
         {
             type: 'category',
             label: 'Writewise',
-            icon: ShoppingCart,
+            icon: PenTool,
             id: 'writewise',
             subItems: [
                 { label: 'Dashboard', href: '/writewise/topics/generate-topics' },
@@ -58,7 +60,7 @@ const NewSidebar = () => {
         {
             type: 'category',
             label: 'Fitmate',
-            icon: ShoppingCart,
+            icon: Dumbbell,
             id: 'fitmate',
             subItems: [
                 { label: 'Dashboard', href: '/fitmate/dashboard/dashboard' },
@@ -71,24 +73,11 @@ const NewSidebar = () => {
         {
             type: 'divider'
         },
-        {
-            type: 'link',
-            label: 'Writewise',
-            icon: LayoutGrid,
-            href: '#',
-            badge: { text: 'Pro', color: 'bg-gray-100 text-gray-800' }
-        },
-        {
-            type: 'link',
-            label: 'Fitmate',
-            icon: Mail,
-            href: '#',
-            badge: { text: '3', color: 'bg-blue-100 text-blue-600' }
-        },
+        /*
         {
             type: 'link',
             label: 'Synapster',
-            icon: Users,
+            icon: Zap,
             href: '#'
         },
         {
@@ -109,9 +98,10 @@ const NewSidebar = () => {
         {
             type: 'link',
             label: 'Sign Up',
-            icon: FileSignature,
+            icon: UserPlus,
             href: '#'
         }
+        */
     ];
 
     return (
