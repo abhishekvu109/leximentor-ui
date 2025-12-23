@@ -13,10 +13,17 @@ import {
     ChevronRight,
     Search,
     Zap,
-    MessageSquare
+    MessageSquare,
+    List,
+    Trophy,
+    BarChart3,
+    Activity,
+    ClipboardList,
+    Settings,
+    Grid
 } from 'lucide-react';
 
-const NewSidebar = () => {
+const NewSidebar = ({ isOpen }) => {
     const [openSections, setOpenSections] = useState({});
 
     const toggleSection = (name) => {
@@ -39,10 +46,10 @@ const NewSidebar = () => {
             icon: BookOpen,
             id: 'leximentor',
             subItems: [
-                { label: 'Dashboard', href: '/dashboard/dashboard2' },
-                { label: 'Drills', href: '/drills/drills/list-drills' },
-                { label: 'Challenges', href: '#' },
-                { label: 'Analytics', href: '/analytics/primal' }
+                { label: 'Dashboard', href: '/dashboard/dashboard2', icon: Activity },
+                { label: 'Drills', href: '/drills/drills/list-drills', icon: List },
+                { label: 'Challenges', href: '#', icon: Trophy },
+                { label: 'Analytics', href: '/analytics/primal', icon: BarChart3 }
             ]
         },
         {
@@ -51,10 +58,10 @@ const NewSidebar = () => {
             icon: PenTool,
             id: 'writewise',
             subItems: [
-                { label: 'Dashboard', href: '/writewise/topics/generate-topics' },
-                { label: 'Drills', href: '#' },
-                { label: 'Challenges', href: '#' },
-                { label: 'Analytics', href: '#' }
+                { label: 'Dashboard', href: '/writewise/topics/generate-topics', icon: Activity },
+                { label: 'Drills', href: '#', icon: List },
+                { label: 'Challenges', href: '#', icon: Trophy },
+                { label: 'Analytics', href: '#', icon: BarChart3 }
             ]
         },
         {
@@ -63,11 +70,11 @@ const NewSidebar = () => {
             icon: Dumbbell,
             id: 'fitmate',
             subItems: [
-                { label: 'Dashboard', href: '/fitmate/dashboard/dashboard' },
-                { label: 'Routine', href: '/fitmate/routine/routine' },
-                { label: 'Exercise', href: '/fitmate/exercise/exercise' },
-                { label: 'Challenges', href: '#' },
-                { label: 'Analytics', href: '#' }
+                { label: 'Dashboard', href: '/fitmate/dashboard/dashboard', icon: Activity },
+                { label: 'Routine', href: '/fitmate/routine/routine', icon: ClipboardList },
+                { label: 'Exercise', href: '/fitmate/exercise/exercise', icon: Dumbbell },
+                { label: 'Challenges', href: '#', icon: Trophy },
+                { label: 'Analytics', href: '#', icon: BarChart3 }
             ]
         },
         {
@@ -105,7 +112,7 @@ const NewSidebar = () => {
     ];
 
     return (
-        <aside className="fixed top-0 left-0 z-40 w-64 h-screen pt-20 transition-transform -translate-x-full bg-white border-r border-slate-200 sm:translate-x-0 dark:bg-slate-900 dark:border-slate-800">
+        <aside className={`fixed top-0 left-0 z-40 w-64 h-screen pt-20 transition-transform duration-300 ease-in-out bg-white border-r border-slate-200 dark:bg-slate-900 dark:border-slate-800 ${isOpen ? 'translate-x-0 shadow-xl' : '-translate-x-full shadow-none'}`}>
             <div className="h-full px-4 pb-4 overflow-y-auto">
                 <ul className="space-y-1 font-medium">
                     {menuItems.map((item, index) => {
@@ -114,7 +121,7 @@ const NewSidebar = () => {
                         }
 
                         if (item.type === 'category') {
-                            const isOpen = openSections[item.id];
+                            const isSectionOpen = openSections[item.id];
                             const Icon = item.icon;
 
                             return (
@@ -126,21 +133,25 @@ const NewSidebar = () => {
                                     >
                                         <Icon className="w-5 h-5 text-slate-400 group-hover:text-slate-600 dark:text-slate-500 dark:group-hover:text-slate-300 transition-colors" />
                                         <span className="flex-1 ms-3 text-left whitespace-nowrap">{item.label}</span>
-                                        {isOpen ? <ChevronDown size={16} className="text-slate-400" /> : <ChevronRight size={16} className="text-slate-400" />}
+                                        {isSectionOpen ? <ChevronDown size={16} className="text-slate-400" /> : <ChevronRight size={16} className="text-slate-400" />}
                                     </button>
 
-                                    <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isOpen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}>
+                                    <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isSectionOpen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}>
                                         <ul className="py-2 space-y-1">
-                                            {item.subItems.map((sub, subIdx) => (
-                                                <li key={subIdx}>
-                                                    <Link
-                                                        href={sub.href}
-                                                        className="flex items-center w-full p-2 text-sm text-slate-600 transition duration-75 rounded-lg pl-11 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800"
-                                                    >
-                                                        {sub.label}
-                                                    </Link>
-                                                </li>
-                                            ))}
+                                            {item.subItems.map((sub, subIdx) => {
+                                                const SubIcon = sub.icon;
+                                                return (
+                                                    <li key={subIdx}>
+                                                        <Link
+                                                            href={sub.href}
+                                                            className="flex items-center w-full p-2 text-sm text-slate-600 transition duration-75 rounded-lg pl-11 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800 group/sub"
+                                                        >
+                                                            {SubIcon && <SubIcon className="w-3.5 h-3.5 me-2.5 text-slate-400 group-hover/sub:text-slate-600 transition-colors" />}
+                                                            <span>{sub.label}</span>
+                                                        </Link>
+                                                    </li>
+                                                );
+                                            })}
                                         </ul>
                                     </div>
                                 </li>
