@@ -1,173 +1,273 @@
-import {fetchData, postDataAsJson} from "@/dataService";
-import {API_LEXIMENTOR_BASE_URL, API_WRITEWISE_BASE_URL} from "@/constants";
+import { fetchData, postDataAsJson } from "@/dataService";
+import { API_WRITEWISE_BASE_URL } from "@/constants";
 import Layout from "@/components/layout/Layout";
-import {useEffect, useState} from "react";
+import { useEffect, useState, useMemo } from "react";
+import dynamic from "next/dynamic";
+import "react-quill/dist/quill.snow.css";
+import { PlusIcon } from "@heroicons/react/24/solid";
 
-const Content = ({topics, responseVersions}) => {
+// Dynamic import for ReactQuill to avoid SSR issues
+const ReactQuill = dynamic(() => import("react-quill"), { ssr: false });
 
-    const Data = () => {
-        if (topics == null || topics.data == null) {
-            return (<>
-                <p className="text-black/50 text-sm font-semibold italic">Internal error in loading the topics.</p>
-            </>);
-        } else {
-            return <><HTML topic={topics.data} recommendations={topics.data.recommendations}
-                           responseVersions={responseVersions}/> </>
+// --- Components ---
+
+const StatusBadge = ({ status }) => {
+    let colorClass = "bg-slate-100 text-slate-600";
+    if (status === 'SUBMITTED') colorClass = "bg-green-100 text-green-700";
+    if (status === 'DRAFT') colorClass = "bg-amber-100 text-amber-700";
+
+    return (
+        <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider ${colorClass}`}>
+            {status || 'Draft'}
+        </span>
+    );
+};
+
+const WritingPad = ({ topics, responseVersions }) => {
+    // --- State ---
+    const [topic, setTopic] = useState(topics?.data || {});
+    const [selectedVersion, setSelectedVersion] = useState(null);
+    const [essayContent, setEssayContent] = useState('');
+    const [isSaving, setIsSaving] = useState(false);
+
+    // Derived State
+    const wordCount = useMemo(() => {
+        if (typeof document === 'undefined') return 0;
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = essayContent;
+        const text = tempDiv.textContent || tempDiv.innerText || "";
+        return text.trim().length > 0 ? text.trim().split(/\s+/).length : 0;
+    }, [essayContent]);
+
+    // Initialize State
+    useEffect(() => {
+        if (responseVersions?.data?.responseVersionDTOs?.length > 0) {
+            const firstVersion = responseVersions.data.responseVersionDTOs[0];
+            setSelectedVersion(firstVersion);
+            setEssayContent(firstVersion.response || '');
+        } else if (topics?.data) {
+            setTopic(topics.data);
         }
-    }
+    }, [topics, responseVersions]);
 
 
-    const HTML = ({topic, recommendations, responseVersions}) => {
-        const [selectedVersion, setSelectedVersion] = useState((responseVersions?.data?.responseVersionDTOs && responseVersions.data.responseVersionDTOs.length > 0) ? responseVersions.data.responseVersionDTOs[0] : null);
-        const [essay, setEssay] = useState('');
-        const wordCount = essay.trim().length > 0 ? essay.trim().split(/\s+/).length : 0;
-        const [formData, setFormData] = useState({
-            writingSessionRefId: topic.writingSessionRefId, topicRefId: topic.refId, responseType: 0, response: ""
+    // --- Handlers ---
 
-        })
+    const handleVersionChange = (e) => {
+        const index = e.target.selectedIndex;
+        const version = responseVersions.data.responseVersionDTOs[index];
+        setSelectedVersion(version);
+        setEssayContent(version.response || '');
+    };
 
-        useEffect(() => {
-            if (responseVersions?.data?.responseVersionDTOs && responseVersions.data.responseVersionDTOs.length > 0) {
-                const firstVersion = responseVersions.data.responseVersionDTOs[0];
-                setSelectedVersion(firstVersion);
-                setEssay(firstVersion.response);
-            }
-        }, [responseVersions]);
+    const handleCreateVersion = () => {
+        if (confirm("Create a new version? This will let you start a fresh draft.")) {
+            setSelectedVersion(null);
+            setEssayContent("");
+        }
+    };
 
+    const handleSave = async (type = 'Draft') => { // 'Draft' or 'Submit'
+        setIsSaving(true);
+        const submitType = type === 'Draft' ? 0 : 1;
 
-        const handleChange = (e) => {
-            const text = e.target.value;
-            setEssay(text);
+        const payload = {
+            writingSessionRefId: topic.writingSessionRefId,
+            topicRefId: topic.refId,
+            responseType: submitType,
+            response: essayContent
         };
 
-        const handleSubmit = async (e, submitType) => {
-            e.preventDefault();
-            formData.response = essay;
-            formData.responseType = submitType == 'Draft' ? 0 : 1;
-            try {
-                const res = await fetch(`${API_WRITEWISE_BASE_URL}/v1/response`, {
-                    method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(formData),
-                });
-                if (!res.ok) throw new Error("Failed to save or submit.");
-                const data = await res.json();
-                alert(`Essay ${submitType === "submit" ? "submitted" : "saved"} successfully!`);
-            } catch (err) {
-                console.error(err);
-                alert("There was an error. Please try again.");
+        try {
+            const res = await fetch(`${API_WRITEWISE_BASE_URL}/v1/response`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload),
+            });
+
+            if (!res.ok) throw new Error("Failed to save.");
+
+            // On success, maybe refetch or just alert
+            alert(`Essay ${type === 'Submit' ? 'submitted' : 'saved'} successfully!`);
+
+            if (type === 'Submit') {
+                // Optimistically update status if needed, or force reload
+                if (selectedVersion) {
+                    setSelectedVersion(prev => ({ ...prev, responseStatus: 'SUBMITTED' }));
+                }
             }
-        };
 
-
-        return (<div className="min-h-screen bg-gray-50 p-6 text-gray-800 font-sans flex flex-col gap-6">
-            {/* Header */}
-            <header className="max-w-4xl mx-auto w-full">
-                <h1 className="text-lg font-bold mb-2">{`📝 ${topic.topicNo}. Topic: ${topic.topic}`}</h1>
-
-                {/* Dropdown for topic versions */}
-                {responseVersions.data && responseVersions.data.responseVersionDTOs.length > 0 && (
-                    <div className="mb-2">
-                        <label htmlFor="versionSelect" className="text-xs font-medium text-gray-600 mr-2">
-                            Select version:
-                        </label>
-                        <select
-                            id="versionSelect"
-                            // value={selectedVersion}
-                            onChange={(e) => {
-                                const version = responseVersions.data.responseVersionDTOs[e.target.selectedIndex];
-                                setSelectedVersion(version);
-                                setEssay(version.response);
-                            }}
-                            className="text-sm border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        >
-                            {responseVersions.data.responseVersionDTOs.map((version, index) => (
-                                <option key={index} value={version}>
-                                    v{version.versionNumber}.0
-                                </option>))}
-                        </select>
-                    </div>)}
-
-                <p className="text-xs text-gray-600">
-                    <strong>Description:</strong> {topic.description}
-                </p>
-            </header>
-
-            {/* Writing area */}
-
-            <section className="max-w-4xl mx-auto w-full bg-white shadow rounded-lg p-6">
-                {selectedVersion != null && String(selectedVersion.responseStatus).toUpperCase() === 'SUBMITTED' ? <>
-                    <button type="submit" onClick={(e) => {
-                        e.preventDefault();
-                        setEssay("");
-                        setSelectedVersion(null);
-                    }}
-                            className="bg-green-200 inline-flex text-gray-800 px-6 py-1 text-xs border border-gray-500  rounded hover:bg-gray-300 transition mb-3 hover:bg-green-400">
-                        <svg className="w-4 h-4 text-gray-800 dark:text-white mr-2" aria-hidden="true"
-                             xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor"
-                             viewBox="0 0 24 24">
-                            <path fillRule="evenodd"
-                                  d="M12 2c-.791 0-1.55.314-2.11.874l-.893.893a.985.985 0 0 1-.696.288H7.04A2.984 2.984 0 0 0 4.055 7.04v1.262a.986.986 0 0 1-.288.696l-.893.893a2.984 2.984 0 0 0 0 4.22l.893.893a.985.985 0 0 1 .288.696v1.262a2.984 2.984 0 0 0 2.984 2.984h1.262c.261 0 .512.104.696.288l.893.893a2.984 2.984 0 0 0 4.22 0l.893-.893a.985.985 0 0 1 .696-.288h1.262a2.984 2.984 0 0 0 2.984-2.984V15.7c0-.261.104-.512.288-.696l.893-.893a2.984 2.984 0 0 0 0-4.22l-.893-.893a.985.985 0 0 1-.288-.696V7.04a2.984 2.984 0 0 0-2.984-2.984h-1.262a.985.985 0 0 1-.696-.288l-.893-.893A2.984 2.984 0 0 0 12 2Zm3.683 7.73a1 1 0 1 0-1.414-1.413l-4.253 4.253-1.277-1.277a1 1 0 0 0-1.415 1.414l1.985 1.984a1 1 0 0 0 1.414 0l4.96-4.96Z"
-                                  clipRule="evenodd"/>
-                        </svg>
-
-                        New
-                    </button>
-                </> : <></>}
-
-                <textarea id="essay" rows="16" placeholder="Start writing your essay here..." value={essay}
-                          onChange={handleChange}
-                          disabled={selectedVersion != null && String(selectedVersion.responseStatus).toUpperCase() === 'SUBMITTED'}
-                          className={`w-full border border-gray-300 rounded-md p-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y`}/>
-                <div className="flex justify-between items-center mt-4 text-sm text-gray-600">
-                    <p><span>{wordCount}</span> words</p>
-                    <div className="flex gap-2">
-                        <button type="submit" onClick={(e) => handleSubmit(e, 'Draft')}
-                                className="bg-gray-200 text-gray-800 px-4 py-2 rounded hover:bg-gray-300 transition">
-                            Save as Draft
-                        </button>
-                        <button type="submit" onClick={(e) => handleSubmit(e, 'Submit')}
-                                className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition">
-                            Submit
-                        </button>
-                    </div>
-                </div>
-            </section>
-            {/* Tips */}
-            {recommendations && recommendations.length > 0 && (<aside className="max-w-4xl mx-auto w-full mt-2">
-                <details className="bg-blue-50 border-l-4 border-blue-400 rounded p-4">
-                    <summary className="font-medium cursor-pointer">💡 Writing Tips (click to expand)</summary>
-                    <ul className="mt-3 list-disc list-inside text-sm text-gray-700 space-y-1">
-                        {recommendations.map((item, index) => (<li key={index}>{item}</li>))}
-                    </ul>
-                </details>
-            </aside>)}
-        </div>);
+        } catch (error) {
+            console.error(error);
+            alert("Error saving essay. Please try again.");
+        } finally {
+            setIsSaving(false);
+        }
     };
 
 
-    return (<>
-        <Data/>
-    </>);
-}
-const WritingPad = ({topics, responseVersions}) => {
-    return (<>
-        <Layout content={<> <Content topics={topics} responseVersions={responseVersions}/></>}/>
-    </>);
-}
+    // --- Editor Config ---
+    const modules = {
+        toolbar: [
+            [{ 'header': [1, 2, 3, false] }],
+            ['bold', 'italic', 'underline', 'strike'],
+            [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+            [{ 'color': [] }, { 'background': [] }],
+            ['clean']
+        ],
+    };
+
+
+    // --- Render ---
+    const isSubmitted = String(selectedVersion?.responseStatus).toUpperCase() === 'SUBMITTED';
+
+    return (
+        <Layout content={
+            <div className="min-h-screen bg-slate-50 font-sans -m-4 sm:-m-8">
+                {/* Top Bar */}
+                <header className="bg-white border-b border-slate-200 px-6 py-4 flex flex-col md:flex-row justify-between items-center sticky top-0 z-10 shadow-sm gap-4">
+                    <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 bg-indigo-100 text-indigo-600 rounded-xl flex items-center justify-center font-bold text-lg">
+                            {topic.topicNo || '#'}
+                        </div>
+                        <div>
+                            <h1 className="text-lg font-bold text-slate-800 leading-tight line-clamp-1">{topic.topic}</h1>
+                            <div className="flex items-center gap-2 text-xs text-slate-500">
+                                <span>{topic.topicNo}</span>
+                                <span>•</span>
+                                <StatusBadge status={selectedVersion?.responseStatus} />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-3 w-full md:w-auto">
+                        {/* Version Select */}
+                        {responseVersions?.data?.responseVersionDTOs?.length > 1 && (
+                            <div className="flex items-center gap-1">
+                                <select
+                                    onChange={handleVersionChange}
+                                    className="text-sm bg-slate-50 border-slate-200 rounded-lg py-2 pl-3 pr-8 focus:ring-indigo-500"
+                                >
+                                    {responseVersions.data.responseVersionDTOs.map((v, i) => (
+                                        <option key={i} value={v.refId}>Version {v.versionNumber}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        )}
+
+                        <button
+                            onClick={handleCreateVersion}
+                            className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition border border-transparent hover:border-indigo-100"
+                            title="Create New Version"
+                        >
+                            <PlusIcon className="w-5 h-5" />
+                        </button>
+
+                        <div className="bg-slate-100 px-4 py-2 rounded-lg text-sm font-medium text-slate-600">
+                            {wordCount} Words
+                        </div>
+
+                        {!isSubmitted && (
+                            <>
+                                <button
+                                    onClick={() => handleSave('Draft')}
+                                    disabled={isSaving}
+                                    className="px-4 py-2 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-lg text-sm font-medium transition shadow-sm"
+                                >
+                                    {isSaving ? 'Saving...' : 'Save Draft'}
+                                </button>
+                                <button
+                                    onClick={() => handleSave('Submit')}
+                                    disabled={isSaving}
+                                    className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition shadow disabled:opacity-50"
+                                >
+                                    Submit
+                                </button>
+                            </>
+                        )}
+                        {isSubmitted && (
+                            <div className="px-4 py-2 bg-green-50 text-green-700 text-sm font-medium rounded-lg border border-green-200">
+                                Essay Submitted
+                            </div>
+                        )}
+                    </div>
+                </header>
+
+                <main className="max-w-[1600px] mx-auto p-6 md:p-8">
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 h-full">
+
+                        {/* Left Sidebar: Context & Help */}
+                        <aside className="lg:col-span-3 space-y-6">
+                            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">Topic Description</h3>
+                                <p className="text-slate-700 text-sm leading-relaxed whitespace-pre-line">
+                                    {topic.description || "No description provided."}
+                                </p>
+                            </div>
+
+                            {topic.recommendations && topic.recommendations.length > 0 && (
+                                <div className="bg-indigo-50 p-6 rounded-2xl border border-indigo-100">
+                                    <h3 className="flex items-center gap-2 text-indigo-800 font-bold mb-4">
+                                        <span>💡</span> Writing Tips
+                                    </h3>
+                                    <ul className="space-y-3">
+                                        {topic.recommendations.map((rec, i) => (
+                                            <li key={i} className="text-sm text-indigo-900/80 flex items-start gap-2">
+                                                <span className="mt-1.5 w-1.5 h-1.5 bg-indigo-400 rounded-full shrink-0" />
+                                                <span>{rec}</span>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            )}
+                        </aside>
+
+                        {/* Center: Editor */}
+                        <section className="lg:col-span-9 flex flex-col h-[calc(100vh-200px)] min-h-[500px]">
+                            <div className="flex-1 bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col">
+                                <ReactQuill
+                                    theme="snow"
+                                    value={essayContent}
+                                    onChange={setEssayContent}
+                                    modules={modules}
+                                    readOnly={isSubmitted}
+                                    className="flex-1 flex flex-col h-full"
+                                    placeholder="Start writing your essay here..."
+                                />
+                                {/* Custom CSS override for Quill to make it fill height */}
+                                <style jsx global>{`
+                                    .quill { display: flex; flex-direction: column; height: 100%; }
+                                    .ql-container { flex: 1; display: flex; flex-direction: column; font-family: 'Inter', sans-serif; font-size: 1rem; }
+                                    .ql-editor { flex: 1; padding: 2rem; overflow-y: auto; line-height: 1.8; color: #334155; }
+                                    .ql-toolbar { border-top: none !important; border-left: none !important; border-right: none !important; border-bottom: 1px solid #e2e8f0 !important; background: #f8fafc; padding: 12px !important; }
+                                    .ql-container.ql-snow { border: none !important; }
+                                `}</style>
+                            </div>
+                        </section>
+
+                    </div>
+                </main>
+            </div>
+        } />
+    );
+};
 
 export default WritingPad;
 
 export async function getServerSideProps(context) {
-    const {params} = context;
-
-    // Accessing the array of values
+    const { params } = context;
     const ids = params.ids;
     const topicRefId = ids[0];
-    const topics = await fetchData(`${API_WRITEWISE_BASE_URL}/v1/topics/topic/${topicRefId}`)
-    const responseVersions = await fetchData(`${API_WRITEWISE_BASE_URL}/v1/response/response-version/${topicRefId}`)
 
-    return {
-        props: {
-            topics, responseVersions
-        },
-    };
+    try {
+        const topics = await fetchData(`${API_WRITEWISE_BASE_URL}/v1/topics/topic/${topicRefId}`) || { data: {} };
+        const responseVersions = await fetchData(`${API_WRITEWISE_BASE_URL}/v1/response/response-version/${topicRefId}`) || { data: { responseVersionDTOs: [] } };
+
+        return {
+            props: { topics, responseVersions },
+        };
+    } catch (e) {
+        console.error(e);
+        return { props: { topics: {}, responseVersions: {} } };
+    }
 }

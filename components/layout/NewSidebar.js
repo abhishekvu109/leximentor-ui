@@ -38,9 +38,9 @@ const NewSidebar = () => {
             id: 'leximentor',
             subItems: [
                 { label: 'Dashboard', href: '/dashboard/dashboard2' },
-                { label: 'Drills', href: '#' },
+                { label: 'Drills', href: '/drills/drills/list-drills' },
                 { label: 'Challenges', href: '#' },
-                { label: 'Analytics', href: '#' }
+                { label: 'Analytics', href: '/analytics/primal' }
             ]
         },
         {

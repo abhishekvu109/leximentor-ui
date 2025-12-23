@@ -6,7 +6,6 @@ import {
     CheckCircle,
     XCircle,
     ArrowLeft,
-    Award,
     Target,
     Brain,
     AlertTriangle,
@@ -21,6 +20,7 @@ import {
  */
 const FeedbackCard = ({ item, index }) => {
     const isCorrect = item.drillChallengeScoresDTO.correct;
+    const question = item.drillChallengeScoresDTO.question;
 
     return (
         <div className={`rounded-xl border-l-4 p-6 shadow-sm bg-white mb-4 transition-all hover:shadow-md
@@ -41,14 +41,27 @@ const FeedbackCard = ({ item, index }) => {
                             </span>
                         )}
                     </div>
-                    <h3 className="text-lg font-medium text-gray-900 mb-4">{item.drillChallengeScoresDTO.question}</h3>
+
+                    <div className="mb-4">
+                        <h3 className="text-lg font-medium text-gray-900 leading-relaxed">
+                            {question.split('_____').map((part, idx, arr) => (
+                                <span key={idx}>
+                                    {part}
+                                    {idx < arr.length - 1 && (
+                                        <span className={`inline-block mx-1 px-2 py-0.5 rounded font-bold border-b-2 ${isCorrect ? 'border-green-500 text-green-700 bg-green-50' : 'border-red-500 text-red-700 bg-red-50'}`}>
+                                            {item.drillChallengeScoresDTO.response || '_____'}
+                                        </span>
+                                    )}
+                                </span>
+                            ))}
+                        </h3>
+                    </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="bg-gray-50 rounded-lg p-3">
-                            <span className="text-xs font-semibold text-gray-500 block mb-1">Your Response</span>
+                            <span className="text-xs font-semibold text-gray-500 block mb-1">Your Selection</span>
                             <p className="text-gray-900 font-medium">{item.drillChallengeScoresDTO.response}</p>
                         </div>
-                        {/* We could show the correct answer here if available in the DTO */}
                     </div>
                 </div>
 
@@ -118,8 +131,8 @@ const ScoreCard = ({ passed, score, correct, wrong, total }) => {
                             {passed ? <CheckCircle size={16} /> : <AlertTriangle size={16} />}
                             {passed ? "Passed" : "Needs Improvement"}
                         </div>
-                        <h2 className="text-xl font-bold text-gray-900">Drill Completed</h2>
-                        <p className="text-gray-500 text-sm">Review your results below</p>
+                        <h2 className="text-xl font-bold text-gray-900">Context Master Challenge</h2>
+                        <p className="text-gray-500 text-sm">Detailed performance breakdown</p>
                     </div>
                 </div>
 
@@ -149,7 +162,7 @@ const ScoreCard = ({ passed, score, correct, wrong, total }) => {
     );
 };
 
-const EvaluationReport = ({ evaluationReportData, challengeId }) => {
+const ContextMasterEvaluationReport = ({ evaluationReportData, challengeId }) => {
     // Data Guards
     if (!evaluationReportData?.data) {
         return (
@@ -192,12 +205,12 @@ const EvaluationReport = ({ evaluationReportData, challengeId }) => {
                     </Link>
                     <div>
                         <div className="flex items-center gap-2 text-sm text-gray-500">
-                            <span>Evaluation Report</span>
+                            <span>Context Master Report</span>
                             <span>•</span>
                             <span className="font-mono">{refId}</span>
                         </div>
                         <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-                            {drillType} Assessment
+                            <BookOpen className="text-indigo-600" /> Assessment Feedback
                         </h1>
                     </div>
                 </div>
@@ -236,13 +249,11 @@ const EvaluationReport = ({ evaluationReportData, challengeId }) => {
     );
 };
 
-export default EvaluationReport;
+export default ContextMasterEvaluationReport;
 
 export async function getServerSideProps(context) {
     const { challengeId } = context.params;
     try {
-        // Updated endpoint based on previous code. Note: Added /report/ prefix if that was the intended path, 
-        // but verifying against previous file content: ${API_LEXIMENTOR_BASE_URL}/drill/metadata/challenges/challenge/${challengeId}/report matches.
         const res = await fetch(`${API_LEXIMENTOR_BASE_URL}/drill/metadata/challenges/challenge/${challengeId}/report`);
         const evaluationReportData = await res.json();
 
