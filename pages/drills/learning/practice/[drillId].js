@@ -1,10 +1,12 @@
 import Layout from "@/components/layout/Layout";
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { fetchData } from "@/dataService";
 import { API_LEXIMENTOR_BASE_URL } from "@/constants";
 import FlashcardView from "@/components/practice/FlashcardView";
 import DetailedView from "@/components/practice/DetailedView";
 import { ViewColumnsIcon, RectangleStackIcon } from "@heroicons/react/24/outline";
+import { ArrowLeft, Trophy } from "lucide-react";
 
 export default function VocabularyCard({ drillSetData, drillId, wordMetadata, sourcesData }) {
     const [isToggleChecked, setIsToggleChecked] = useState(false);
@@ -29,11 +31,29 @@ export default function VocabularyCard({ drillSetData, drillId, wordMetadata, so
         <div className="bg-white border-b border-slate-200 sticky top-0 z-20 shadow-sm">
             <div className="max-w-7xl mx-auto px-6 py-4">
                 <div className="flex items-center justify-between">
-                    <div>
-                        <h1 className="text-2xl font-black text-slate-800">Practice Mode</h1>
-                        <p className="text-sm text-slate-500 mt-1">
-                            {drillSetData?.data?.length || 0} words in this drill
-                        </p>
+                    <div className="flex items-center gap-4">
+                        <Link
+                            href="/drills/drills/list-drills"
+                            className="p-2.5 hover:bg-slate-50 rounded-xl transition-all text-slate-400 hover:text-slate-600 border border-transparent hover:border-slate-100 group"
+                            title="Back to Drills"
+                        >
+                            <ArrowLeft className="w-5 h-5 transition-transform group-hover:-translate-x-0.5" />
+                        </Link>
+                        <div>
+                            <div className="flex items-center gap-3">
+                                <h1 className="text-2xl font-black text-slate-800">Practice Mode</h1>
+                                <Link
+                                    href={`/challenges/${drillId}`}
+                                    className="flex items-center gap-1.5 px-3 py-1 bg-amber-50 text-amber-600 rounded-full text-[10px] font-black uppercase tracking-wider hover:bg-amber-100 transition-colors border border-amber-100 shadow-sm"
+                                >
+                                    <Trophy size={12} className="fill-amber-500/10" />
+                                    Go to Challenges
+                                </Link>
+                            </div>
+                            <p className="text-sm text-slate-500 mt-0.5">
+                                {drillSetData?.data?.length || 0} words in this drill
+                            </p>
+                        </div>
                     </div>
 
                     {/* Modern Toggle */}
@@ -41,8 +61,8 @@ export default function VocabularyCard({ drillSetData, drillId, wordMetadata, so
                         <button
                             onClick={() => !isToggleChecked && handleToggle()}
                             className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-bold text-sm transition-all ${!isToggleChecked
-                                    ? 'bg-white text-indigo-600 shadow-md'
-                                    : 'text-slate-500 hover:text-slate-700'
+                                ? 'bg-white text-indigo-600 shadow-md'
+                                : 'text-slate-500 hover:text-slate-700'
                                 }`}
                         >
                             <ViewColumnsIcon className="w-5 h-5" />
@@ -51,8 +71,8 @@ export default function VocabularyCard({ drillSetData, drillId, wordMetadata, so
                         <button
                             onClick={() => isToggleChecked && handleToggle()}
                             className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-bold text-sm transition-all ${isToggleChecked
-                                    ? 'bg-white text-indigo-600 shadow-md'
-                                    : 'text-slate-500 hover:text-slate-700'
+                                ? 'bg-white text-indigo-600 shadow-md'
+                                : 'text-slate-500 hover:text-slate-700'
                                 }`}
                         >
                             <RectangleStackIcon className="w-5 h-5" />

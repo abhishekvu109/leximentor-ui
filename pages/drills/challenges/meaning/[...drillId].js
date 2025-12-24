@@ -130,7 +130,7 @@ const LoadMeaningDrillChallenge = ({ drillSetData, challengeId, drillRefId }) =>
                 <div className="bg-white border-b border-slate-200">
                     <div className="max-w-4xl mx-auto px-6 py-8">
                         <div className="mb-6 flex items-center gap-2">
-                            <Link href={`/challenges/${challengeId}`} className="text-slate-400 hover:text-indigo-600 transition-colors flex items-center gap-1 text-sm font-medium">
+                            <Link href={`/challenges/${drillRefId}`} className="text-slate-400 hover:text-indigo-600 transition-colors flex items-center gap-1 text-sm font-medium">
                                 <ArrowLeftIcon className="w-4 h-4" />
                                 Back to Drill
                             </Link>
@@ -221,8 +221,8 @@ export default LoadMeaningDrillChallenge;
 export async function getServerSideProps(context) {
     const { params } = context;
     const drillId = params.drillId;
-    const drillRefId = drillId[0];
-    const challengeId = drillId[1];
+    const drillRefId = drillId[1];
+    const challengeId = drillId[0];
 
     try {
         const drillSetData = await fetchData(`${API_LEXIMENTOR_BASE_URL}/drill/metadata/sets/${drillId[1]}`) || { data: [] };

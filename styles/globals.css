@@ -23,4 +23,6 @@
 }
 
 body {
+  /* add styles here */
+  min-height: 100vh;
 }
