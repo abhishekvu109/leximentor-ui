@@ -1,7 +1,8 @@
 import Layout from "@/components/layout/Layout";
 import { API_WRITEWISE_BASE_URL } from "@/constants";
-import { fetchData, ModelData } from "@/dataService";
+import { fetchWithAuth, ModelData } from "@/dataService";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/router";
 import Dropdown from "@/components/form/DropDown";
 import { ChevronDownIcon, PlayIcon, CheckBadgeIcon, PaperAirplaneIcon, BeakerIcon } from "@heroicons/react/24/solid";
 
@@ -10,13 +11,11 @@ import { ChevronDownIcon, PlayIcon, CheckBadgeIcon, PaperAirplaneIcon, BeakerIco
 const StatusPill = ({ status }) => {
     let color = 'bg-slate-100 text-slate-600 border-slate-200';
     let icon = null;
-    let animate = false;
 
     const s = String(status || 'not started').toUpperCase();
 
     if (s === 'IN-PROGRESS' || s === 'IN PROGRESS') {
         color = 'bg-amber-50 text-amber-700 border-amber-200';
-        animate = true;
         icon = <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping mr-2" />;
     } else if (s === 'COMPLETED') {
         color = 'bg-green-50 text-green-700 border-green-200';
@@ -89,9 +88,11 @@ const EvaluationControlPanel = ({ title, type, topicRefId, versionRefId, model, 
 
     // Polling Functionality
     useEffect(() => {
+        if (!topicRefId || !versionRefId) return;
+
         const fetchStatus = async () => {
             try {
-                const res = await fetch(`${API_WRITEWISE_BASE_URL}/v1/topics/topic/${topicRefId}/versions/version/${versionRefId}`);
+                const res = await fetchWithAuth(`${API_WRITEWISE_BASE_URL}/v1/topics/topic/${topicRefId}/versions/version/${versionRefId}`);
                 const data = await res.json();
 
                 // Fields depend on type
@@ -139,14 +140,13 @@ const EvaluationControlPanel = ({ title, type, topicRefId, versionRefId, model, 
                 setIsValidating(true);
                 break;
             case 'submit':
-                endpoint = "/v1/topics/topic//versions/version/submit-results";
+                endpoint = "/v1/topics/topic/versions/version/submit-results";
                 break;
         }
 
         try {
-            const res = await fetch(`${API_WRITEWISE_BASE_URL}${endpoint}`, {
+            const res = await fetchWithAuth(`${API_WRITEWISE_BASE_URL}${endpoint}`, {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(body),
             });
 
@@ -158,7 +158,6 @@ const EvaluationControlPanel = ({ title, type, topicRefId, versionRefId, model, 
                 setTimeout(() => setValidationStatus(null), 3000); // Clears validation highlight
             } else {
                 alert(`${action} triggered successfully!`);
-                // Force status update?
                 setStatus('In Progress');
             }
 
@@ -223,7 +222,12 @@ const EvaluationControlPanel = ({ title, type, topicRefId, versionRefId, model, 
 
 // --- Main Page ---
 
-const EvaluationView = ({ topicRefId, versionRefId }) => {
+const EvaluationView = () => {
+    const router = useRouter();
+    const { ids } = router.query;
+    const topicRefId = ids?.[0];
+    const versionRefId = ids?.[1];
+
     const [selectedModel, setSelectedModel] = useState("");
 
     const handleModelSelect = (m) => setSelectedModel(m);
@@ -276,18 +280,3 @@ const EvaluationView = ({ topicRefId, versionRefId }) => {
 };
 
 export default EvaluationView;
-
-export async function getServerSideProps(context) {
-    const { params } = context;
-    const ids = params.ids;
-    const topicRefId = ids[0];
-    const versionRefId = ids[1];
-
-    // Note: Original didn't fetch initial data for props, just IDs. Keeping consistent to avoid hydration mismatches if data changes fast.
-    return {
-        props: {
-            topicRefId,
-            versionRefId
-        },
-    };
-}

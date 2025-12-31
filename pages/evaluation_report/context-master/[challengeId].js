@@ -1,5 +1,7 @@
-
+import { useState, useEffect } from "react";
+import { useRouter } from "next/router";
 import { API_LEXIMENTOR_BASE_URL } from "@/constants";
+import { fetchWithAuth } from "@/dataService";
 import Link from "next/link";
 import Layout from "@/components/layout/Layout";
 import {
@@ -162,7 +164,33 @@ const ScoreCard = ({ passed, score, correct, wrong, total }) => {
     );
 };
 
-const ContextMasterEvaluationReport = ({ evaluationReportData, challengeId }) => {
+const ContextMasterEvaluationReport = () => {
+    const router = useRouter();
+    const { challengeId } = router.query;
+
+    const [evaluationReportData, setEvaluationReportData] = useState(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        if (challengeId) {
+            const loadData = async () => {
+                setLoading(true);
+                try {
+                    const res = await fetchWithAuth(`${API_LEXIMENTOR_BASE_URL}/drill/metadata/challenges/challenge/${challengeId}/report`);
+                    const data = await res.json();
+                    setEvaluationReportData(data);
+                } catch (error) {
+                    console.error("Failed to load evaluation report:", error);
+                } finally {
+                    setLoading(false);
+                }
+            };
+            loadData();
+        }
+    }, [challengeId]);
+
+    if (loading) return <Layout content={<div className="p-8 text-center text-slate-500 font-bold">Loading Report...</div>} />;
+
     // Data Guards
     if (!evaluationReportData?.data) {
         return (
@@ -250,26 +278,3 @@ const ContextMasterEvaluationReport = ({ evaluationReportData, challengeId }) =>
 };
 
 export default ContextMasterEvaluationReport;
-
-export async function getServerSideProps(context) {
-    const { challengeId } = context.params;
-    try {
-        const res = await fetch(`${API_LEXIMENTOR_BASE_URL}/drill/metadata/challenges/challenge/${challengeId}/report`);
-        const evaluationReportData = await res.json();
-
-        return {
-            props: {
-                evaluationReportData,
-                challengeId
-            },
-        };
-    } catch (e) {
-        console.error("Failed to load evaluation report", e);
-        return {
-            props: {
-                evaluationReportData: null,
-                challengeId
-            }
-        }
-    }
-}

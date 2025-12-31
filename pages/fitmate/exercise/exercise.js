@@ -3,7 +3,7 @@ import Link from "next/link";
 import Layout from "@/components/layout/Layout";
 import { useEffect, useState, useMemo } from "react";
 import { API_FITMATE_BASE_URL } from "@/constants";
-import { fetchData, postDataAsJson, DeleteByObject } from "@/dataService";
+import { fetchData, postDataAsJson, DeleteByObject, fetchWithAuth } from "@/dataService";
 import {
     Search, Plus, Filter, Trash2, Edit2, Dumbbell,
     MoreVertical, X, Check, AlertCircle, Loader2, Info, Camera
@@ -19,7 +19,7 @@ const ExerciseCard = ({ exercise, onDelete, onEdit, onThumbnailUpload }) => {
     useEffect(() => {
         const fetchThumb = async () => {
             try {
-                const res = await fetch(`${API_FITMATE_BASE_URL}/exercises/exercise/resources/resource?refId=${exercise.refId}&placeholder=THUMBNAIL&resourceId=`);
+                const res = await fetchWithAuth(`${API_FITMATE_BASE_URL}/exercises/exercise/resources/resource?refId=${exercise.refId}&placeholder=THUMBNAIL&resourceId=`);
                 if (!res.ok) return;
                 const blob = await res.blob();
                 if (blob.size > 0 && blob.type.startsWith('image/')) {
@@ -399,9 +399,10 @@ const ExerciseLibrary = () => {
         formData.append('files', file);
 
         try {
-            const res = await fetch(`${API_FITMATE_BASE_URL}/exercises/exercise/resources?refId=${refId}&placeholder=THUMBNAIL`, {
+            const res = await fetchWithAuth(`${API_FITMATE_BASE_URL}/exercises/exercise/resources?refId=${refId}&placeholder=THUMBNAIL`, {
                 method: 'PUT',
-                body: formData
+                body: formData,
+                headers: {} // fetchWithAuth handles Content-Type if needed, but for FormData it should be empty to let browser set boundary
             });
 
             if (res.ok) {

@@ -6,7 +6,7 @@ import Layout from "@/components/layout/Layout";
 import Link from 'next/link';
 import { ArrowLeft, Dumbbell, Activity, Calendar, PlayCircle, Edit2, Camera, Save, Loader2, Check, AlertCircle, Info, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { fetchData, updateData } from '@/dataService';
+import { fetchData, updateData, fetchWithAuth } from '@/dataService';
 
 
 const EditExerciseModal = ({ isOpen, onClose, exercise, onSuccess, onNotification, data: { trainings, bodyParts, musclesAll } }) => {
@@ -229,7 +229,7 @@ const ExerciseDetailContent = () => {
 
     const fetchExerciseImage = async (refId) => {
         try {
-            const res = await fetch(`${API_FITMATE_BASE_URL}/exercises/exercise/resources/resource?refId=${refId}&placeholder=GIF&resourceId=`);
+            const res = await fetchWithAuth(`${API_FITMATE_BASE_URL}/exercises/exercise/resources/resource?refId=${refId}&placeholder=GIF&resourceId=`);
             if (!res.ok) throw new Error("Image fetch failed");
 
             // The API returns binary data direttamente, not JSON
@@ -251,7 +251,7 @@ const ExerciseDetailContent = () => {
     const loadExerciseData = () => {
         if (id) {
             setLoading(true);
-            fetch(`${API_FITMATE_BASE_URL}/exercises/exercise/${id}`)
+            fetchWithAuth(`${API_FITMATE_BASE_URL}/exercises/exercise/${id}`)
                 .then((res) => res.json())
                 .then((data) => {
                     setExercise(data.data);
@@ -300,7 +300,7 @@ const ExerciseDetailContent = () => {
         formData.append('files', file);
 
         try {
-            const res = await fetch(`${API_FITMATE_BASE_URL}/exercises/exercise/resources?refId=${exercise.refId}&placeholder=GIF`, {
+            const res = await fetchWithAuth(`${API_FITMATE_BASE_URL}/exercises/exercise/resources?refId=${exercise.refId}&placeholder=GIF`, {
                 method: 'PUT',
                 body: formData
             });
@@ -328,7 +328,7 @@ const ExerciseDetailContent = () => {
         formData.append('files', file);
 
         try {
-            const res = await fetch(`${API_FITMATE_BASE_URL}/exercises/exercise/resources?refId=${exercise.refId}&placeholder=THUMBNAIL`, {
+            const res = await fetchWithAuth(`${API_FITMATE_BASE_URL}/exercises/exercise/resources?refId=${exercise.refId}&placeholder=THUMBNAIL`, {
                 method: 'PUT',
                 body: formData
             });
