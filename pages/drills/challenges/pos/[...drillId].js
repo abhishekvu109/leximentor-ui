@@ -40,7 +40,7 @@ const Notification = ({ message, type, onClose }) => {
     );
 };
 
-const LoadPosDrillChallenge = () => {
+const POSPractice = () => {
     const router = useRouter();
     const { drillId } = router.query; // [...drillId] -> [challengeId, drillRefId]
 
