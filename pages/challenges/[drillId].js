@@ -1,8 +1,9 @@
 
 import React, { useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/router";
 import Link from "next/link";
 import { API_LEXIMENTOR_BASE_URL } from "@/constants";
-import { deleteData, fetchData, postData } from "@/dataService";
+import { deleteData, fetchData, postData, fetchWithAuth } from "@/dataService";
 import Layout from "@/components/layout/Layout";
 import { motion } from "framer-motion";
 import {
@@ -318,9 +319,13 @@ const EvaluatorModal = ({ isVisible, onClose, evaluators, onSubmit, challengeId 
     );
 };
 
-const Challenges = ({ data, drillId }) => {
-    const [challengeData, setChallengeData] = useState(data);
+const Challenges = () => {
+    const router = useRouter();
+    const { drillId } = router.query;
+
+    const [challengeData, setChallengeData] = useState({ data: [] });
     const [drillRefId, setDrillRefId] = useState(drillId);
+    const [loading, setLoading] = useState(true);
 
     // Evaluation State
     const [isEvaluatorVisible, setIsEvaluatorVisible] = useState(false);
@@ -333,24 +338,41 @@ const Challenges = ({ data, drillId }) => {
     // View State
     const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'analytics'
 
+    const loadChallenges = useCallback(async (id) => {
+        const URL = `${API_LEXIMENTOR_BASE_URL}/drill/metadata/challenges/${id}`;
+        try {
+            const res = await fetchWithAuth(URL);
+            const data = await res.json();
+            setChallengeData(data);
+        } catch (error) {
+            console.error("Failed to load challenges:", error);
+        }
+    }, []);
+
+    useEffect(() => {
+        if (drillId) {
+            setDrillRefId(drillId);
+            const init = async () => {
+                setLoading(true);
+                await loadChallenges(drillId);
+                setLoading(false);
+            };
+            init();
+        }
+    }, [drillId, loadChallenges]);
+
     useEffect(() => {
         if (typeof window !== "undefined" && window.initFlowbite) {
             window.initFlowbite();
         }
     }, []);
 
-    const loadChallenges = async () => {
-        const URL = `${API_LEXIMENTOR_BASE_URL}/drill/metadata/challenges/${drillRefId}`;
-        const res = await fetchData(URL);
-        setChallengeData(res);
-    };
-
     const handleCreateChallenge = async (type) => {
         setCreatingType(type);
         try {
             const URL = `${API_LEXIMENTOR_BASE_URL}/drill/metadata/challenges/challenge?drillId=${drillRefId}&drillType=${type}`;
-            await postData(URL);
-            await loadChallenges();
+            await fetchWithAuth(URL, { method: 'POST' });
+            await loadChallenges(drillRefId);
         } catch (error) {
             console.error(error);
             alert("Failed to create challenge");
@@ -362,25 +384,38 @@ const Challenges = ({ data, drillId }) => {
     const handleDelete = async (refId) => {
         if (!confirm("Are you sure you want to delete this challenge?")) return;
         const URL = `${API_LEXIMENTOR_BASE_URL}/drill/metadata/challenges/${refId}`;
-        await deleteData(URL);
-        await loadChallenges();
+        try {
+            await fetchWithAuth(URL, { method: 'DELETE' });
+            await loadChallenges(drillRefId);
+        } catch (error) {
+            console.error("Failed to delete challenge:", error);
+        }
     };
 
     const handleOpenEvaluator = async (challengeId) => {
         setActiveChallengeId(challengeId);
         setIsEvaluatorVisible(true);
         const URL = `${API_LEXIMENTOR_BASE_URL}/drill/metadata/challenges/challenge/evaluators?challengeRefId=${challengeId}`;
-        const res = await fetchData(URL);
-        setChallengeEvaluators(res);
+        try {
+            const res = await fetchWithAuth(URL);
+            const data = await res.json();
+            setChallengeEvaluators(data);
+        } catch (error) {
+            console.error("Failed to fetch evaluators:", error);
+        }
     };
 
     const handleSubmitEvaluation = async (challengeId, evaluator) => {
         const URL = `${API_LEXIMENTOR_BASE_URL}/drill/metadata/challenges/challenge/${challengeId}/evaluate?challengeId=${challengeId}&evaluator=${evaluator}`;
-        await postData(URL);
-        setIsEvaluatorVisible(false);
-        setActiveChallengeId(null);
-        alert("Evaluation submitted!"); // Replace with toast
-        await loadChallenges();
+        try {
+            await fetchWithAuth(URL, { method: 'POST' });
+            setIsEvaluatorVisible(false);
+            setActiveChallengeId(null);
+            alert("Evaluation submitted!"); // Replace with toast
+            await loadChallenges(drillRefId);
+        } catch (error) {
+            console.error("Failed to submit evaluation:", error);
+        }
     };
 
     const getDrillLink = (type, refId) => {
@@ -396,6 +431,8 @@ const Challenges = ({ data, drillId }) => {
                                             '/drills/challenges/meaning/';
         return `${base}${refId}/${drillRefId}`;
     };
+
+    if (loading) return <Layout content={<div className="p-8 text-center text-slate-500 font-bold">Loading Challenges...</div>} />;
 
     return (
         <Layout content={
@@ -524,26 +561,3 @@ const Challenges = ({ data, drillId }) => {
 };
 
 export default Challenges;
-
-export async function getServerSideProps(context) {
-    const { drillId } = context.params;
-    try {
-        const URL = `${API_LEXIMENTOR_BASE_URL}/drill/metadata/challenges/${drillId}`;
-        const res = await fetch(URL, { headers: { 'Content-Type': 'application/json' } });
-        const data = await res.json();
-        return {
-            props: {
-                data: data,
-                drillId: drillId
-            }
-        };
-    } catch (e) {
-        console.error("Failed to load challenges", e);
-        return {
-            props: {
-                data: null,
-                drillId: drillId
-            }
-        };
-    }
-}

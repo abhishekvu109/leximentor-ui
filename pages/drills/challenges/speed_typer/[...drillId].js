@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/router";
 import Link from "next/link";
 import Layout from "@/components/layout/Layout";
 import { API_LEXIMENTOR_BASE_URL } from "@/constants";
-import { fetchData } from "@/dataService";
+import { fetchData, fetchWithAuth } from "@/dataService";
 import {
     ArrowLeftIcon,
     HeartIcon,
@@ -71,9 +72,13 @@ const FallingItem = ({ item, onReachBottom }) => {
     );
 };
 
-const SpeedTyperChallenge = ({ drillSetData, drillSetWordData, challengeId, drillRefId }) => {
+const SpeedTyperChallenge = () => {
+    const router = useRouter();
+    const { drillId } = router.query; // [...drillId] -> [drillRefId, challengeId]
 
     // --- State ---
+    const [drillSetData, setDrillSetData] = useState({ data: [] });
+    const [drillSetWordData, setDrillSetWordData] = useState({ data: [] });
     const [words, setWords] = useState([]);
     const [fallingItems, setFallingItems] = useState([]);
     const [currentInput, setCurrentInput] = useState('');
@@ -83,6 +88,7 @@ const SpeedTyperChallenge = ({ drillSetData, drillSetWordData, challengeId, dril
     const [isPlaying, setIsPlaying] = useState(false);
     const [isGameOver, setIsGameOver] = useState(false);
     const [wordQueue, setWordQueue] = useState([]);
+    const [loading, setLoading] = useState(true);
 
     const [notification, setNotification] = useState({ visible: false, message: '', type: '' });
     const [difficulty, setDifficulty] = useState(1); // 0.5 = slower, 1 = normal, 1.5 = faster
@@ -90,18 +96,41 @@ const SpeedTyperChallenge = ({ drillSetData, drillSetWordData, challengeId, dril
     const nextIdRef = useRef(0);
     const spawnIntervalRef = useRef(null);
 
+    const drillRefId = drillId?.[0];
+    const challengeId = drillId?.[1];
+
     // --- Init ---
     useEffect(() => {
-        if (drillSetWordData?.data) {
-            const wordList = drillSetWordData.data.map(item => ({
-                word: item.word.toLowerCase(),
-                definition: item.meanings?.[0]?.meaning || `Definition of ${item.word}`,
-                refId: item.refId
-            }));
-            setWords(wordList);
-            setWordQueue([...wordList]);
+        if (drillRefId && challengeId) {
+            setLoading(true);
+            const fetchDataAsync = async () => {
+                try {
+                    const [setData, wordData] = await Promise.all([
+                        fetchWithAuth(`${API_LEXIMENTOR_BASE_URL}/drill/metadata/sets/${drillRefId}`).then(res => res.json()),
+                        fetchWithAuth(`${API_LEXIMENTOR_BASE_URL}/drill/metadata/sets/words/data/${drillRefId}`).then(res => res.json())
+                    ]);
+
+                    setDrillSetData(setData || { data: [] });
+                    setDrillSetWordData(wordData || { data: [] });
+
+                    if (wordData?.data) {
+                        const wordList = wordData.data.map(item => ({
+                            word: item.word.toLowerCase(),
+                            definition: item.meanings?.[0]?.meaning || `Definition of ${item.word}`,
+                            refId: item.refId
+                        }));
+                        setWords(wordList);
+                        setWordQueue([...wordList]);
+                    }
+                } catch (error) {
+                    console.error("Failed to fetch challenge data:", error);
+                } finally {
+                    setLoading(false);
+                }
+            };
+            fetchDataAsync();
         }
-    }, [drillSetWordData]);
+    }, [drillRefId, challengeId]);
 
     const closeNotification = () => setNotification({ ...notification, visible: false });
 
@@ -223,9 +252,8 @@ const SpeedTyperChallenge = ({ drillSetData, drillSetWordData, challengeId, dril
             }));
 
             const URL = `${API_LEXIMENTOR_BASE_URL}/drill/metadata/challenges/challenge/${challengeId}/scores`;
-            await fetch(URL, {
+            await fetchWithAuth(URL, {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(submissionData),
             });
             setNotification({ visible: true, message: `Final Score: ${score}! Progress saved.`, type: 'success' });
@@ -236,6 +264,19 @@ const SpeedTyperChallenge = ({ drillSetData, drillSetWordData, challengeId, dril
             setTimeout(closeNotification, 5000);
         }
     };
+
+    if (loading) {
+        return (
+            <Layout content={
+                <div className="min-h-screen flex items-center justify-center bg-slate-50">
+                    <div className="text-center">
+                        <ArrowPathIcon className="w-10 h-10 text-indigo-400 animate-spin mx-auto mb-4" />
+                        <p className="text-slate-500 font-bold">Initialing Challenge...</p>
+                    </div>
+                </div>
+            } />
+        );
+    }
 
     return (
         <Layout content={
@@ -403,24 +444,3 @@ const SpeedTyperChallenge = ({ drillSetData, drillSetWordData, challengeId, dril
 };
 
 export default SpeedTyperChallenge;
-
-export async function getServerSideProps(context) {
-    const { params } = context;
-    const drillId = params.drillId;
-    const drillRefId = drillId[0];
-    const challengeId = drillId[1];
-
-    try {
-        const drillSetData = await fetchData(`${API_LEXIMENTOR_BASE_URL}/drill/metadata/sets/${drillId[0]}`) || { data: [] };
-        const drillSetWordData = await fetchData(`${API_LEXIMENTOR_BASE_URL}/drill/metadata/sets/words/data/${drillId[1]}`) || { data: [] };
-
-        return {
-            props: { drillSetData, drillSetWordData, challengeId, drillRefId },
-        };
-    } catch (e) {
-        console.error("Error fetching drill data:", e);
-        return {
-            props: { drillSetData: { data: [] }, drillSetWordData: { data: [] }, challengeId, drillRefId },
-        };
-    }
-}

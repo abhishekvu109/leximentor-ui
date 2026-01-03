@@ -1,8 +1,9 @@
-import { fetchData, postDataAsJson } from "@/dataService";
+import { fetchWithAuth } from "@/dataService";
 import { API_WRITEWISE_BASE_URL } from "@/constants";
 import Layout from "@/components/layout/Layout";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import dynamic from "next/dynamic";
+import { useRouter } from "next/router";
 import "react-quill/dist/quill.snow.css";
 import { PlusIcon } from "@heroicons/react/24/solid";
 
@@ -23,12 +24,18 @@ const StatusBadge = ({ status }) => {
     );
 };
 
-const WritingPad = ({ topics, responseVersions }) => {
+const WritingPad = () => {
+    const router = useRouter();
+    const { ids } = router.query;
+    const topicRefId = ids?.[0];
+
     // --- State ---
-    const [topic, setTopic] = useState(topics?.data || {});
+    const [topic, setTopic] = useState({});
+    const [responseVersions, setResponseVersions] = useState({ data: { responseVersionDTOs: [] } });
     const [selectedVersion, setSelectedVersion] = useState(null);
     const [essayContent, setEssayContent] = useState('');
     const [isSaving, setIsSaving] = useState(false);
+    const [loading, setLoading] = useState(true);
 
     // Derived State
     const wordCount = useMemo(() => {
@@ -39,16 +46,34 @@ const WritingPad = ({ topics, responseVersions }) => {
         return text.trim().length > 0 ? text.trim().split(/\s+/).length : 0;
     }, [essayContent]);
 
-    // Initialize State
-    useEffect(() => {
-        if (responseVersions?.data?.responseVersionDTOs?.length > 0) {
-            const firstVersion = responseVersions.data.responseVersionDTOs[0];
-            setSelectedVersion(firstVersion);
-            setEssayContent(firstVersion.response || '');
-        } else if (topics?.data) {
-            setTopic(topics.data);
+    // Data Loading
+    const loadData = useCallback(async () => {
+        if (!topicRefId) return;
+        setLoading(true);
+        try {
+            const [topicsRes, versionsRes] = await Promise.all([
+                fetchWithAuth(`${API_WRITEWISE_BASE_URL}/v1/topics/topic/${topicRefId}`).then(res => res.json()),
+                fetchWithAuth(`${API_WRITEWISE_BASE_URL}/v1/response/response-version/${topicRefId}`).then(res => res.json())
+            ]);
+
+            setTopic(topicsRes?.data || {});
+            setResponseVersions(versionsRes || { data: { responseVersionDTOs: [] } });
+
+            if (versionsRes?.data?.responseVersionDTOs?.length > 0) {
+                const firstVersion = versionsRes.data.responseVersionDTOs[0];
+                setSelectedVersion(firstVersion);
+                setEssayContent(firstVersion.response || '');
+            }
+        } catch (error) {
+            console.error("Failed to load writing pad data:", error);
+        } finally {
+            setLoading(false);
         }
-    }, [topics, responseVersions]);
+    }, [topicRefId]);
+
+    useEffect(() => {
+        loadData();
+    }, [loadData]);
 
 
     // --- Handlers ---
@@ -79,19 +104,20 @@ const WritingPad = ({ topics, responseVersions }) => {
         };
 
         try {
-            const res = await fetch(`${API_WRITEWISE_BASE_URL}/v1/response`, {
+            const res = await fetchWithAuth(`${API_WRITEWISE_BASE_URL}/v1/response`, {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(payload),
             });
 
             if (!res.ok) throw new Error("Failed to save.");
 
-            // On success, maybe refetch or just alert
             alert(`Essay ${type === 'Submit' ? 'submitted' : 'saved'} successfully!`);
 
+            // Refresh versions after save
+            const newVersionsRes = await fetchWithAuth(`${API_WRITEWISE_BASE_URL}/v1/response/response-version/${topicRefId}`).then(res => res.json());
+            setResponseVersions(newVersionsRes || { data: { responseVersionDTOs: [] } });
+
             if (type === 'Submit') {
-                // Optimistically update status if needed, or force reload
                 if (selectedVersion) {
                     setSelectedVersion(prev => ({ ...prev, responseStatus: 'SUBMITTED' }));
                 }
@@ -119,6 +145,8 @@ const WritingPad = ({ topics, responseVersions }) => {
 
 
     // --- Render ---
+    if (loading) return <Layout content={<div className="p-8 text-center text-slate-500 font-bold">Loading Writing Pad...</div>} />;
+
     const isSubmitted = String(selectedVersion?.responseStatus).toUpperCase() === 'SUBMITTED';
 
     return (
@@ -146,6 +174,7 @@ const WritingPad = ({ topics, responseVersions }) => {
                             <div className="flex items-center gap-1">
                                 <select
                                     onChange={handleVersionChange}
+                                    value={selectedVersion?.refId}
                                     className="text-sm bg-slate-50 border-slate-200 rounded-lg py-2 pl-3 pr-8 focus:ring-indigo-500"
                                 >
                                     {responseVersions.data.responseVersionDTOs.map((v, i) => (
@@ -253,21 +282,3 @@ const WritingPad = ({ topics, responseVersions }) => {
 };
 
 export default WritingPad;
-
-export async function getServerSideProps(context) {
-    const { params } = context;
-    const ids = params.ids;
-    const topicRefId = ids[0];
-
-    try {
-        const topics = await fetchData(`${API_WRITEWISE_BASE_URL}/v1/topics/topic/${topicRefId}`) || { data: {} };
-        const responseVersions = await fetchData(`${API_WRITEWISE_BASE_URL}/v1/response/response-version/${topicRefId}`) || { data: { responseVersionDTOs: [] } };
-
-        return {
-            props: { topics, responseVersions },
-        };
-    } catch (e) {
-        console.error(e);
-        return { props: { topics: {}, responseVersions: {} } };
-    }
-}

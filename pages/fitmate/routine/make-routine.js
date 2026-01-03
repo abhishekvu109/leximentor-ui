@@ -4,7 +4,7 @@ import { ChevronDown, Option, CheckCircle2, MoreVertical, Plus, Trash2, Timer, C
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState } from "react";
 import { API_FITMATE_BASE_URL } from "@/constants";
-import { fetchData, POST, postData } from "@/dataService";
+import { fetchData, POST, postData, fetchWithAuth } from "@/dataService";
 import { useRouter } from "next/router";
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -36,7 +36,7 @@ const CartExerciseThumb = ({ refId, name }) => {
     useEffect(() => {
         const fetchThumb = async () => {
             try {
-                const res = await fetch(`${API_FITMATE_BASE_URL}/exercises/exercise/resources/resource?refId=${refId}&placeholder=THUMBNAIL&resourceId=`);
+                const res = await fetchWithAuth(`${API_FITMATE_BASE_URL}/exercises/exercise/resources/resource?refId=${refId}&placeholder=THUMBNAIL&resourceId=`);
                 if (!res.ok) return;
                 const blob = await res.blob();
                 if (blob.size > 0 && blob.type.startsWith('image/')) {
@@ -253,7 +253,7 @@ const ExerciseGridItem = ({ name, refId, isSelected, onClick }) => {
     useEffect(() => {
         const fetchThumb = async () => {
             try {
-                const res = await fetch(`${API_FITMATE_BASE_URL}/exercises/exercise/resources/resource?refId=${refId}&placeholder=THUMBNAIL&resourceId=`);
+                const res = await fetchWithAuth(`${API_FITMATE_BASE_URL}/exercises/exercise/resources/resource?refId=${refId}&placeholder=THUMBNAIL&resourceId=`);
                 if (!res.ok) return;
                 const blob = await res.blob();
                 if (blob.size > 0 && blob.type.startsWith('image/')) {
@@ -774,13 +774,13 @@ const FitmateMakeRoutine = () => {
     const [trainings, setTrainings] = useState([]);
 
     useEffect(() => {
-        const fetchData = async () => {
+        const fetchInitialData = async () => {
             try {
                 const [bodyRes, muscleRes, exerciseRes, trainingRes] = await Promise.all([
-                    fetch(`${API_FITMATE_BASE_URL}/bodyparts`),
-                    fetch(`${API_FITMATE_BASE_URL}/muscles`),
-                    fetch(`${API_FITMATE_BASE_URL}/exercises`),
-                    fetch(`${API_FITMATE_BASE_URL}/trainings`)
+                    fetchWithAuth(`${API_FITMATE_BASE_URL}/bodyparts`),
+                    fetchWithAuth(`${API_FITMATE_BASE_URL}/muscles`),
+                    fetchWithAuth(`${API_FITMATE_BASE_URL}/exercises`),
+                    fetchWithAuth(`${API_FITMATE_BASE_URL}/trainings`)
                 ]);
                 const [bodyData, muscleData, exerciseData, trainingData] = await Promise.all([
                     bodyRes.json(),
@@ -796,7 +796,7 @@ const FitmateMakeRoutine = () => {
                 console.error("Error fetching dropdown data:", error);
             }
         };
-        fetchData();
+        fetchInitialData();
     }, []);
 
     // --- PDF Export Function ---

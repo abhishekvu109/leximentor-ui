@@ -6,11 +6,15 @@ export const API_WRITEWISE_BASE_URL = `${process.env.NEXT_PUBLIC_WRITEWISE_BASE_
 export const API_SYNAPSTER_BASE_URL = `${API_BASE_URL}/synapster`;
 export const API_FITMATE_BASE_URL = `${process.env.NEXT_PUBLIC_FITMATE_BASE_URL}/fitmate`;
 export const API_TEXT_TO_SPEECH = `${API_BASE_URL}/tts/text2speech`;
+export const API_AUTH_URL = `${process.env.NEXT_PUBLIC_AUTH_BASE_URL}/auth/v1`;
+export const API_LOGIN_URL = `${API_AUTH_URL}/login`;
+export const API_REGISTER_URL = `${API_AUTH_URL}/user`;
+export const API_REFRESH_URL = `${API_AUTH_URL}/refresh`;
+export const API_LOGOUT_URL = `${API_AUTH_URL}/logout`;
 
-
-export const FITMATE_MEASUREMENT_UNITS={
-    "Time":['Hour','Minute','Second'],
-    "Weight":['Kilogram','Pound','Gram'],
-    "Reps":['Count'],
-    "Distance":['Miles','Kilometer']
+export const FITMATE_MEASUREMENT_UNITS = {
+    "Time": ['Hour', 'Minute', 'Second'],
+    "Weight": ['Kilogram', 'Pound', 'Gram'],
+    "Reps": ['Count'],
+    "Distance": ['Miles', 'Kilometer']
 }

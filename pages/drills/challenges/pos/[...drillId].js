@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
+import { useRouter } from "next/router";
 import Link from "next/link";
 import Layout from "@/components/layout/Layout";
 import { API_LEXIMENTOR_BASE_URL } from "@/constants";
-import { fetchData } from "@/dataService";
+import { fetchData, fetchWithAuth } from "@/dataService";
 import {
     ArrowLeftIcon,
     CheckCircleIcon,
@@ -39,7 +40,14 @@ const Notification = ({ message, type, onClose }) => {
     );
 };
 
-const LoadPosDrillChallenge = ({ drillSetData, drillSetWordData, challengeScores, challengeId, drillRefId }) => {
+const LoadPosDrillChallenge = () => {
+    const router = useRouter();
+    const { drillId } = router.query; // [...drillId] -> [challengeId, drillRefId]
+
+    const [drillSetData, setDrillSetData] = useState({ data: [] });
+    const [drillSetWordData, setDrillSetWordData] = useState({ data: [] });
+    const [challengeScores, setChallengeScores] = useState({ data: [] });
+    const [loading, setLoading] = useState(true);
     const [questions, setQuestions] = useState([]);
     const [currentIndex, setCurrentIndex] = useState(0);
     const [answers, setAnswers] = useState([]);
@@ -47,27 +55,52 @@ const LoadPosDrillChallenge = ({ drillSetData, drillSetWordData, challengeScores
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [notification, setNotification] = useState({ visible: false, message: '', type: '' });
 
-    useEffect(() => {
-        if (drillSetWordData?.data && challengeScores?.data && drillSetData?.data) {
-            initializeGame();
-        }
-    }, [drillSetWordData, challengeScores, drillSetData]);
+    const challengeId = drillId?.[0];
+    const drillRefId = drillId?.[1];
 
-    const initializeGame = () => {
-        const generatedQuestions = challengeScores.data.map(scoreItem => {
-            const setItem = drillSetData.data.find(d => d.refId === scoreItem.drillSetRefId);
+    useEffect(() => {
+        if (drillRefId && challengeId) {
+            setLoading(true);
+            const fetchDataAsync = async () => {
+                try {
+                    const [setData, wordData, scores] = await Promise.all([
+                        fetchWithAuth(`${API_LEXIMENTOR_BASE_URL}/drill/metadata/sets/${drillRefId}`).then(res => res.json()),
+                        fetchWithAuth(`${API_LEXIMENTOR_BASE_URL}/drill/metadata/sets/words/data/${drillRefId}`).then(res => res.json()),
+                        fetchWithAuth(`${API_LEXIMENTOR_BASE_URL}/drill/metadata/challenges/challenge/${challengeId}/scores`).then(res => res.json())
+                    ]);
+
+                    setDrillSetData(setData || { data: [] });
+                    setDrillSetWordData(wordData || { data: [] });
+                    setChallengeScores(scores || { data: [] });
+
+                    if (wordData?.data && scores?.data && setData?.data) {
+                        initializeGame(wordData, scores, setData);
+                    }
+                } catch (error) {
+                    console.error("Failed to fetch challenge data:", error);
+                } finally {
+                    setLoading(false);
+                }
+            };
+            fetchDataAsync();
+        }
+    }, [drillRefId, challengeId]);
+
+    const initializeGame = (wordData = drillSetWordData, scores = challengeScores, setData = drillSetData) => {
+        const generatedQuestions = scores.data.map(scoreItem => {
+            const setItem = setData.data.find(d => d.refId === scoreItem.drillSetRefId);
             if (!setItem) return null;
 
-            const wordItem = drillSetWordData.data.find(w => w.refId === setItem.wordRefId);
+            const wordItem = wordData.data.find(w => w.refId === setItem.wordRefId);
             if (!wordItem) return null;
 
             return {
                 scoreRefId: scoreItem.refId,
                 drillSetRefId: scoreItem.drillSetRefId,
                 word: wordItem.word,
-                meaning: wordItem.meanings?.[0]?.meaning || "No meaning available",
+                meaning: wordItem.meanings?.[0]?.meaning || wordItem.meaning || "No meaning available",
                 example: wordItem.examples?.[0]?.example || `Context: The word "${wordItem.word}" is used in various sentences.`,
-                correctPos: wordItem.pos?.toLowerCase() || 'noun' // Backend's expected/stored POS
+                correctPos: wordItem.pos?.toLowerCase() || 'noun'
             };
         }).filter(Boolean);
 
@@ -110,9 +143,8 @@ const LoadPosDrillChallenge = ({ drillSetData, drillSetWordData, challengeScores
         setIsSubmitting(true);
         try {
             const URL = `${API_LEXIMENTOR_BASE_URL}/drill/metadata/challenges/challenge/${challengeId}/scores`;
-            const response = await fetch(URL, {
+            const response = await fetchWithAuth(URL, {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(submissionData),
             });
 
@@ -133,7 +165,7 @@ const LoadPosDrillChallenge = ({ drillSetData, drillSetWordData, challengeScores
     const currentQuestion = questions[currentIndex];
     const progress = questions.length > 0 ? ((currentIndex + 1) / questions.length) * 100 : 0;
 
-    if (questions.length === 0) {
+    if (loading) {
         return (
             <Layout content={
                 <div className="min-h-screen flex items-center justify-center bg-slate-50">
@@ -259,40 +291,5 @@ const LoadPosDrillChallenge = ({ drillSetData, drillSetWordData, challengeScores
     );
 };
 
-export default LoadPosDrillChallenge;
 
-export async function getServerSideProps(context) {
-    const { params } = context;
-    const drillId = params.drillId;
-    const challengeId = drillId[0];
-    const drillRefId = drillId[1];
-
-    try {
-        const [drillSetData, drillSetWordData, challengeScores] = await Promise.all([
-            fetchData(`${API_LEXIMENTOR_BASE_URL}/drill/metadata/sets/${drillRefId}`),
-            fetchData(`${API_LEXIMENTOR_BASE_URL}/drill/metadata/sets/words/data/${drillRefId}`),
-            fetchData(`${API_LEXIMENTOR_BASE_URL}/drill/metadata/challenges/challenge/${challengeId}/scores`)
-        ]);
-
-        return {
-            props: {
-                drillSetData: drillSetData || { data: [] },
-                drillSetWordData: drillSetWordData || { data: [] },
-                challengeScores: challengeScores || { data: [] },
-                challengeId,
-                drillRefId
-            },
-        };
-    } catch (e) {
-        console.error("Error fetching POS challenge data:", e);
-        return {
-            props: {
-                drillSetData: { data: [] },
-                drillSetWordData: { data: [] },
-                challengeScores: { data: [] },
-                challengeId,
-                drillRefId
-            },
-        };
-    }
-}
+export default POSPractice;

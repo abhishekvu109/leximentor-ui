@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import {
     LayoutDashboard,
+    User,
     BookOpen,
     PenTool,
     Dumbbell,
@@ -39,6 +40,12 @@ const NewSidebar = ({ isOpen }) => {
             label: 'Dashboard',
             icon: LayoutDashboard,
             href: '/dashboard/dashboard2'
+        },
+        {
+            type: 'link',
+            label: 'My Profile',
+            icon: User,
+            href: '/profile'
         },
         {
             type: 'category', // Collapsible

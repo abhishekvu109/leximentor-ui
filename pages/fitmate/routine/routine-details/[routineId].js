@@ -1,5 +1,5 @@
 
-import { fetchData, updateData, DeleteByObject } from "@/dataService";
+import { fetchData, updateData, DeleteByObject, fetchWithAuth } from "@/dataService";
 import { API_FITMATE_BASE_URL } from "@/constants";
 import Layout from "@/components/layout/Layout";
 import { useRouter } from "next/router";
@@ -379,23 +379,32 @@ const RoutineLogger = ({ initialData }) => {
     );
 };
 
-const RoutineDetail = ({ routine }) => {
+const RoutineDetail = () => {
+    const router = useRouter();
+    const { routineId } = router.query;
+    const [routine, setRoutine] = useState(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        if (routineId) {
+            setLoading(true);
+            fetchWithAuth(`${API_FITMATE_BASE_URL}/routines/routine/${routineId}`)
+                .then(res => res.json())
+                .then(data => {
+                    setRoutine(data.data);
+                    setLoading(false);
+                })
+                .catch(err => {
+                    console.error('Failed to fetch routine:', err);
+                    setLoading(false);
+                });
+        }
+    }, [routineId]);
+
+    if (loading) return <div className="p-10 text-center font-bold text-gray-400 animate-pulse">Loading Routine...</div>;
+    if (!routine) return <div className="p-10 text-center text-red-500 font-bold">Routine not found.</div>;
+
     return <Layout content={<RoutineLogger initialData={routine} />} />;
 }
 
 export default RoutineDetail;
-
-
-// Server Side Fetch
-export async function getServerSideProps(context) {
-    const { routineId } = context.params;
-    try {
-        const res = await fetch(`${API_FITMATE_BASE_URL}/routines/routine/${routineId}`);
-        const data = await res.json();
-        if (!data || !data.data) return { notFound: true };
-        return { props: { routine: data.data } };
-    } catch (error) {
-        console.error('Failed to fetch routine:', error);
-        return { props: { routine: null } };
-    }
-}

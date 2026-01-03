@@ -1,5 +1,7 @@
-
+import { useState, useEffect } from "react";
+import { useRouter } from "next/router";
 import { API_LEXIMENTOR_BASE_URL } from "@/constants";
+import { fetchWithAuth } from "@/dataService";
 import Link from "next/link";
 import Layout from "@/components/layout/Layout";
 import {
@@ -149,7 +151,33 @@ const ScoreCard = ({ passed, score, correct, wrong, total }) => {
     );
 };
 
-const EvaluationReport = ({ evaluationReportData, challengeId }) => {
+const EvaluationReport = () => {
+    const router = useRouter();
+    const { challengeId } = router.query;
+
+    const [evaluationReportData, setEvaluationReportData] = useState(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        if (challengeId) {
+            const loadData = async () => {
+                setLoading(true);
+                try {
+                    const res = await fetchWithAuth(`${API_LEXIMENTOR_BASE_URL}/drill/metadata/challenges/challenge/${challengeId}/report`);
+                    const data = await res.json();
+                    setEvaluationReportData(data);
+                } catch (error) {
+                    console.error("Failed to load evaluation report:", error);
+                } finally {
+                    setLoading(false);
+                }
+            };
+            loadData();
+        }
+    }, [challengeId]);
+
+    if (loading) return <Layout content={<div className="p-8 text-center text-slate-500 font-bold">Loading Report...</div>} />;
+
     // Data Guards
     if (!evaluationReportData?.data) {
         return (
@@ -237,28 +265,3 @@ const EvaluationReport = ({ evaluationReportData, challengeId }) => {
 };
 
 export default EvaluationReport;
-
-export async function getServerSideProps(context) {
-    const { challengeId } = context.params;
-    try {
-        // Updated endpoint based on previous code. Note: Added /report/ prefix if that was the intended path, 
-        // but verifying against previous file content: ${API_LEXIMENTOR_BASE_URL}/drill/metadata/challenges/challenge/${challengeId}/report matches.
-        const res = await fetch(`${API_LEXIMENTOR_BASE_URL}/drill/metadata/challenges/challenge/${challengeId}/report`);
-        const evaluationReportData = await res.json();
-
-        return {
-            props: {
-                evaluationReportData,
-                challengeId
-            },
-        };
-    } catch (e) {
-        console.error("Failed to load evaluation report", e);
-        return {
-            props: {
-                evaluationReportData: null,
-                challengeId
-            }
-        }
-    }
-}
