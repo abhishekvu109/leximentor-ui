@@ -9,7 +9,7 @@ import { motion } from "framer-motion";
 import {
     Play, Trash2, CheckCircle, AlertCircle, BarChart2,
     Plus, RefreshCw, BookOpen, Mic, Brain, Hash, Type,
-    Layers, Zap, FileText, LayoutGrid, List, Sparkles
+    Layers, Zap, FileText, LayoutGrid, List, Sparkles, Pencil
 } from "lucide-react";
 import {
     LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -26,6 +26,7 @@ const DRILL_TYPES = [
     { id: 'FB', label: 'Flashcard Blitz', icon: Layers, color: 'text-teal-600', bg: 'bg-teal-50', shadow: 'hover:shadow-teal-200/50' },
     { id: 'ST', label: 'Speed Typer', icon: Zap, color: 'text-orange-600', bg: 'bg-orange-50', shadow: 'hover:shadow-orange-200/50' },
     { id: 'CM', label: 'Context Master', icon: FileText, color: 'text-cyan-600', bg: 'bg-cyan-50', shadow: 'hover:shadow-cyan-200/50' },
+    { id: 'SU', label: 'Sentence Usage', icon: Pencil, color: 'text-rose-600', bg: 'bg-rose-50', shadow: 'hover:shadow-rose-200/50' },
 ];
 
 const getDrillConfig = (typeId) => {
@@ -43,7 +44,8 @@ const getDrillConfig = (typeId) => {
         'SPEED_TYPER': 'ST',
         'SPEED': 'ST',
         'CONTEXT_MASTER': 'CM',
-        'CONTEXT': 'CM'
+        'CONTEXT': 'CM',
+        'SENTENCE_USAGE': 'SU'
     };
     const standardId = mapping[typeId] || typeId;
     return DRILL_TYPES.find(t => t.id === standardId);
@@ -428,7 +430,8 @@ const Challenges = () => {
                                 type === 'SPEED' || type === 'SPEED_TYPER' ? '/drills/challenges/speed_typer/' :
                                     type === 'FLASHCARD' || type === 'FLASHCARD_BLITZ' ? '/drills/challenges/flashcard_blitz/' :
                                         type === 'SCRAMBLE' || type === 'WORD_SCRAMBLE' ? '/drills/challenges/word_scramble/' :
-                                            '/drills/challenges/meaning/';
+                                            type === 'SENTENCE_USAGE' || type === 'SU' ? '/drills/challenges/sentence_usage/' :
+                                                '/drills/challenges/meaning/';
         return `${base}${refId}/${drillRefId}`;
     };
 
