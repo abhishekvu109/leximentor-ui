@@ -9,7 +9,124 @@ import { useRouter } from "next/router";
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
-// --- Sub-components Helper ---
+// Generate Routine Modal Component
+const GenerateRoutineModal = ({ isOpen, onClose, onGenerate, trainings, bodyParts }) => {
+    const [trainingType, setTrainingType] = useState('Weight Training');
+    const [selectedBodyParts, setSelectedBodyParts] = useState([]);
+    const [isGenerating, setIsGenerating] = useState(false);
+
+    const toggleBodyPart = (bp) => {
+        setSelectedBodyParts(prev =>
+            prev.includes(bp) ? prev.filter(item => item !== bp) : [...prev, bp]
+        );
+    };
+
+    const handleGenerate = async () => {
+        if (!trainingType || selectedBodyParts.length === 0) {
+            alert("Please select training type and at least one body part.");
+            return;
+        }
+        setIsGenerating(true);
+        try {
+            await onGenerate({ trainingType, targetBodyParts: selectedBodyParts.map(bp => bp.toLowerCase()) });
+            onClose();
+        } catch (error) {
+            console.error("Generation failed:", error);
+            alert("Failed to generate workout. Please try again.");
+        } finally {
+            setIsGenerating(false);
+        }
+    };
+
+    return (
+        <AnimatePresence>
+            {isOpen && (
+                <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        onClick={onClose}
+                        className="fixed inset-0 bg-slate-900/60 backdrop-blur-md"
+                    />
+                    <motion.div
+                        initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                        animate={{ scale: 1, opacity: 1, y: 0 }}
+                        exit={{ scale: 0.9, opacity: 0, y: 20 }}
+                        className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl overflow-hidden border border-white/20"
+                    >
+                        <div className="p-8">
+                            <div className="flex justify-between items-start mb-8">
+                                <div className="space-y-1">
+                                    <h2 className="text-2xl font-black text-slate-800 tracking-tight">AI Workout Generator</h2>
+                                    <p className="text-slate-500 text-sm font-medium">Select parameters to build your routine</p>
+                                </div>
+                                <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
+                                    <X size={24} className="text-slate-400" />
+                                </button>
+                            </div>
+
+                            <div className="space-y-8">
+                                <div className="space-y-3">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] px-1">Training Type</label>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        {trainings.map(t => (
+                                            <button
+                                                key={t.name}
+                                                onClick={() => setTrainingType(t.name)}
+                                                className={`px-4 py-3 rounded-2xl text-sm font-bold transition-all border-2 text-left ${trainingType === t.name ? 'bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-200' : 'bg-slate-50 border-slate-50 text-slate-600 hover:border-blue-200'}`}
+                                            >
+                                                {t.name}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div className="space-y-3">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] px-1">Target Body Parts</label>
+                                    <div className="flex flex-wrap gap-2">
+                                        {bodyParts.map(bp => (
+                                            <button
+                                                key={bp.name}
+                                                onClick={() => toggleBodyPart(bp.name)}
+                                                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border-2 ${selectedBodyParts.includes(bp.name) ? 'bg-blue-100 border-blue-500 text-blue-700' : 'bg-slate-50 border-slate-50 text-slate-500 hover:border-slate-200'}`}
+                                            >
+                                                {bp.name}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <button
+                                onClick={handleGenerate}
+                                disabled={isGenerating || selectedBodyParts.length === 0}
+                                className="w-full mt-10 py-4 bg-slate-900 hover:bg-black text-white rounded-2xl font-black text-sm uppercase tracking-widest transition-all shadow-xl shadow-slate-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
+                            >
+                                {isGenerating ? (
+                                    <>
+                                        <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                        Generating...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Sparkles size={18} className="text-blue-400" />
+                                        Generate Workout
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    </motion.div>
+                </div>
+            )}
+        </AnimatePresence>
+    );
+};
+
+// Add Sparkles icon to imports
+import { Sparkles } from "lucide-react";
+
+// (Keep existing ExerciseGridItem and other components up to line 305)
 
 // Success Notification Component
 const SuccessNotification = ({ message, onClose }) => {
@@ -326,6 +443,9 @@ const UnifiedRoutineBuilder = ({
     const [selectedMuscle, setSelectedMuscle] = useState(null);
     const [searchQuery, setSearchQuery] = useState('');
 
+    // --> Generator State
+    const [isGeneratorOpen, setIsGeneratorOpen] = useState(false);
+
     // --> History UI State
     const [historyPanel, setHistoryPanel] = useState({ open: false, exercise: null, data: [], loading: false });
 
@@ -443,6 +563,36 @@ const UnifiedRoutineBuilder = ({
         });
     }
 
+    const handleGenerateWorkout = async (params) => {
+        try {
+            const res = await postData(`${API_FITMATE_BASE_URL}/routines/routine/generate`, params);
+            if (res.meta?.code === "000" && res.data?.drills) {
+                const newDrills = res.data.drills.map(drill => ({
+                    exercise: drill.exercise.name,
+                    refId: drill.exercise.refId,
+                    bodyPart: drill.exercise.bodyPart?.name,
+                    muscle: drill.muscle?.name || drill.exercise.targetMuscles?.[0]?.name,
+                    sets: Array.from({ length: 3 }, (_, i) => ({
+                        id: Date.now() + Math.random() + i,
+                        weight: drill.measurement || '',
+                        reps: drill.repetition || '',
+                        unit: drill.unit || 'kg',
+                        completed: false
+                    })),
+                    notes: drill.notes || 'Auto-generated'
+                }));
+                setExerciseCart(prev => [...prev, ...newDrills]);
+                // Set training type if not already set
+                if (!routine.training?.name) {
+                    setRoutine(prev => ({ ...prev, training: { name: res.data.training?.name || params.trainingType } }));
+                }
+            }
+        } catch (error) {
+            console.error("AI Generation failed:", error);
+            throw error;
+        }
+    };
+
 
     return (
         <div className="flex flex-col h-[calc(100vh-64px)] overflow-hidden bg-gray-50/50">
@@ -494,6 +644,12 @@ const UnifiedRoutineBuilder = ({
                     <div className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-full text-sm font-medium">
                         <Timer size={16} /> 00:00
                     </div>
+                    <button
+                        onClick={() => setIsGeneratorOpen(true)}
+                        className="flex items-center gap-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-5 py-2.5 rounded-xl font-bold transition-all shadow-md shadow-blue-200 active:scale-95"
+                    >
+                        <Sparkles size={18} /> Generate Workout
+                    </button>
                     <button
                         onClick={handleDownloadPDF}
                         disabled={exerciseCart.length === 0}
@@ -743,6 +899,15 @@ const UnifiedRoutineBuilder = ({
                 exerciseName={historyPanel.exercise}
                 historyData={historyPanel.data}
                 loading={historyPanel.loading}
+            />
+
+            {/* AI Generator Modal */}
+            <GenerateRoutineModal
+                isOpen={isGeneratorOpen}
+                onClose={() => setIsGeneratorOpen(false)}
+                onGenerate={handleGenerateWorkout}
+                trainings={trainings}
+                bodyParts={bodyParts}
             />
         </div>
     );
