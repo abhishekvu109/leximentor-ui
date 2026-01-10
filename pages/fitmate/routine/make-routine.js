@@ -239,7 +239,7 @@ const HistoryPanel = ({ isOpen, onClose, exerciseName, historyData, loading }) =
                                                     <p className="text-sm font-black text-slate-700">{log.repetition}</p>
                                                 </div>
                                             </div>
-                                            {log.notes && <p className="mt-2 text-[10px] text-slate-500 italic">"{log.notes}"</p>}
+                                            {log.notes && <p className="mt-2 text-[10px] text-slate-500 italic">&quot;{log.notes}&quot;</p>}
                                         </div>
                                     ))}
                                 </div>
