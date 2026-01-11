@@ -2,6 +2,7 @@ import "../styles/globals.css";
 import Script from "next/script";
 import { QueryClient, QueryClientProvider } from 'react-query';
 import { AuthProvider } from '../context/AuthContext';
+import { RouteGuard } from '../components/auth/RouteGuard';
 
 const queryClient = new QueryClient();
 
@@ -10,7 +11,9 @@ function App({ Component, pageProps }) {
         <QueryClientProvider client={queryClient}>
             <AuthProvider>
 
-                <Component {...pageProps} />
+                <RouteGuard>
+                    <Component {...pageProps} />
+                </RouteGuard>
             </AuthProvider>
         </QueryClientProvider>
     );

@@ -91,12 +91,13 @@ export const AuthProvider = ({ children }) => {
 
     return (
         <AuthContext.Provider value={{ user, loading, login, register, logout }}>
-            {children}
+            {/* Hide everything else when session expires for security and UI clarity */}
+            {!sessionExpired && children}
 
             {/* Session Expired Modal */}
             <AnimatePresence>
                 {sessionExpired && (
-                    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md">
+                    <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-slate-950">
                         <motion.div
                             initial={{ opacity: 0, scale: 0.9, y: 20 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
