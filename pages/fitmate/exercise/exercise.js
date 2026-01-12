@@ -132,7 +132,8 @@ const AddExerciseModal = ({ isOpen, onClose, onSuccess, onNotification, data: { 
         bodyPart: "",
         targetMuscles: [],
         equipments: [],
-        status: "ACTIVE"
+        status: "ACTIVE",
+        unit: "reps"
     });
 
     const [filteredMuscles, setFilteredMuscles] = useState([]);
@@ -142,7 +143,7 @@ const AddExerciseModal = ({ isOpen, onClose, onSuccess, onNotification, data: { 
         if (isOpen) {
             setForm({
                 name: "", description: "", training: "",
-                bodyPart: "", targetMuscles: [], equipments: [], status: "ACTIVE"
+                bodyPart: "", targetMuscles: [], equipments: [], status: "ACTIVE", unit: "reps"
             });
             setFilteredMuscles([]);
         }
@@ -171,7 +172,8 @@ const AddExerciseModal = ({ isOpen, onClose, onSuccess, onNotification, data: { 
                 bodyPart: { name: form.bodyPart },
                 targetMuscles: form.targetMuscles.map(m => ({ name: m })),
                 equipments: form.equipments,
-                status: form.status
+                status: form.status,
+                unit: form.unit
             }];
 
             await postDataAsJson(`${API_FITMATE_BASE_URL}/exercises`, payload);
@@ -236,6 +238,26 @@ const AddExerciseModal = ({ isOpen, onClose, onSuccess, onNotification, data: { 
                                     <option value="">Select Type</option>
                                     {trainings.map((t, i) => <option key={i} value={t.name}>{t.name}</option>)}
                                 </select>
+                            </div>
+                        </div>
+
+                        {/* Unit Selection */}
+                        <div>
+                            <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Measure By (Unit)</label>
+                            <div className="flex gap-2">
+                                {['reps', 'weight', 'time'].map((u) => (
+                                    <button
+                                        key={u}
+                                        type="button"
+                                        onClick={() => setForm({ ...form, unit: u })}
+                                        className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all border ${form.unit === u
+                                            ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-100'
+                                            : 'bg-white text-gray-600 border-gray-200 hover:border-blue-300'
+                                            }`}
+                                    >
+                                        {u.charAt(0).toUpperCase() + u.slice(1)}
+                                    </button>
+                                ))}
                             </div>
                         </div>
 

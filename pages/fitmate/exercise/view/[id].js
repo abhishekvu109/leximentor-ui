@@ -19,7 +19,8 @@ const EditExerciseModal = ({ isOpen, onClose, exercise, onSuccess, onNotificatio
         bodyPart: "",
         targetMuscles: [],
         equipments: [],
-        status: "ACTIVE"
+        status: "ACTIVE",
+        unit: "reps"
     });
 
     const [filteredMuscles, setFilteredMuscles] = useState([]);
@@ -34,7 +35,8 @@ const EditExerciseModal = ({ isOpen, onClose, exercise, onSuccess, onNotificatio
                 bodyPart: exercise.bodyPart?.name || "",
                 targetMuscles: exercise.targetMuscles?.map(m => m.name) || [],
                 equipments: exercise.equipments || [],
-                status: exercise.status || "ACTIVE"
+                status: exercise.status || "ACTIVE",
+                unit: exercise.unit || "reps"
             });
         }
     }, [isOpen, exercise]);
@@ -62,7 +64,8 @@ const EditExerciseModal = ({ isOpen, onClose, exercise, onSuccess, onNotificatio
                 bodyPart: { name: form.bodyPart },
                 targetMuscles: form.targetMuscles.map(m => ({ name: m })),
                 equipments: form.equipments,
-                status: form.status
+                status: form.status,
+                unit: form.unit
             };
 
             await updateData(`${API_FITMATE_BASE_URL}/exercises/exercise`, payload);
@@ -125,6 +128,26 @@ const EditExerciseModal = ({ isOpen, onClose, exercise, onSuccess, onNotificatio
                                     <option value="">Select Type</option>
                                     {trainings.map((t, i) => <option key={i} value={t.name}>{t.name}</option>)}
                                 </select>
+                            </div>
+                        </div>
+
+                        {/* Unit Selection */}
+                        <div>
+                            <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Measure By (Unit)</label>
+                            <div className="flex gap-2">
+                                {['reps', 'weight', 'time'].map((u) => (
+                                    <button
+                                        key={u}
+                                        type="button"
+                                        onClick={() => setForm({ ...form, unit: u })}
+                                        className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all border ${form.unit === u
+                                            ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-100'
+                                            : 'bg-white text-gray-600 border-gray-200 hover:border-blue-300'
+                                            }`}
+                                    >
+                                        {u.charAt(0).toUpperCase() + u.slice(1)}
+                                    </button>
+                                ))}
                             </div>
                         </div>
 
@@ -449,6 +472,13 @@ const ExerciseDetailContent = () => {
                             <p className="font-semibold text-gray-800 break-words">
                                 {exercise.equipments?.join(', ') || 'None'}
                             </p>
+                        </div>
+                        <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                            <div className="flex items-center gap-2 mb-1 text-gray-400">
+                                <Activity size={16} />
+                                <span className="text-xs font-bold uppercase">Measurement Unit</span>
+                            </div>
+                            <p className="font-semibold text-gray-800 capitalize">{exercise.unit || 'reps'}</p>
                         </div>
                         <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100 relative group">
                             <div className="flex items-center justify-between mb-1 text-gray-400">
