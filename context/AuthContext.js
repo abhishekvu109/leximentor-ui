@@ -15,8 +15,9 @@ export const AuthProvider = ({ children }) => {
 
     useEffect(() => {
         const token = getAuthToken();
+        const storedUsername = typeof window !== 'undefined' ? localStorage.getItem('username') : null;
         if (token) {
-            setUser({ authenticated: true });
+            setUser({ authenticated: true, username: storedUsername || 'Abhishek V' });
         }
         setLoading(false);
 
@@ -39,6 +40,9 @@ export const AuthProvider = ({ children }) => {
             const result = await response.json();
             if (response.ok && result.data && result.data.token) {
                 setTokens(result.data.token, result.data.refreshToken);
+                if (typeof window !== 'undefined') {
+                    localStorage.setItem('username', username);
+                }
                 setUser({ authenticated: true, username });
                 router.push('/dashboard/dashboard2');
                 return { success: true };
@@ -77,6 +81,9 @@ export const AuthProvider = ({ children }) => {
             console.error('Logout API call failed:', error);
         } finally {
             clearTokens();
+            if (typeof window !== 'undefined') {
+                localStorage.removeItem('username');
+            }
             setUser(null);
             router.push('/auth/login');
         }

@@ -85,6 +85,18 @@ const NewSidebar = ({ isOpen }) => {
             ]
         },
         {
+            type: 'category',
+            label: 'Cashflow',
+            icon: ShoppingBag,
+            id: 'cashflow',
+            subItems: [
+                { label: 'Dashboard', href: '/cashflow', icon: Activity },
+                { label: 'Households', href: '/cashflow/households', icon: Grid },
+                { label: 'Expense Logs', href: '/cashflow/logs', icon: List },
+                { label: 'Budgets', href: '#', icon: BarChart3 }
+            ]
+        },
+        {
             type: 'divider'
         },
         /*
