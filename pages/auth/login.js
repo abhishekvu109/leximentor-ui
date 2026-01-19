@@ -36,7 +36,7 @@ export default function LoginPage() {
                 username: formData.username,
                 password: formData.password,
                 email: formData.email,
-                fullName: formData.fullName
+                name: formData.fullName
             });
             if (result.success) {
                 setIsLogin(true);
