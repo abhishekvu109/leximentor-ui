@@ -1272,6 +1272,7 @@ const OverviewTab = ({ household }) => {
 
     // Calculate Financial Metrics with real data
     const { totalSpentThisMonth, totalMonthlyBudget, chartData, categoryPieData } = useMemo(() => {
+        const now = new Date();
         const expenses = household.expenses || [];
         const budgets = household.budgets || [];
         const currentMonth = now.getMonth() + 1; // 1-12
