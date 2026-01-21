@@ -7,6 +7,20 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 const AuthContext = createContext();
 
+// Helper to parse JWT
+const parseJwt = (token) => {
+    try {
+        const base64Url = token.split('.')[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function (c) {
+            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+        }).join(''));
+        return JSON.parse(jsonPayload);
+    } catch (e) {
+        return null;
+    }
+};
+
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -17,7 +31,13 @@ export const AuthProvider = ({ children }) => {
         const token = getAuthToken();
         const storedUsername = typeof window !== 'undefined' ? localStorage.getItem('username') : null;
         if (token) {
-            setUser({ authenticated: true, username: storedUsername || 'Abhishek V' });
+            const decoded = parseJwt(token);
+            setUser({
+                authenticated: true,
+                username: storedUsername || decoded?.sub || 'User',
+                roles: decoded?.roles || [],
+                profile: decoded?.profile || 'MEMBER'
+            });
         }
         setLoading(false);
 
@@ -43,7 +63,15 @@ export const AuthProvider = ({ children }) => {
                 if (typeof window !== 'undefined') {
                     localStorage.setItem('username', username);
                 }
-                setUser({ authenticated: true, username });
+
+                const decoded = parseJwt(result.data.token);
+                setUser({
+                    authenticated: true,
+                    username,
+                    roles: decoded?.roles || [],
+                    profile: decoded?.profile || 'MEMBER'
+                });
+
                 router.push('/dashboard/dashboard2');
                 return { success: true };
             } else {
@@ -96,8 +124,17 @@ export const AuthProvider = ({ children }) => {
         router.push('/auth/login');
     };
 
+    const hasAccess = (appId) => {
+        if (!user) return false;
+        if (user.profile === 'ADMIN') return true;
+
+        // Check if the appId matches any role (case-insensitive)
+        const normalizedAppId = appId.toUpperCase();
+        return user.roles.some(role => role.toUpperCase() === normalizedAppId);
+    };
+
     return (
-        <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+        <AuthContext.Provider value={{ user, loading, login, register, logout, hasAccess }}>
             {/* Hide everything else when session expires for security and UI clarity */}
             {!sessionExpired && children}
 
