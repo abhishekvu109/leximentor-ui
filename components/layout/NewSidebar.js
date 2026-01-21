@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
+import { useAuth } from '../../context/AuthContext';
 import {
     LayoutDashboard,
     User,
@@ -25,6 +26,7 @@ import {
 } from 'lucide-react';
 
 const NewSidebar = ({ isOpen }) => {
+    const { hasAccess } = useAuth();
     const [openSections, setOpenSections] = useState({});
 
     const toggleSection = (name) => {
@@ -139,7 +141,10 @@ const NewSidebar = ({ isOpen }) => {
                             return <li key={index} className="my-4 border-t border-slate-100 dark:border-slate-800" />;
                         }
 
+                        // Check access for category types using their ID
                         if (item.type === 'category') {
+                            if (!hasAccess(item.id)) return null;
+
                             const isSectionOpen = openSections[item.id];
                             const Icon = item.icon;
 
