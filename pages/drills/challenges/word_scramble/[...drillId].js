@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
+import { useRouter } from "next/router";
 import Link from "next/link";
 import Layout from "@/components/layout/Layout";
 import { API_LEXIMENTOR_BASE_URL } from "@/constants";
-import { fetchData } from "@/dataService";
+import { fetchData, fetchWithAuth } from "@/dataService";
 import {
     ArrowLeftIcon,
     CheckCircleIcon,
@@ -46,7 +47,9 @@ const shuffleArray = (array) => {
     return newArr;
 };
 
-const WordScrambleChallenge = ({ drillSetData, drillSetWordData, challengeId, drillRefId, challengeScores }) => {
+const WordScrambleChallenge = () => {
+    const router = useRouter();
+    const { drillId } = router.query; // [...drillId] -> [challengeId, drillRefId]
 
     // --- State ---
     const [words, setWords] = useState([]);
@@ -58,15 +61,37 @@ const WordScrambleChallenge = ({ drillSetData, drillSetWordData, challengeId, dr
     const [responses, setResponses] = useState([]);
     const [isCompleted, setIsCompleted] = useState(false);
     const [attempts, setAttempts] = useState(0);
+    const [loading, setLoading] = useState(true);
 
     const [notification, setNotification] = useState({ visible: false, message: '', type: '' });
 
-    // --- Init ---
+    const challengeId = drillId?.[0];
+    const drillRefId = drillId?.[1];
+
+    // --- Fetching ---
     useEffect(() => {
-        if (drillSetWordData?.data && challengeScores?.data && drillSetData?.data) {
-            initializeGame(drillSetWordData.data, challengeScores.data, drillSetData.data);
+        if (drillRefId && challengeId) {
+            setLoading(true);
+            const fetchDataAsync = async () => {
+                try {
+                    const [drillSetData, drillSetWordData, challengeScores] = await Promise.all([
+                        fetchWithAuth(`${API_LEXIMENTOR_BASE_URL}/drill/metadata/sets/${drillRefId}`).then(res => res.json()),
+                        fetchWithAuth(`${API_LEXIMENTOR_BASE_URL}/drill/metadata/sets/words/data/${drillRefId}`).then(res => res.json()),
+                        fetchWithAuth(`${API_LEXIMENTOR_BASE_URL}/drill/metadata/challenges/challenge/${challengeId}/scores`).then(res => res.json())
+                    ]);
+
+                    if (drillSetWordData?.data && challengeScores?.data && drillSetData?.data) {
+                        initializeGame(drillSetWordData.data, challengeScores.data, drillSetData.data);
+                    }
+                } catch (error) {
+                    console.error("Failed to fetch challenge data:", error);
+                } finally {
+                    setLoading(false);
+                }
+            };
+            fetchDataAsync();
         }
-    }, [drillSetWordData, challengeScores, drillSetData]);
+    }, [drillRefId, challengeId]);
 
     const initializeGame = (data, scores, setData) => {
         // Map scores to words using drillSetData join table
@@ -209,9 +234,8 @@ const WordScrambleChallenge = ({ drillSetData, drillSetWordData, challengeId, dr
     const submitResults = async (submissionData) => {
         try {
             const URL = `${API_LEXIMENTOR_BASE_URL}/drill/metadata/challenges/challenge/${challengeId}/scores`;
-            await fetch(URL, {
+            await fetchWithAuth(URL, {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(submissionData),
             });
             setNotification({ visible: true, message: "Challenge Completed! Progress saved.", type: 'success' });
@@ -402,9 +426,13 @@ const WordScrambleChallenge = ({ drillSetData, drillSetWordData, challengeId, dr
                             </div>
 
                         </div>
-                    ) : (
-                        <div className="text-center py-20 text-slate-400">
+                    ) : loading ? (
+                        <div className="text-center py-20 text-slate-400 animate-pulse font-bold text-xl">
                             Loading words...
+                        </div>
+                    ) : (
+                        <div className="text-center py-20 text-red-400 font-bold">
+                            Failed to load challenge.
                         </div>
                     )}
 
@@ -424,39 +452,3 @@ const WordScrambleChallenge = ({ drillSetData, drillSetWordData, challengeId, dr
 };
 
 export default WordScrambleChallenge;
-
-export async function getServerSideProps(context) {
-    const { params } = context;
-    const drillId = params.drillId;
-    const challengeId = drillId[0];
-    const drillRefId = drillId[1];
-
-    try {
-        const [drillSetData, drillSetWordData, challengeScores] = await Promise.all([
-            fetchData(`${API_LEXIMENTOR_BASE_URL}/drill/metadata/sets/${drillRefId}`),
-            fetchData(`${API_LEXIMENTOR_BASE_URL}/drill/metadata/sets/words/data/${drillRefId}`),
-            fetchData(`${API_LEXIMENTOR_BASE_URL}/drill/metadata/challenges/challenge/${challengeId}/scores`)
-        ]);
-
-        return {
-            props: {
-                drillSetData: drillSetData || { data: [] },
-                drillSetWordData: drillSetWordData || { data: [] },
-                challengeId,
-                drillRefId,
-                challengeScores: challengeScores || { data: [] }
-            },
-        };
-    } catch (e) {
-        console.error("Error fetching drill data:", e);
-        return {
-            props: {
-                drillSetData: { data: [] },
-                drillSetWordData: { data: [] },
-                challengeScores: { data: [] },
-                challengeId,
-                drillRefId
-            },
-        };
-    }
-}

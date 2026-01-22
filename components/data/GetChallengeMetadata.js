@@ -1,13 +1,18 @@
-import {useEffect, useState} from "react";
-import {API_LEXIMENTOR_BASE_URL} from "@/constants";
+import { useEffect, useState } from "react";
+import { API_LEXIMENTOR_BASE_URL } from "@/constants";
+import { fetchWithAuth } from "@/dataService";
 
 const GetChallengeMetadata = () => {
     const [drillChallengeAnalytics, setDrillChallengeAnalytics] = useState([]);
     useEffect(() => {
         const fetchData = async () => {
-            const res1 = await fetch(`${API_LEXIMENTOR_BASE_URL}/analytics/drill/challenge/metadata`); // Replace with your API endpoint
-            const getChallengeMetadata = await res1.json();
-            setDrillChallengeAnalytics(getChallengeMetadata);
+            try {
+                const res1 = await fetchWithAuth(`${API_LEXIMENTOR_BASE_URL}/analytics/drill/challenge/metadata`);
+                const getChallengeMetadata = await res1.json();
+                setDrillChallengeAnalytics(getChallengeMetadata);
+            } catch (error) {
+                console.error("Failed to fetch challenge metadata:", error);
+            }
         };
 
         fetchData();
@@ -20,40 +25,40 @@ const GetChallengeMetadata = () => {
                     Drill Challenge Analytics Summary
                 </caption>
                 <thead className="text-xs text-gray-700 uppercase bg-gray-200 dark:bg-gray-700 dark:text-gray-400">
-                <tr>
-                    <th scope="col" className="px-3 py-3 text-left">
-                        Drill type
-                    </th>
-                    <th scope="col" className="px-3 py-3 text-left">
-                        Count
-                    </th>
-                    <th scope="col" className="px-3 py-3 text-left">
-                        Mean
-                    </th>
-                    <th scope="col" className="px-3 py-3 text-left">
-                        Lowest
-                    </th>
-                    <th scope="col" className="px-3 py-3 text-left">
-                        Highest
-                    </th>
-                </tr>
+                    <tr>
+                        <th scope="col" className="px-3 py-3 text-left">
+                            Drill type
+                        </th>
+                        <th scope="col" className="px-3 py-3 text-left">
+                            Count
+                        </th>
+                        <th scope="col" className="px-3 py-3 text-left">
+                            Mean
+                        </th>
+                        <th scope="col" className="px-3 py-3 text-left">
+                            Lowest
+                        </th>
+                        <th scope="col" className="px-3 py-3 text-left">
+                            Highest
+                        </th>
+                    </tr>
                 </thead>
                 <tbody>
-                {(drillChallengeAnalytics.data != null && drillChallengeAnalytics.data.length > 0) ? (<>
-                    {drillChallengeAnalytics.data.map((item, index) => (<tr key={item.drillType}
-                                                                            className="odd:bg-white odd:dark:bg-gray-900 even:bg-gray-50 even:dark:bg-gray-800 border-b dark:border-gray-700">
-                        <th scope="row"
-                            className="px-3 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white text-left">{item.drillType}</th>
-                        <td className="px-3 py-4 text-left">{item.drillCount}</td>
-                        <td className="px-3 py-4 text-left">{item.avgScore}</td>
-                        <td className="px-3 py-4 text-left">{item.lowestScore}</td>
-                        <td className="px-3 py-4 text-left">{item.highestScore}</td>
-                    </tr>))}
-                </>) : (<>
-                    <tr>
-                        <td className="px-6 py-4 text-center">No drills found</td>
-                    </tr>
-                </>)}
+                    {(drillChallengeAnalytics.data != null && drillChallengeAnalytics.data.length > 0) ? (<>
+                        {drillChallengeAnalytics.data.map((item, index) => (<tr key={item.drillType}
+                            className="odd:bg-white odd:dark:bg-gray-900 even:bg-gray-50 even:dark:bg-gray-800 border-b dark:border-gray-700">
+                            <th scope="row"
+                                className="px-3 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white text-left">{item.drillType}</th>
+                            <td className="px-3 py-4 text-left">{item.drillCount}</td>
+                            <td className="px-3 py-4 text-left">{item.avgScore}</td>
+                            <td className="px-3 py-4 text-left">{item.lowestScore}</td>
+                            <td className="px-3 py-4 text-left">{item.highestScore}</td>
+                        </tr>))}
+                    </>) : (<>
+                        <tr>
+                            <td className="px-6 py-4 text-center">No drills found</td>
+                        </tr>
+                    </>)}
 
                 </tbody>
             </table>

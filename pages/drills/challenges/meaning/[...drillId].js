@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/router";
 import { API_LEXIMENTOR_BASE_URL } from "@/constants";
-import { fetchData } from "@/dataService";
+import { fetchData, fetchWithAuth } from "@/dataService";
 import Link from "next/link";
 import Layout from "@/components/layout/Layout";
 import {
@@ -61,16 +62,40 @@ const ChallengeCard = ({ item, index, onChange, value }) => {
     );
 };
 
-const LoadMeaningDrillChallenge = ({ drillSetData, challengeId, drillRefId }) => {
-    const [formData, setFormData] = useState(
-        drillSetData.data?.map(item => ({
-            drillSetRefId: item.refId,
-            drillChallengeRefId: challengeId,
-            response: item.response || '', // Pre-fill if exists (optional logic)
-        })) || []
-    );
+const LoadMeaningDrillChallenge = () => {
+    const router = useRouter();
+    const { drillId } = router.query; // [...drillId] -> [challengeId, drillRefId]
+
+    const [drillSetData, setDrillSetData] = useState({ data: [] });
+    const [loading, setLoading] = useState(true);
+    const [formData, setFormData] = useState([]);
     const [notification, setNotification] = useState({ visible: false, message: '', type: '' });
     const [isSubmitting, setIsSubmitting] = useState(false);
+
+    const challengeId = drillId?.[0];
+    const drillRefId = drillId?.[1];
+
+    useEffect(() => {
+        if (drillRefId && challengeId) {
+            setLoading(true);
+            fetchWithAuth(`${API_LEXIMENTOR_BASE_URL}/drill/metadata/sets/${drillRefId}`)
+                .then(res => res.json())
+                .then(data => {
+                    const actualData = data || { data: [] };
+                    setDrillSetData(actualData);
+                    setFormData(actualData.data?.map(item => ({
+                        drillSetRefId: item.refId,
+                        drillChallengeRefId: challengeId,
+                        response: item.response || '',
+                    })) || []);
+                    setLoading(false);
+                })
+                .catch(err => {
+                    console.error('Failed to fetch drill data:', err);
+                    setLoading(false);
+                });
+        }
+    }, [drillRefId, challengeId]);
 
     const closeNotification = () => setNotification({ ...notification, visible: false });
 
@@ -97,19 +122,14 @@ const LoadMeaningDrillChallenge = ({ drillSetData, challengeId, drillRefId }) =>
         setIsSubmitting(true);
         try {
             const URL = `${API_LEXIMENTOR_BASE_URL}/drill/metadata/challenges/challenge/${challengeId}/scores`;
-            const response = await fetch(URL, {
+            const response = await fetchWithAuth(URL, {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(formData),
             });
 
             if (!response.ok) throw new Error("Submission failed");
 
-            const data = await response.json();
             setNotification({ visible: true, message: "Drill submitted successfully!", type: 'success' });
-
-            // Optional: Redirect after success?
-            // setTimeout(() => router.push(...), 2000);
 
         } catch (error) {
             console.error(error);
@@ -119,6 +139,8 @@ const LoadMeaningDrillChallenge = ({ drillSetData, challengeId, drillRefId }) =>
             setTimeout(closeNotification, 5000);
         }
     };
+
+    if (loading) return <div className="p-20 text-center font-bold text-slate-400 animate-pulse">Loading Challenge...</div>;
 
     const words = drillSetData?.data || [];
 
@@ -130,7 +152,7 @@ const LoadMeaningDrillChallenge = ({ drillSetData, challengeId, drillRefId }) =>
                 <div className="bg-white border-b border-slate-200">
                     <div className="max-w-4xl mx-auto px-6 py-8">
                         <div className="mb-6 flex items-center gap-2">
-                            <Link href={`/challenges/${challengeId}`} className="text-slate-400 hover:text-indigo-600 transition-colors flex items-center gap-1 text-sm font-medium">
+                            <Link href={`/challenges/${drillRefId}`} className="text-slate-400 hover:text-indigo-600 transition-colors flex items-center gap-1 text-sm font-medium">
                                 <ArrowLeftIcon className="w-4 h-4" />
                                 Back to Drill
                             </Link>
@@ -217,22 +239,3 @@ const LoadMeaningDrillChallenge = ({ drillSetData, challengeId, drillRefId }) =>
 };
 
 export default LoadMeaningDrillChallenge;
-
-export async function getServerSideProps(context) {
-    const { params } = context;
-    const drillId = params.drillId;
-    const drillRefId = drillId[0];
-    const challengeId = drillId[1];
-
-    try {
-        const drillSetData = await fetchData(`${API_LEXIMENTOR_BASE_URL}/drill/metadata/sets/${drillId[1]}`) || { data: [] };
-        return {
-            props: { drillSetData, challengeId, drillRefId },
-        };
-    } catch (e) {
-        console.error("Error fetching drill data:", e);
-        return {
-            props: { drillSetData: { data: [] }, challengeId, drillRefId },
-        };
-    }
-}

@@ -1,9 +1,8 @@
-import axios from "axios";
 import { API_LEXIMENTOR_BASE_URL, API_TEXT_TO_SPEECH } from "@/constants";
 import Link from "next/link";
 import { SpeakerWaveIcon, ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/24/solid";
 import { BookOpenIcon, LightBulbIcon, TagIcon, ChatBubbleLeftRightIcon, ArrowsRightLeftIcon } from "@heroicons/react/24/outline";
-import { fetchData } from "@/dataService";
+import { fetchData, fetchWithAuth } from "@/dataService";
 import { useEffect, useState } from "react";
 
 const Main = ({ drillSetData, wordMetadata, sourcesData }) => {
@@ -39,8 +38,13 @@ const Main = ({ drillSetData, wordMetadata, sourcesData }) => {
 
     const handleConvertToSpeech = async (text) => {
         try {
-            const response = await axios.post(API_TEXT_TO_SPEECH, { text }, { responseType: 'arraybuffer' });
-            const audioUrl = URL.createObjectURL(new Blob([response.data]));
+            const response = await fetchWithAuth(API_TEXT_TO_SPEECH, {
+                method: 'POST',
+                body: JSON.stringify({ text }),
+            });
+            if (!response.ok) throw new Error('TTS failed');
+            const data = await response.arrayBuffer();
+            const audioUrl = URL.createObjectURL(new Blob([data]));
             const audio = new Audio(audioUrl);
             await audio.play();
         } catch (error) {

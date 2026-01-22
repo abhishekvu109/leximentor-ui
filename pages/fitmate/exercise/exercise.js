@@ -3,10 +3,11 @@ import Link from "next/link";
 import Layout from "@/components/layout/Layout";
 import { useEffect, useState, useMemo } from "react";
 import { API_FITMATE_BASE_URL } from "@/constants";
-import { fetchData, postDataAsJson, DeleteByObject } from "@/dataService";
+import { fetchData, postDataAsJson, DeleteByObject, fetchWithAuth } from "@/dataService";
 import {
     Search, Plus, Filter, Trash2, Edit2, Dumbbell,
-    MoreVertical, X, Check, AlertCircle, Loader2, Info, Camera
+    MoreVertical, X, Check, AlertCircle, Loader2, Info, Camera,
+    ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -19,7 +20,7 @@ const ExerciseCard = ({ exercise, onDelete, onEdit, onThumbnailUpload }) => {
     useEffect(() => {
         const fetchThumb = async () => {
             try {
-                const res = await fetch(`${API_FITMATE_BASE_URL}/exercises/exercise/resources/resource?refId=${exercise.refId}&placeholder=THUMBNAIL&resourceId=`);
+                const res = await fetchWithAuth(`${API_FITMATE_BASE_URL}/exercises/exercise/resources/resource?refId=${exercise.refId}&placeholder=THUMBNAIL&resourceId=`);
                 if (!res.ok) return;
                 const blob = await res.blob();
                 if (blob.size > 0 && blob.type.startsWith('image/')) {
@@ -131,7 +132,8 @@ const AddExerciseModal = ({ isOpen, onClose, onSuccess, onNotification, data: { 
         bodyPart: "",
         targetMuscles: [],
         equipments: [],
-        status: "ACTIVE"
+        status: "ACTIVE",
+        unit: "reps"
     });
 
     const [filteredMuscles, setFilteredMuscles] = useState([]);
@@ -141,7 +143,7 @@ const AddExerciseModal = ({ isOpen, onClose, onSuccess, onNotification, data: { 
         if (isOpen) {
             setForm({
                 name: "", description: "", training: "",
-                bodyPart: "", targetMuscles: [], equipments: [], status: "ACTIVE"
+                bodyPart: "", targetMuscles: [], equipments: [], status: "ACTIVE", unit: "reps"
             });
             setFilteredMuscles([]);
         }
@@ -170,7 +172,8 @@ const AddExerciseModal = ({ isOpen, onClose, onSuccess, onNotification, data: { 
                 bodyPart: { name: form.bodyPart },
                 targetMuscles: form.targetMuscles.map(m => ({ name: m })),
                 equipments: form.equipments,
-                status: form.status
+                status: form.status,
+                unit: form.unit
             }];
 
             await postDataAsJson(`${API_FITMATE_BASE_URL}/exercises`, payload);
@@ -235,6 +238,26 @@ const AddExerciseModal = ({ isOpen, onClose, onSuccess, onNotification, data: { 
                                     <option value="">Select Type</option>
                                     {trainings.map((t, i) => <option key={i} value={t.name}>{t.name}</option>)}
                                 </select>
+                            </div>
+                        </div>
+
+                        {/* Unit Selection */}
+                        <div>
+                            <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Measure By (Unit)</label>
+                            <div className="flex gap-2">
+                                {['reps', 'weight', 'time'].map((u) => (
+                                    <button
+                                        key={u}
+                                        type="button"
+                                        onClick={() => setForm({ ...form, unit: u })}
+                                        className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all border ${form.unit === u
+                                            ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-100'
+                                            : 'bg-white text-gray-600 border-gray-200 hover:border-blue-300'
+                                            }`}
+                                    >
+                                        {u.charAt(0).toUpperCase() + u.slice(1)}
+                                    </button>
+                                ))}
                             </div>
                         </div>
 
@@ -351,6 +374,10 @@ const ExerciseLibrary = () => {
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [notification, setNotification] = useState({ visible: false, message: "", type: "info" });
 
+    // Pagination State
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 12; // 3 rows of 4 (lg) or 6 rows of 2 (sm)
+
     const showNotification = ({ message, type = "info" }) => {
         setNotification({ visible: true, message, type });
         setTimeout(() => setNotification(prev => ({ ...prev, visible: false })), 4000);
@@ -399,9 +426,10 @@ const ExerciseLibrary = () => {
         formData.append('files', file);
 
         try {
-            const res = await fetch(`${API_FITMATE_BASE_URL}/exercises/exercise/resources?refId=${refId}&placeholder=THUMBNAIL`, {
+            const res = await fetchWithAuth(`${API_FITMATE_BASE_URL}/exercises/exercise/resources?refId=${refId}&placeholder=THUMBNAIL`, {
                 method: 'PUT',
-                body: formData
+                body: formData,
+                headers: {} // fetchWithAuth handles Content-Type if needed, but for FormData it should be empty to let browser set boundary
             });
 
             if (res.ok) {
@@ -431,6 +459,24 @@ const ExerciseLibrary = () => {
         }
         return res;
     }, [exercises, search, filters]);
+
+    // Pagination Logic
+    const totalPages = Math.ceil(filteredExercises.length / itemsPerPage);
+    const paginatedExercises = filteredExercises.slice(
+        (currentPage - 1) * itemsPerPage,
+        currentPage * itemsPerPage
+    );
+
+    // Reset pagination when filters change
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [search, filters]);
+
+    const handlePageChange = (newPage) => {
+        if (newPage >= 1 && newPage <= totalPages) {
+            setCurrentPage(newPage);
+        }
+    };
 
     // Unique options for filters based on actual data
     // const availableBodyParts = [...new Set(exercises.map(e => e.bodyPart?.name).filter(Boolean))];
@@ -500,7 +546,7 @@ const ExerciseLibrary = () => {
                 </div>
             ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                    {filteredExercises.map((ex, i) => (
+                    {paginatedExercises.map((ex, i) => (
                         <ExerciseCard
                             key={i}
                             exercise={ex}
@@ -509,6 +555,83 @@ const ExerciseLibrary = () => {
                             onThumbnailUpload={handleThumbnailUpload}
                         />
                     ))}
+                </div>
+            )}
+
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+                <div className="flex flex-col md:flex-row items-center justify-between gap-4 py-4 border-t border-gray-100">
+                    <p className="text-sm text-gray-500">
+                        Showing <span className="font-bold text-gray-900">{(currentPage - 1) * itemsPerPage + 1}</span> to <span className="font-bold text-gray-900">{Math.min(currentPage * itemsPerPage, filteredExercises.length)}</span> of <span className="font-bold text-gray-900">{filteredExercises.length}</span> results
+                    </p>
+
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={() => handlePageChange(1)}
+                            disabled={currentPage === 1}
+                            className="p-2 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                            title="First Page"
+                        >
+                            <ChevronsLeft size={18} />
+                        </button>
+                        <button
+                            onClick={() => handlePageChange(currentPage - 1)}
+                            disabled={currentPage === 1}
+                            className="p-2 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                            title="Previous Page"
+                        >
+                            <ChevronLeft size={18} />
+                        </button>
+
+                        <div className="flex items-center gap-1 mx-2">
+                            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                                // Logic to show window of pages around current
+                                let pageNum = i + 1;
+                                if (totalPages > 5) {
+                                    if (currentPage > 3) {
+                                        pageNum = currentPage - 2 + i;
+                                    }
+                                    if (pageNum > totalPages) {
+                                        pageNum = totalPages - 4 + i; // Stick to end
+                                    }
+                                }
+
+                                // Boundary check specifically for start window
+                                if (currentPage < 3) pageNum = i + 1;
+
+                                return (
+                                    <button
+                                        key={pageNum}
+                                        onClick={() => handlePageChange(pageNum)}
+                                        className={`w-10 h-10 rounded-lg text-sm font-bold transition-all
+                                            ${currentPage === pageNum
+                                                ? 'bg-blue-600 text-white shadow-lg shadow-blue-200 scale-105'
+                                                : 'text-gray-600 hover:bg-gray-100'
+                                            }`}
+                                    >
+                                        {pageNum}
+                                    </button>
+                                );
+                            })}
+                        </div>
+
+                        <button
+                            onClick={() => handlePageChange(currentPage + 1)}
+                            disabled={currentPage === totalPages}
+                            className="p-2 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                            title="Next Page"
+                        >
+                            <ChevronRight size={18} />
+                        </button>
+                        <button
+                            onClick={() => handlePageChange(totalPages)}
+                            disabled={currentPage === totalPages}
+                            className="p-2 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                            title="Last Page"
+                        >
+                            <ChevronsRight size={18} />
+                        </button>
+                    </div>
                 </div>
             )}
 

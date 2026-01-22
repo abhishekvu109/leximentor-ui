@@ -1,12 +1,12 @@
 
-import { fetchData, updateData, DeleteByObject } from "@/dataService";
+import { fetchData, updateData, DeleteByObject, fetchWithAuth } from "@/dataService";
 import { API_FITMATE_BASE_URL } from "@/constants";
 import Layout from "@/components/layout/Layout";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import {
     Pen, Trash2, Check, X, Play, Flag, Clock, Flame,
-    Dumbbell, Calendar, ArrowLeft, Save, AlertCircle
+    Dumbbell, Calendar, ArrowLeft, Save, AlertCircle, Info
 } from "lucide-react";
 import { useState, useEffect } from "react";
 
@@ -30,22 +30,19 @@ const StatusBadge = ({ status }) => {
     );
 };
 
-const DrillCard = ({ drill, onSave, onDelete, isSessionActive }) => {
+const SetRow = ({ drill, index, onSave, onDelete, isSessionActive }) => {
     const [isEditing, setIsEditing] = useState(false);
     const [formData, setFormData] = useState({
         measurement: drill.measurement || '',
-        unit: drill.unit || 'kg',
         repetition: drill.repetition || '',
-        measurementUnit: drill.measurementUnit || 'Weight' // Context (Weight/Time/Distance)
+        unit: drill.unit || 'kg'
     });
 
-    // Reset form if drill prop updates (e.g. after save)
     useEffect(() => {
         setFormData({
             measurement: drill.measurement || '',
-            unit: drill.unit || 'kg',
             repetition: drill.repetition || '',
-            measurementUnit: drill.measurementUnit || 'Weight'
+            unit: drill.unit || 'kg'
         });
         setIsEditing(false);
     }, [drill]);
@@ -55,101 +52,130 @@ const DrillCard = ({ drill, onSave, onDelete, isSessionActive }) => {
         setIsEditing(false);
     };
 
-    const units = ['kg', 'lb', 'min', 'sec']; // Simplified for typical use
-
     return (
-        <div className={`group bg-white rounded-2xl border transition-all duration-300 ${isEditing ? 'border-blue-300 shadow-md ring-4 ring-blue-50/50' : 'border-gray-100 shadow-sm hover:border-blue-100'}`}>
-            <div className="p-5 flex flex-col sm:flex-row gap-5 items-start sm:items-center">
-                {/* Visual / Info */}
-                <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                        <span className="text-xs font-bold text-gray-400 uppercase">{drill.muscle?.name || 'Muscle'}</span>
-                        <span className="w-1 h-1 bg-gray-300 rounded-full"></span>
-                        <span className="text-xs font-bold text-gray-400 uppercase">{drill.exercise?.bodyPart?.name || 'Body'}</span>
-                    </div>
-                    <h3 className="text-lg font-bold text-gray-800">{drill.exercise?.name || 'Exercise'}</h3>
-                    {!isEditing && (
-                        <div className="flex items-center gap-4 mt-2">
-                            <div className="flex items-center gap-1 text-sm font-semibold text-gray-700 bg-gray-50 px-2 py-1 rounded-lg">
-                                {/* Auto-detect icon based on unit/context usually, default to Dumbbell */}
-                                <Dumbbell size={14} className="text-blue-500" />
-                                {drill.measurement || '-'} {drill.unit}
-                            </div>
-                            <div className="flex items-center gap-1 text-sm font-semibold text-gray-700 bg-gray-50 px-2 py-1 rounded-lg">
-                                <span className="text-xs text-gray-400">x</span>
-                                {drill.repetition || '-'} Reps
-                            </div>
-                        </div>
-                    )}
-                </div>
+        <div className={`grid grid-cols-12 gap-3 px-6 py-3 items-center border-b border-gray-50 last:border-none transition-colors ${isEditing ? 'bg-blue-50/30' : 'hover:bg-gray-50/50'}`}>
+            <div className="col-span-1 text-xs font-black text-gray-300">#{index + 1}</div>
 
-                {/* Edit Controls */}
+            <div className="col-span-4 flex items-center gap-2">
                 {isEditing ? (
-                    <div className="flex-1 w-full sm:w-auto grid grid-cols-2 gap-3 animate-in fade-in zoom-in-95 duration-200">
-                        <div>
-                            <label className="text-[10px] font-bold text-gray-400 uppercase">Load / Time</label>
-                            <div className="flex">
-                                <input
-                                    type="number"
-                                    value={formData.measurement}
-                                    onChange={e => setFormData({ ...formData, measurement: e.target.value })}
-                                    className="w-full rounded-l-lg border-gray-200 text-sm focus:border-blue-500 focus:ring-blue-500 py-1.5"
-                                    placeholder="0"
-                                />
-                                <select
-                                    value={formData.unit}
-                                    onChange={e => setFormData({ ...formData, unit: e.target.value })}
-                                    className="border-l-0 rounded-r-lg border-gray-200 bg-gray-50 text-xs font-medium focus:border-blue-500 focus:ring-blue-500 py-1.5 px-1"
-                                >
-                                    {units.map(u => <option key={u} value={u}>{u}</option>)}
-                                </select>
-                            </div>
-                        </div>
-                        <div>
-                            <label className="text-[10px] font-bold text-gray-400 uppercase">Reps</label>
-                            <input
-                                type="number"
-                                value={formData.repetition}
-                                onChange={e => setFormData({ ...formData, repetition: e.target.value })}
-                                className="w-full rounded-lg border-gray-200 text-sm focus:border-blue-500 focus:ring-blue-500 py-1.5"
-                                placeholder="0"
-                            />
-                        </div>
+                    <div className="flex w-full">
+                        <input
+                            type="number"
+                            value={formData.measurement}
+                            onChange={e => setFormData({ ...formData, measurement: e.target.value })}
+                            className="w-full rounded-l-lg border-gray-200 text-sm focus:border-blue-500 focus:ring-0 py-1"
+                            placeholder="0"
+                        />
+                        <select
+                            value={formData.unit}
+                            onChange={e => setFormData({ ...formData, unit: e.target.value })}
+                            className="border-l-0 rounded-r-lg border-gray-200 bg-gray-50 text-[10px] font-bold focus:ring-0 py-1 px-1 uppercase"
+                        >
+                            {['kg', 'lb', 'min', 'sec'].map(u => <option key={u} value={u}>{u}</option>)}
+                        </select>
                     </div>
-                ) : null}
+                ) : (
+                    <span className="text-sm font-bold text-gray-700">{drill.measurement || '-'} <span className="text-[10px] text-gray-400 uppercase">{drill.unit}</span></span>
+                )}
+            </div>
 
-                {/* Buttons */}
-                <div className="flex items-center gap-2 w-full sm:w-auto justify-end sm:border-l sm:border-gray-100 sm:pl-4">
-                    {isEditing ? (
-                        <>
-                            <button onClick={handleSave} className="p-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 shadow-sm transition-all">
-                                <Check size={18} />
-                            </button>
-                            <button onClick={() => setIsEditing(false)} className="p-2 bg-gray-100 text-gray-500 rounded-xl hover:bg-gray-200 transition-all">
-                                <X size={18} />
-                            </button>
-                        </>
-                    ) : (
-                        <>
-                            <button
-                                onClick={() => setIsEditing(true)}
-                                disabled={!isSessionActive}
-                                className={`p-2 rounded-xl transition-all flex items-center gap-2 text-sm font-semibold
-                                    ${isSessionActive
-                                        ? 'bg-blue-50 text-blue-700 hover:bg-blue-100'
-                                        : 'bg-gray-50 text-gray-400 cursor-not-allowed opacity-50'}`}
-                            >
-                                <Pen size={16} /> <span className="hidden sm:inline">Log</span>
-                            </button>
-                            <button
-                                onClick={() => onDelete(drill)}
-                                className="p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-colors"
-                            >
-                                <Trash2 size={16} />
-                            </button>
-                        </>
-                    )}
+            <div className="col-span-3">
+                {isEditing ? (
+                    <input
+                        type="number"
+                        value={formData.repetition}
+                        onChange={e => setFormData({ ...formData, repetition: e.target.value })}
+                        className="w-full rounded-lg border-gray-200 text-sm focus:border-blue-500 focus:ring-0 py-1"
+                        placeholder="0"
+                    />
+                ) : (
+                    <span className="text-sm font-bold text-gray-700">{drill.repetition || '-'} <span className="text-[10px] text-gray-400 uppercase">Reps</span></span>
+                )}
+            </div>
+
+            <div className="col-span-4 flex justify-end gap-2">
+                {isEditing ? (
+                    <>
+                        <button onClick={handleSave} className="p-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-sm transition-all">
+                            <Check size={14} />
+                        </button>
+                        <button onClick={() => setIsEditing(false)} className="p-1.5 bg-gray-100 text-gray-500 rounded-lg hover:bg-gray-200 transition-all">
+                            <X size={14} />
+                        </button>
+                    </>
+                ) : (
+                    <>
+                        <button
+                            onClick={() => setIsEditing(true)}
+                            disabled={!isSessionActive}
+                            className={`p-1.5 rounded-lg transition-all flex items-center gap-2 text-[10px] font-black uppercase tracking-wider
+                                ${isSessionActive
+                                    ? 'bg-blue-50 text-blue-600 hover:bg-blue-100'
+                                    : 'bg-gray-50 text-gray-300 cursor-not-allowed'}`}
+                        >
+                            <Pen size={12} /> Log
+                        </button>
+                        <button
+                            onClick={() => onDelete(drill)}
+                            className="p-1.5 text-gray-200 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                        >
+                            <Trash2 size={12} />
+                        </button>
+                    </>
+                )}
+            </div>
+        </div>
+    );
+};
+
+const ExerciseGroupCard = ({ exerciseId, exerciseName, bodyPart, muscle, drills, onSave, onDelete, isSessionActive }) => {
+    return (
+        <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden animate-in slide-in-from-bottom-4 duration-500">
+            {/* Group Header */}
+            <div className="p-6 pb-4 bg-gradient-to-r from-gray-50 to-white flex justify-between items-start border-b border-gray-50">
+                <div>
+                    <div className="flex flex-wrap gap-2 mb-2">
+                        <span className="text-[10px] font-black px-2 py-0.5 bg-blue-100 text-blue-600 rounded-lg uppercase tracking-widest">{muscle || 'General'}</span>
+                        <span className="text-[10px] font-black px-2 py-0.5 bg-slate-100 text-slate-500 rounded-lg uppercase tracking-widest">{bodyPart || 'Target'}</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                        <h3 className="text-xl font-black text-gray-800 tracking-tight">{exerciseName}</h3>
+                        {exerciseId && (
+                            <Link href={`/fitmate/exercise/view/${exerciseId}`}>
+                                <button className="p-1 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors group/info flex items-center gap-1.5">
+                                    <Info size={16} />
+                                    <span className="text-[10px] font-black uppercase tracking-widest opacity-0 group-hover/info:opacity-100 transition-opacity">Learn More</span>
+                                </button>
+                            </Link>
+                        )}
+                    </div>
                 </div>
+                <div className="text-right">
+                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Total Sets</span>
+                    <p className="text-2xl font-black text-blue-600 leading-none">{drills.length}</p>
+                </div>
+            </div>
+
+            {/* Sets Table Header */}
+            <div className="grid grid-cols-12 gap-3 px-6 py-2 bg-gray-50/50 border-b border-gray-50 text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                <div className="col-span-1">No</div>
+                <div className="col-span-4">Weight / Time</div>
+                <div className="col-span-3">Reps</div>
+                <div className="col-span-4 text-right pr-4">Actions</div>
+            </div>
+
+            {/* Sets List */}
+            <div className="divide-y divide-gray-50">
+                {drills.map((drill, idx) => (
+                    <SetRow
+                        key={drill.refId}
+                        drill={drill}
+                        index={idx}
+                        onSave={onSave}
+                        onDelete={onDelete}
+                        isSessionActive={isSessionActive}
+                    />
+                ))}
             </div>
         </div>
     );
@@ -350,21 +376,43 @@ const RoutineLogger = ({ initialData }) => {
                     </div>
                 )}
 
-                <div className="space-y-4">
+                <div className="space-y-6">
                     {routine.drills?.length > 0 ? (
-                        routine.drills.map((drill, i) => (
-                            <DrillCard
-                                key={i}
-                                drill={drill}
-                                onSave={handleDrillSave}
-                                onDelete={handleDrillDelete}
-                                isSessionActive={isActive}
-                            />
-                        ))
+                        (() => {
+                            // Group drills by exercise
+                            const groups = {};
+                            routine.drills.forEach(drill => {
+                                const id = drill.exercise?.refId || 'unknown';
+                                if (!groups[id]) {
+                                    groups[id] = {
+                                        exerciseId: id,
+                                        exerciseName: drill.exercise?.name,
+                                        bodyPart: drill.exercise?.bodyPart?.name,
+                                        muscle: drill.muscle?.name || drill.exercise?.targetMuscles?.[0]?.name,
+                                        drills: []
+                                    };
+                                }
+                                groups[id].drills.push(drill);
+                            });
+
+                            return Object.values(groups).map((group, i) => (
+                                <ExerciseGroupCard
+                                    key={i}
+                                    exerciseId={group.exerciseId}
+                                    exerciseName={group.exerciseName}
+                                    bodyPart={group.bodyPart}
+                                    muscle={group.muscle}
+                                    drills={group.drills}
+                                    onSave={handleDrillSave}
+                                    onDelete={handleDrillDelete}
+                                    isSessionActive={isActive}
+                                />
+                            ));
+                        })()
                     ) : (
                         <div className="text-center py-12 bg-gray-50 rounded-3xl border border-dashed border-gray-200">
                             <Dumbbell className="mx-auto text-gray-300 mb-2" size={32} />
-                            <p className="text-gray-500">No exercises in this routine.</p>
+                            <p className="text-gray-500 font-bold">No exercises in this routine.</p>
                         </div>
                     )}
                 </div>
@@ -379,23 +427,32 @@ const RoutineLogger = ({ initialData }) => {
     );
 };
 
-const RoutineDetail = ({ routine }) => {
+const RoutineDetail = () => {
+    const router = useRouter();
+    const { routineId } = router.query;
+    const [routine, setRoutine] = useState(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        if (routineId) {
+            setLoading(true);
+            fetchWithAuth(`${API_FITMATE_BASE_URL}/routines/routine/${routineId}`)
+                .then(res => res.json())
+                .then(data => {
+                    setRoutine(data.data);
+                    setLoading(false);
+                })
+                .catch(err => {
+                    console.error('Failed to fetch routine:', err);
+                    setLoading(false);
+                });
+        }
+    }, [routineId]);
+
+    if (loading) return <div className="p-10 text-center font-bold text-gray-400 animate-pulse">Loading Routine...</div>;
+    if (!routine) return <div className="p-10 text-center text-red-500 font-bold">Routine not found.</div>;
+
     return <Layout content={<RoutineLogger initialData={routine} />} />;
 }
 
 export default RoutineDetail;
-
-
-// Server Side Fetch
-export async function getServerSideProps(context) {
-    const { routineId } = context.params;
-    try {
-        const res = await fetch(`${API_FITMATE_BASE_URL}/routines/routine/${routineId}`);
-        const data = await res.json();
-        if (!data || !data.data) return { notFound: true };
-        return { props: { routine: data.data } };
-    } catch (error) {
-        console.error('Failed to fetch routine:', error);
-        return { props: { routine: null } };
-    }
-}

@@ -1,7 +1,8 @@
-import { useRef, useState, useMemo } from 'react';
+import { useRef, useState, useMemo, useEffect } from 'react';
 import Layout from "@/components/layout/Layout";
-import { fetchData } from "@/dataService";
+import { fetchWithAuth } from "@/dataService";
 import { API_WRITEWISE_BASE_URL } from "@/constants";
+import { useRouter } from "next/router";
 
 // --- Components ---
 
@@ -161,21 +162,48 @@ const AnalysisView = ({ evaluation }) => {
 
 // --- Main Page Component ---
 
-const EvaluationResult = ({ data }) => {
-    const topic = data?.topic || {};
-    const responseVersion = data?.responseVersionDTOs?.[0] || {};
-    const evaluations = responseVersion?.evaluations || [];
-    const evaluation = evaluations[0] || {};
-    const overallScore = evaluation?.evaluationResult?.score || 0;
+const EvaluationResult = () => {
+    const router = useRouter();
+    const { ids } = router.query;
+    const responseRefId = ids?.[0];
+    const versionRefId = ids?.[1];
 
+    const [data, setData] = useState(null);
+    const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState('HighLevel');
+
+    useEffect(() => {
+        if (responseRefId && versionRefId) {
+            const loadData = async () => {
+                setLoading(true);
+                try {
+                    const res = await fetchWithAuth(`${API_WRITEWISE_BASE_URL}/v1/responses/response/${responseRefId}/versions/version/${versionRefId}`);
+                    const result = await res.json();
+                    setData(result?.data || null);
+                } catch (error) {
+                    console.error("Error fetching evaluation result:", error);
+                } finally {
+                    setLoading(false);
+                }
+            };
+            loadData();
+        }
+    }, [responseRefId, versionRefId]);
+
+    if (loading) return <Layout content={<div className="p-8 text-center text-slate-500 font-bold">Loading Results...</div>} />;
+    if (!data) return <Layout content={<div className="p-8 text-center text-red-500 font-bold">Result not found.</div>} />;
+
+    const topic = data.topic || {};
+    const responseVersion = data.responseVersionDTOs?.[0] || {};
+    const evaluations = responseVersion.evaluations || [];
+    const evaluation = evaluations[0] || {};
+    const overallScore = evaluation.evaluationResult?.score || 0;
 
     const renderTabContent = () => {
         switch (activeTab) {
             case 'HighLevel':
                 return <AnalysisView evaluation={evaluation} />;
             case 'LowLevel':
-                // Fallback or specific data field if available. Using same evaluation as placeholder/mirror
                 return <AnalysisView evaluation={evaluation} />;
             case 'Annotations':
                 return (
@@ -248,19 +276,3 @@ const EvaluationResult = ({ data }) => {
 };
 
 export default EvaluationResult;
-
-
-export async function getServerSideProps(context) {
-    const { params } = context;
-    const ids = params.ids;
-    const responseRefId = ids[0];
-    const versionRefId = ids[1];
-
-    try {
-        const data = await fetchData(`${API_WRITEWISE_BASE_URL}/v1/responses/response/${responseRefId}/versions/version/${versionRefId}`);
-        return { props: { data: data?.data || null } };
-    } catch (e) {
-        console.error("Error fetching evaluation result:", e);
-        return { props: { data: null } };
-    }
-}

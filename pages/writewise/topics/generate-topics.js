@@ -1,11 +1,17 @@
+import { useState, useEffect, useCallback } from "react";
 import Layout from "@/components/layout/Layout";
 import Link from "next/link";
 import { API_WRITEWISE_BASE_URL } from "@/constants";
-import { deleteData, fetchData, postDataAsJson } from "@/dataService";
-import { useState } from "react";
+import { fetchWithAuth } from "@/dataService";
 import ModalConfirmation from "@/components/modal_notifications/ModalConfirmation";
 
 // --- Components ---
+// ... (HeroSection, SubjectCard, NumberStepper, TopicCard, TabButton unchanged)
+
+// I'll keep the component definitions as they were, but ensure they are included if I'm replacing the whole block.
+// To be safe, I'll only replace the top part and the component signature.
+
+// Actually, I'll replace the first 146 lines to get everything right.
 
 const HeroSection = () => (
     <div className="text-center mb-10">
@@ -120,12 +126,7 @@ const TabButton = ({ active, label, onClick }) => (
 
 // --- Main Component ---
 
-export default function GenerateTopics({
-    load_topics_response,
-    load_all_topics,
-    load_all_submitted_responses,
-    load_all_evaluated_responses
-}) {
+export default function GenerateTopics() {
     // --- State ---
     const [formData, setFormData] = useState({
         subject: "",
@@ -136,13 +137,41 @@ export default function GenerateTopics({
     const [activeTab, setActiveTab] = useState('generate');
 
     // Data States
-    const [topicsState, setTopicsState] = useState(load_topics_response); // Generated Sets
-    const [allTopicsState, setAllTopicsState] = useState(load_all_topics); // Individual Topics
-    const [submittedState, setSubmittedState] = useState(load_all_submitted_responses);
-    const [evaluatedState, setEvaluatedState] = useState(load_all_evaluated_responses);
+    const [topicsState, setTopicsState] = useState({ data: [] }); // Generated Sets
+    const [allTopicsState, setAllTopicsState] = useState({ data: [] }); // Individual Topics
+    const [submittedState, setSubmittedState] = useState({ data: [] });
+    const [evaluatedState, setEvaluatedState] = useState({ data: [] });
 
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [loading, setLoading] = useState(true);
 
+    // --- Data Loading ---
+    const loadAllData = useCallback(async () => {
+        try {
+            const [generations, topics, submitted, evaluated] = await Promise.all([
+                fetchWithAuth(`${API_WRITEWISE_BASE_URL}/v1/topic-generations`).then(res => res.json()),
+                fetchWithAuth(`${API_WRITEWISE_BASE_URL}/v1/topics`).then(res => res.json()),
+                fetchWithAuth(`${API_WRITEWISE_BASE_URL}/v1/response/submitted-responses`).then(res => res.json()),
+                fetchWithAuth(`${API_WRITEWISE_BASE_URL}/v1/response/evaluated-responses`).then(res => res.json())
+            ]);
+
+            setTopicsState(generations || { data: [] });
+            setAllTopicsState(topics || { data: [] });
+            setSubmittedState(submitted || { data: [] });
+            setEvaluatedState(evaluated || { data: [] });
+        } catch (error) {
+            console.error("Failed to load Writewise data:", error);
+        }
+    }, []);
+
+    useEffect(() => {
+        const init = async () => {
+            setLoading(true);
+            await loadAllData();
+            setLoading(false);
+        };
+        init();
+    }, [loadAllData]);
 
     // --- Handlers ---
     const handleSubjectSelect = (subject) => {
@@ -164,15 +193,18 @@ export default function GenerateTopics({
         setIsSubmitting(true);
         try {
             const URL = `${API_WRITEWISE_BASE_URL}/v1/topics`;
-            await postDataAsJson(URL, formData);
+            await fetchWithAuth(URL, {
+                method: 'POST',
+                body: JSON.stringify(formData),
+            });
 
-            // Refresh Data (Optimistic or Refetch)
-            // Ideally we refetch, for now simplistic reload logic:
-            const newTopics = await fetchData(`${API_WRITEWISE_BASE_URL}/v1/topic-generations`);
+            // Refresh Data
+            const newRes = await fetchWithAuth(`${API_WRITEWISE_BASE_URL}/v1/topic-generations`);
+            const newTopics = await newRes.json();
             setTopicsState(newTopics);
 
             alert("Topics Generated Successfully!");
-            setFormData({ ...formData, subject: "" }); // Reset subject to force new choice? Or keep it.
+            setFormData({ ...formData, subject: "" });
         } catch (error) {
             console.error(error);
             alert("Failed to generate topics.");
@@ -185,13 +217,17 @@ export default function GenerateTopics({
         if (!confirm("Are you sure you want to delete this?")) return;
 
         try {
-            await deleteData(`${API_WRITEWISE_BASE_URL}/v1/topic-generations/topic-generation/${refId}`);
+            await fetchWithAuth(`${API_WRITEWISE_BASE_URL}/v1/topic-generations/topic-generation/${refId}`, {
+                method: 'DELETE'
+            });
             // Refetch based on type
             if (type === 'topic') {
-                const newAllTopics = await fetchData(`${API_WRITEWISE_BASE_URL}/v1/topics`);
+                const res = await fetchWithAuth(`${API_WRITEWISE_BASE_URL}/v1/topics`);
+                const newAllTopics = await res.json();
                 setAllTopicsState(newAllTopics);
             } else if (type === 'set') {
-                const newTopics = await fetchData(`${API_WRITEWISE_BASE_URL}/v1/topic-generations`);
+                const res = await fetchWithAuth(`${API_WRITEWISE_BASE_URL}/v1/topic-generations`);
+                const newTopics = await res.json();
                 setTopicsState(newTopics);
             }
         } catch (e) {
@@ -365,6 +401,8 @@ export default function GenerateTopics({
     };
 
 
+    if (loading) return <Layout content={<div className="p-8 text-center text-slate-500 font-bold">Loading Writewise Topics...</div>} />;
+
     return (
         <Layout content={
             <div className="min-h-screen bg-slate-50/50 -m-4 sm:-m-8 p-4 sm:p-8 font-sans">
@@ -391,30 +429,3 @@ export default function GenerateTopics({
     );
 }
 
-export async function getServerSideProps(context) {
-    try {
-        const load_topics_response = await fetchData(`${API_WRITEWISE_BASE_URL}/v1/topic-generations`) || { data: [] };
-        const load_all_topics = await fetchData(`${API_WRITEWISE_BASE_URL}/v1/topics`) || { data: [] };
-        const load_all_submitted_responses = await fetchData(`${API_WRITEWISE_BASE_URL}/v1/response/submitted-responses`) || { data: [] };
-        const load_all_evaluated_responses = await fetchData(`${API_WRITEWISE_BASE_URL}/v1/response/evaluated-responses`) || { data: [] };
-
-        return {
-            props: {
-                load_topics_response,
-                load_all_topics,
-                load_all_submitted_responses,
-                load_all_evaluated_responses
-            },
-        };
-    } catch (e) {
-        console.error("Error fetching props", e);
-        return {
-            props: {
-                load_topics_response: { data: [] },
-                load_all_topics: { data: [] },
-                load_all_submitted_responses: { data: [] },
-                load_all_evaluated_responses: { data: [] }
-            }
-        }
-    }
-}
