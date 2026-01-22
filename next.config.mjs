@@ -13,6 +13,15 @@ const nextConfig = {
             },
         ];
     },
+    async redirects() {
+        return [
+            {
+                source: '/',
+                destination: '/cashflow',
+                permanent: true,
+            },
+        ];
+    },
     webpack: (config, { dev, isServer }) => {
         if (dev && !isServer) {
             config.watchOptions = {

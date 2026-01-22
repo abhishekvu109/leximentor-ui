@@ -95,7 +95,7 @@ const NewSidebar = ({ isOpen }) => {
                 { label: 'Dashboard', href: '/cashflow', icon: Activity },
                 { label: 'Households', href: '/cashflow/households', icon: Grid },
                 { label: 'Expense Logs', href: '/cashflow/logs', icon: List },
-                { label: 'Budgets', href: '#', icon: BarChart3 }
+                { label: 'Earnings', href: '/cashflow/earnings', icon: Activity }
             ]
         },
         {
