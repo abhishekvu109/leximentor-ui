@@ -1,5 +1,7 @@
 import Layout from "@/components/layout/Layout";
 import { useState, useEffect, useMemo, useCallback } from "react";
+import { jsPDF } from "jspdf";
+import autoTable from "jspdf-autotable";
 import {
     Plus,
     Search,
@@ -22,10 +24,11 @@ import {
     ChevronUp,
     ArrowUpDown,
     ArrowDown,
-    ArrowUp
+    ArrowUp,
+    Trash2
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
-import { postDataAsJson, fetchData } from "../../dataService";
+import { postDataAsJson, fetchData, DeleteByObject } from "../../dataService";
 import { API_CASHFLOW_BASE_URL, API_CATEGORY_SEARCH_URL } from "../../constants";
 
 const formatDateArray = (dateArray) => {
@@ -45,6 +48,7 @@ const ExpenseLogsLogic = () => {
     const [transactions, setTransactions] = useState([]);
     const [loading, setLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [showExportOptions, setShowExportOptions] = useState(false);
     const [error, setError] = useState("");
 
     // Form States
@@ -79,6 +83,10 @@ const ExpenseLogsLogic = () => {
     // Pagination State
     const [currentPage, setCurrentPage] = useState(1);
     const pageSize = 10;
+
+    // Selection State
+    const [selectedRefIds, setSelectedRefIds] = useState([]);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     const refreshData = useCallback(async (currentFilters = appliedFilters) => {
         if (!user?.username) return;
@@ -249,6 +257,106 @@ const ExpenseLogsLogic = () => {
 
     const totalPages = Math.ceil(filteredTransactions.length / pageSize);
 
+    // Selection Helpers
+    const handleSelectRow = (refId) => {
+        setSelectedRefIds(prev =>
+            prev.includes(refId) ? prev.filter(id => id !== refId) : [...prev, refId]
+        );
+    };
+
+    const handleSelectAll = (e) => {
+        if (e.target.checked) {
+            const allIds = paginatedTransactions.map(tx => tx.refId || tx.uuid);
+            setSelectedRefIds(allIds);
+        } else {
+            setSelectedRefIds([]);
+        }
+    };
+
+    const handleDeleteSelected = async () => {
+        if (!selectedRefIds.length || isDeleting) return;
+
+        if (!confirm(`Are you sure you want to delete ${selectedRefIds.length} selected expenses?`)) return;
+
+        setIsDeleting(true);
+        setError("");
+
+        try {
+            const payload = selectedRefIds.map(refId => ({ refId }));
+            await DeleteByObject(`${API_CASHFLOW_BASE_URL}/expenses/expense`, payload);
+            setSelectedRefIds([]);
+            refreshData();
+        } catch (err) {
+            console.error("Failed to delete expenses:", err);
+            setError("Failed to delete selected items. Please try again.");
+        } finally {
+            setIsDeleting(false);
+        }
+    };
+
+    // Export Logic
+    const exportToCSV = () => {
+        const headers = ["Date", "Description", "Category", "Type", "Payer", "Amount (₹)"];
+        const rows = filteredTransactions.map(tx => [
+            formatDateArray(tx.expenseDate),
+            tx.description,
+            tx.categoryName || 'Expense',
+            tx.type,
+            tx.owner,
+            tx.amount
+        ]);
+
+        const csvContent = [headers, ...rows].map(e => e.join(",")).join("\n");
+        const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+        const link = document.createElement("a");
+        const url = URL.createObjectURL(blob);
+        link.setAttribute("href", url);
+        link.setAttribute("download", `expenses_export_${new Date().toISOString().split('T')[0]}.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        setShowExportOptions(false);
+    };
+
+    const exportToPDF = () => {
+        const doc = new jsPDF();
+
+        // Add Title
+        doc.setFontSize(20);
+        doc.text("Expense Logs Report", 14, 22);
+        doc.setFontSize(11);
+        doc.setTextColor(100);
+
+        // Add Meta Information
+        const dateStr = new Date().toLocaleDateString();
+        doc.text(`Generated on: ${dateStr}`, 14, 30);
+        doc.text(`Total Transactions: ${filteredTransactions.length}`, 14, 38);
+        const totalAmount = filteredTransactions.reduce((sum, tx) => sum + (tx.amount || 0), 0);
+        doc.text(`Total Amount: INR ${totalAmount.toLocaleString()}`, 14, 46);
+
+        // Add Table
+        const tableColumn = ["Date", "Description", "Category", "Type", "Amount"];
+        const tableRows = filteredTransactions.map(tx => [
+            formatDateArray(tx.expenseDate),
+            tx.description,
+            tx.categoryName || 'Expense',
+            tx.type,
+            `INR ${tx.amount.toLocaleString()}`
+        ]);
+
+        autoTable(doc, {
+            head: [tableColumn],
+            body: tableRows,
+            startY: 55,
+            theme: 'grid',
+            headStyles: { fillColor: [79, 70, 229] }, // Indigo-600
+        });
+
+        doc.save(`expenses_report_${new Date().toISOString().split('T')[0]}.pdf`);
+        setShowExportOptions(false);
+    };
+
     return (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
             {/* Header Section */}
@@ -265,9 +373,45 @@ const ExpenseLogsLogic = () => {
                     >
                         <RefreshCcw size={18} className={loading ? "animate-spin" : ""} />
                     </button>
-                    <button className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 px-5 py-3 rounded-xl font-bold hover:bg-gray-200 transition-all text-sm">
-                        <Download size={18} /> Export
-                    </button>
+
+                    <div className="relative">
+                        <button
+                            onClick={() => setShowExportOptions(!showExportOptions)}
+                            className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 px-5 py-3 rounded-xl font-bold hover:bg-gray-200 transition-all text-sm"
+                        >
+                            <Download size={18} /> Export
+                        </button>
+
+                        {showExportOptions && (
+                            <>
+                                <div
+                                    className="fixed inset-0 z-[120]"
+                                    onClick={() => setShowExportOptions(false)}
+                                />
+                                <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-100 dark:border-gray-700 z-[130] py-2 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                                    <button
+                                        onClick={exportToCSV}
+                                        className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors text-left"
+                                    >
+                                        <div className="p-2 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 rounded-lg">
+                                            <Download size={16} />
+                                        </div>
+                                        <span className="text-sm font-bold text-gray-700 dark:text-gray-200">Export as CSV</span>
+                                    </button>
+                                    <button
+                                        onClick={exportToPDF}
+                                        className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors text-left border-t border-gray-50 dark:border-gray-700"
+                                    >
+                                        <div className="p-2 bg-rose-50 dark:bg-rose-900/20 text-rose-600 rounded-lg">
+                                            <Download size={16} />
+                                        </div>
+                                        <span className="text-sm font-bold text-gray-700 dark:text-gray-200">Export as PDF</span>
+                                    </button>
+                                </div>
+                            </>
+                        )}
+                    </div>
+
                     <button
                         onClick={() => setShowLogForm(!showLogForm)}
                         className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-xl font-bold shadow-lg shadow-indigo-100 dark:shadow-none transition-all active:scale-95 text-sm"
@@ -541,6 +685,14 @@ const ExpenseLogsLogic = () => {
                     <table className="w-full text-left min-w-[900px]">
                         <thead>
                             <tr className="bg-gray-50 dark:bg-gray-900 border-b border-gray-100 dark:border-gray-700">
+                                <th className="px-8 py-6 w-12">
+                                    <input
+                                        type="checkbox"
+                                        className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                                        checked={selectedRefIds.length === paginatedTransactions.length && paginatedTransactions.length > 0}
+                                        onChange={handleSelectAll}
+                                    />
+                                </th>
                                 <th
                                     className="px-8 py-6 text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] w-32 cursor-pointer hover:text-indigo-600 transition-colors"
                                     onClick={() => handleSort('expenseDate')}
@@ -581,7 +733,7 @@ const ExpenseLogsLogic = () => {
                         <tbody className="divide-y divide-gray-50 dark:divide-gray-700">
                             {loading ? (
                                 <tr>
-                                    <td colSpan="5" className="px-8 py-20 text-center">
+                                    <td colSpan="6" className="px-8 py-20 text-center">
                                         <div className="flex flex-col items-center gap-3">
                                             <Loader2 size={40} className="animate-spin text-indigo-500" />
                                             <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Initialising Ledger...</p>
@@ -590,7 +742,15 @@ const ExpenseLogsLogic = () => {
                                 </tr>
                             ) : paginatedTransactions.length > 0 ? (
                                 paginatedTransactions.map((expense) => (
-                                    <tr key={expense.uuid || expense.refId} className="hover:bg-indigo-50/30 dark:hover:bg-indigo-900/10 transition-colors group">
+                                    <tr key={expense.uuid || expense.refId} className={`hover:bg-indigo-50/30 dark:hover:bg-indigo-900/10 transition-colors group ${selectedRefIds.includes(expense.refId || expense.uuid) ? 'bg-indigo-50/50 dark:bg-indigo-900/20' : ''}`}>
+                                        <td className="px-8 py-7">
+                                            <input
+                                                type="checkbox"
+                                                className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                                                checked={selectedRefIds.includes(expense.refId || expense.uuid)}
+                                                onChange={() => handleSelectRow(expense.refId || expense.uuid)}
+                                            />
+                                        </td>
                                         <td className="px-8 py-7">
                                             <div className="flex flex-col">
                                                 <span className="text-sm font-black text-gray-800 dark:text-white">
@@ -649,7 +809,7 @@ const ExpenseLogsLogic = () => {
                                 ))
                             ) : (
                                 <tr>
-                                    <td colSpan="5" className="px-8 py-32 text-center">
+                                    <td colSpan="6" className="px-8 py-32 text-center">
                                         <div className="flex flex-col items-center gap-4 text-gray-300 dark:text-gray-600">
                                             <History size={64} strokeWidth={1} />
                                             <div className="space-y-1">
@@ -697,6 +857,36 @@ const ExpenseLogsLogic = () => {
                     </div>
                 )}
             </div>
+
+            {/* Floating Bulk Action Bar */}
+            {selectedRefIds.length > 0 && (
+                <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[200] animate-in slide-in-from-bottom-8 duration-500">
+                    <div className="bg-gray-900 dark:bg-indigo-950 text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-6 border border-white/10 backdrop-blur-xl">
+                        <div className="flex items-center gap-3 pr-6 border-r border-white/10">
+                            <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center font-black text-sm">
+                                {selectedRefIds.length}
+                            </div>
+                            <span className="text-xs font-bold uppercase tracking-widest text-gray-300">Items Selected</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={() => setSelectedRefIds([])}
+                                className="px-4 py-2 text-xs font-bold uppercase tracking-widest hover:text-indigo-400 transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleDeleteSelected}
+                                disabled={isDeleting}
+                                className="bg-rose-600 hover:bg-rose-700 text-white px-6 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest shadow-lg shadow-rose-900/20 transition-all flex items-center gap-2"
+                            >
+                                {isDeleting ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                                {isDeleting ? "Deleting..." : "Delete Permanently"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div >
     );
 };
