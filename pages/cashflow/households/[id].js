@@ -621,7 +621,8 @@ const AddExpenseModal = ({ isOpen, onClose, onSuccess, householdRefId }) => {
         amount: "",
         expenseDate: new Date().toISOString().split('T')[0],
         description: "",
-        type: "ONE_TIME"
+        type: "ONE_TIME",
+        expenseFor: "FAMILY"
     });
     const [categories, setCategories] = useState([]);
     const [filteredCategories, setFilteredCategories] = useState([]);
@@ -684,7 +685,8 @@ const AddExpenseModal = ({ isOpen, onClose, onSuccess, householdRefId }) => {
                 expenseDate: formData.expenseDate,
                 description: formData.description,
                 categoryRefId: formData.categoryRefId,
-                type: formData.type
+                type: formData.type,
+                expenseFor: formData.expenseFor
             }
         ];
 
@@ -698,7 +700,8 @@ const AddExpenseModal = ({ isOpen, onClose, onSuccess, householdRefId }) => {
                 amount: "",
                 expenseDate: new Date().toISOString().split('T')[0],
                 description: "",
-                type: "ONE_TIME"
+                type: "ONE_TIME",
+                expenseFor: "FAMILY"
             });
         } catch (err) {
             console.error("Failed to log expense:", err);
@@ -795,17 +798,32 @@ const AddExpenseModal = ({ isOpen, onClose, onSuccess, householdRefId }) => {
                             </div>
                         </div>
 
-                        <div className="space-y-2">
-                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Type</label>
-                            <select
-                                name="type"
-                                value={formData.type}
-                                onChange={handleChange}
-                                className="w-full bg-white dark:bg-gray-800 border-none rounded-2xl px-5 py-4 text-sm font-bold focus:ring-2 focus:ring-indigo-500/20 shadow-sm appearance-none dark:text-white"
-                            >
-                                <option value="ONE_TIME">One-time</option>
-                                <option value="RECURRING">Recurring</option>
-                            </select>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Type</label>
+                                <select
+                                    name="type"
+                                    value={formData.type}
+                                    onChange={handleChange}
+                                    className="w-full bg-white dark:bg-gray-800 border-none rounded-2xl px-5 py-4 text-sm font-bold focus:ring-2 focus:ring-indigo-500/20 shadow-sm appearance-none dark:text-white"
+                                >
+                                    <option value="ONE_TIME">One-time</option>
+                                    <option value="RECURRING">Recurring</option>
+                                </select>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Expense For</label>
+                                <select
+                                    name="expenseFor"
+                                    value={formData.expenseFor}
+                                    onChange={handleChange}
+                                    className="w-full bg-white dark:bg-gray-800 border-none rounded-2xl px-5 py-4 text-sm font-bold focus:ring-2 focus:ring-indigo-500/20 shadow-sm appearance-none dark:text-white"
+                                >
+                                    <option value="FAMILY">Family</option>
+                                    <option value="PERSONAL">Personal</option>
+                                    <option value="OTHERS">Others</option>
+                                </select>
+                            </div>
                         </div>
 
                         <div className="space-y-2">
@@ -846,7 +864,8 @@ const EditExpenseModal = ({ isOpen, onClose, onSuccess, expense, householdRefId 
         amount: "",
         expenseDate: "",
         description: "",
-        type: "ONE_TIME"
+        type: "ONE_TIME",
+        expenseFor: "FAMILY"
     });
     const [categories, setCategories] = useState([]);
     const [filteredCategories, setFilteredCategories] = useState([]);
@@ -863,7 +882,8 @@ const EditExpenseModal = ({ isOpen, onClose, onSuccess, expense, householdRefId 
                 amount: expense.amount || "",
                 expenseDate: expense.expenseDate ? (Array.isArray(expense.expenseDate) ? `${expense.expenseDate[0]}-${String(expense.expenseDate[1]).padStart(2, '0')}-${String(expense.expenseDate[2]).padStart(2, '0')}` : expense.expenseDate) : "",
                 description: expense.description || "",
-                type: expense.type || "ONE_TIME"
+                type: expense.type || "ONE_TIME",
+                expenseFor: expense.expenseFor || "FAMILY"
             });
         }
     }, [isOpen, expense]);
@@ -923,7 +943,8 @@ const EditExpenseModal = ({ isOpen, onClose, onSuccess, expense, householdRefId 
                 expenseDate: formData.expenseDate,
                 description: formData.description,
                 categoryRefId: formData.categoryRefId,
-                type: formData.type
+                type: formData.type,
+                expenseFor: formData.expenseFor
             }
         ];
 
@@ -1026,17 +1047,32 @@ const EditExpenseModal = ({ isOpen, onClose, onSuccess, expense, householdRefId 
                             </div>
                         </div>
 
-                        <div className="space-y-2">
-                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Type</label>
-                            <select
-                                name="type"
-                                value={formData.type}
-                                onChange={handleChange}
-                                className="w-full bg-white dark:bg-gray-800 border-none rounded-2xl px-5 py-4 text-sm font-bold focus:ring-2 focus:ring-amber-500/20 shadow-sm appearance-none dark:text-white"
-                            >
-                                <option value="ONE_TIME">One-time</option>
-                                <option value="RECURRING">Recurring</option>
-                            </select>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Type</label>
+                                <select
+                                    name="type"
+                                    value={formData.type}
+                                    onChange={handleChange}
+                                    className="w-full bg-white dark:bg-gray-800 border-none rounded-2xl px-5 py-4 text-sm font-bold focus:ring-2 focus:ring-amber-500/20 shadow-sm appearance-none dark:text-white"
+                                >
+                                    <option value="ONE_TIME">One-time</option>
+                                    <option value="RECURRING">Recurring</option>
+                                </select>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Expense For</label>
+                                <select
+                                    name="expenseFor"
+                                    value={formData.expenseFor}
+                                    onChange={handleChange}
+                                    className="w-full bg-white dark:bg-gray-800 border-none rounded-2xl px-5 py-4 text-sm font-bold focus:ring-2 focus:ring-amber-500/20 shadow-sm appearance-none dark:text-white"
+                                >
+                                    <option value="FAMILY">Family</option>
+                                    <option value="PERSONAL">Personal</option>
+                                    <option value="OTHERS">Others</option>
+                                </select>
+                            </div>
                         </div>
 
                         <div className="space-y-2">
