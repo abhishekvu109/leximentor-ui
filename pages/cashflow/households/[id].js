@@ -613,6 +613,153 @@ const EditBudgetModal = ({ isOpen, onClose, onSuccess, budget, householdRefId })
     );
 };
 
+const AddDepositModal = ({ isOpen, onClose, onSuccess, householdRefId }) => {
+    const { user } = useAuth();
+    const [formData, setFormData] = useState({
+        amount: "",
+        depositDate: new Date().toISOString().split('T')[0],
+        source: "",
+        notes: ""
+    });
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [error, setError] = useState("");
+
+    const handleChange = (e) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({ ...prev, [name]: value }));
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setIsSubmitting(true);
+        setError("");
+
+        const payload = [
+            {
+                username: user?.username || "unknown",
+                amount: parseFloat(formData.amount),
+                householdRefId: householdRefId,
+                depositDate: formData.depositDate,
+                source: formData.source,
+                notes: formData.notes
+            }
+        ];
+
+        try {
+            await postDataAsJson(`${API_CASHFLOW_BASE_URL}/households/deposits/deposit`, payload);
+            onSuccess();
+            onClose();
+            setFormData({
+                amount: "",
+                depositDate: new Date().toISOString().split('T')[0],
+                source: "",
+                notes: ""
+            });
+        } catch (err) {
+            console.error("Failed to log deposit:", err);
+            setError("Failed to log deposit. Please try again.");
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-sm animate-in fade-in duration-300">
+            <div className="bg-white dark:bg-gray-800 rounded-[2.5rem] shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-300">
+                <div className="bg-emerald-600 p-8 text-white relative">
+                    <button
+                        onClick={onClose}
+                        className="absolute top-6 right-6 p-2 hover:bg-white/20 rounded-xl transition-colors"
+                    >
+                        <X size={20} />
+                    </button>
+                    <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center mb-4 backdrop-blur-md border border-white/30">
+                        <TrendingUp size={32} />
+                    </div>
+                    <h2 className="text-2xl font-black tracking-tight uppercase">New Deposit</h2>
+                    <p className="text-emerald-100 text-sm font-medium mt-1">Add funds to your household account.</p>
+                </div>
+
+                <form onSubmit={handleSubmit} className="p-8 space-y-5 bg-gray-50 dark:bg-gray-900/50">
+                    {error && (
+                        <div className="bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400 p-4 rounded-2xl text-xs font-bold uppercase tracking-wider flex items-center gap-3 border border-rose-100 dark:border-rose-800">
+                            <span className="w-2 h-2 rounded-full bg-rose-600 animate-pulse" />
+                            {error}
+                        </div>
+                    )}
+
+                    <div className="space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Amount</label>
+                                <input
+                                    required
+                                    type="number"
+                                    name="amount"
+                                    value={formData.amount}
+                                    onChange={handleChange}
+                                    placeholder="0.00"
+                                    className="w-full bg-white dark:bg-gray-800 border-none rounded-2xl px-5 py-4 text-sm font-bold focus:ring-2 focus:ring-emerald-500/20 shadow-sm dark:text-white"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Deposit Date</label>
+                                <input
+                                    required
+                                    type="date"
+                                    name="depositDate"
+                                    value={formData.depositDate}
+                                    onChange={handleChange}
+                                    className="w-full bg-white dark:bg-gray-800 border-none rounded-2xl px-5 py-4 text-sm font-bold focus:ring-2 focus:ring-emerald-500/20 shadow-sm dark:text-white"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Source</label>
+                            <input
+                                required
+                                type="text"
+                                name="source"
+                                value={formData.source}
+                                onChange={handleChange}
+                                placeholder="e.g. Salary, Freelance..."
+                                className="w-full bg-white dark:bg-gray-800 border-none rounded-2xl px-5 py-4 text-sm font-bold focus:ring-2 focus:ring-emerald-500/20 shadow-sm dark:text-white"
+                            />
+                        </div>
+
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Notes</label>
+                            <input
+                                type="text"
+                                name="notes"
+                                value={formData.notes}
+                                onChange={handleChange}
+                                placeholder="Any additional info..."
+                                className="w-full bg-white dark:bg-gray-800 border-none rounded-2xl px-5 py-4 text-sm font-bold focus:ring-2 focus:ring-emerald-500/20 shadow-sm dark:text-white"
+                            />
+                        </div>
+                    </div>
+
+                    <div className="pt-4">
+                        <button
+                            disabled={isSubmitting}
+                            type="submit"
+                            className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400 text-white py-5 rounded-2xl font-black text-sm uppercase tracking-widest shadow-xl shadow-emerald-100 transition-all active:scale-95 flex items-center justify-center gap-3"
+                        >
+                            {isSubmitting ? <Loader2 className="animate-spin" size={20} /> : <TrendingUp size={20} />}
+                            {isSubmitting ? "Logging Deposit..." : "Confirm Deposit"}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+};
+
+
 const AddExpenseModal = ({ isOpen, onClose, onSuccess, householdRefId }) => {
     const { user } = useAuth();
     const [formData, setFormData] = useState({
@@ -1691,6 +1838,166 @@ const MembersTab = ({ members, household, onInviteClick }) => {
     );
 };
 
+const DepositsTab = ({ deposits, onAddClick, onEditClick, onDeleteClick, selectedDeposits, setSelectedDeposits }) => {
+    const isAllSelected = deposits?.length > 0 && selectedDeposits.length === deposits.length;
+
+    const toggleSelectAll = () => {
+        if (isAllSelected) {
+            setSelectedDeposits([]);
+        } else {
+            setSelectedDeposits(deposits || []);
+        }
+    };
+
+    const toggleSelectOne = (deposit) => {
+        const isSelected = selectedDeposits.some(d => d.refId === deposit.refId);
+        if (isSelected) {
+            setSelectedDeposits(selectedDeposits.filter(d => d.refId !== deposit.refId));
+        } else {
+            setSelectedDeposits([...selectedDeposits, deposit]);
+        }
+    };
+
+    return (
+        <div className="space-y-8 animate-in fade-in duration-500">
+            <div className="flex justify-between items-center">
+                <div>
+                    <h2 className="text-xl font-black text-gray-800 dark:text-white uppercase tracking-widest flex items-center gap-3">
+                        <TrendingUp size={24} className="text-emerald-500" />
+                        Deposits Ledger
+                    </h2>
+                    <p className="text-gray-400 dark:text-gray-500 font-bold text-xs uppercase tracking-widest mt-1">History of funds added to this household</p>
+                </div>
+                <div className="flex gap-4">
+                    {selectedDeposits.length > 0 && (
+                        <button
+                            onClick={() => onDeleteClick(null)} // null triggers bulk delete in state logic
+                            className="flex items-center gap-2 bg-rose-50 text-rose-600 hover:bg-rose-100 px-6 py-3 rounded-xl font-bold transition-all active:scale-95 text-sm border border-rose-200"
+                        >
+                            <Trash2 size={20} /> Delete ({selectedDeposits.length})
+                        </button>
+                    )}
+                    <button
+                        onClick={onAddClick}
+                        className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-xl font-bold shadow-lg shadow-emerald-100 dark:shadow-none transition-all active:scale-95 text-sm"
+                    >
+                        <Plus size={20} /> Add Deposit
+                    </button>
+                </div>
+            </div>
+
+            <div className="bg-white dark:bg-gray-800 rounded-[2.5rem] border border-gray-100 dark:border-gray-700 shadow-xl overflow-hidden">
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left min-w-[1000px]">
+                        <thead>
+                            <tr className="bg-gray-50 dark:bg-gray-900 border-b border-gray-100 dark:border-gray-700">
+                                <th className="px-6 py-6 w-16">
+                                    <div className="flex items-center justify-center">
+                                        <input
+                                            type="checkbox"
+                                            checked={isAllSelected}
+                                            onChange={toggleSelectAll}
+                                            className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                                        />
+                                    </div>
+                                </th>
+                                <th className="px-8 py-6 text-[11px] font-black text-gray-400 uppercase tracking-[0.2em]">Date</th>
+                                <th className="px-8 py-6 text-[11px] font-black text-gray-400 uppercase tracking-[0.2em]">Source</th>
+                                <th className="px-8 py-6 text-[11px] font-black text-gray-400 uppercase tracking-[0.2em]">Added By</th>
+                                <th className="px-8 py-6 text-[11px] font-black text-gray-400 uppercase tracking-[0.2em]">Notes</th>
+                                <th className="px-8 py-6 text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] text-right">Amount</th>
+                                <th className="px-8 py-6 text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-50 dark:divide-gray-700">
+                            {deposits && deposits.length > 0 ? (
+                                [...deposits].sort((a, b) => {
+                                    const dateA = Array.isArray(a.depositDate) ? new Date(a.depositDate[0], a.depositDate[1] - 1, a.depositDate[2]) : new Date(a.depositDate);
+                                    const dateB = Array.isArray(b.depositDate) ? new Date(b.depositDate[0], b.depositDate[1] - 1, b.depositDate[2]) : new Date(b.depositDate);
+                                    return dateB - dateA;
+                                }).map((deposit, idx) => {
+                                    const isSelected = selectedDeposits.some(d => d.refId === deposit.refId);
+                                    return (
+                                        <tr key={deposit.uuid || idx} className={`${isSelected ? 'bg-emerald-50/50 dark:bg-emerald-900/10' : 'hover:bg-emerald-50/30 dark:hover:bg-emerald-900/10'} transition-colors group`}>
+                                            <td className="px-6 py-7">
+                                                <div className="flex items-center justify-center">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={isSelected}
+                                                        onChange={() => toggleSelectOne(deposit)}
+                                                        className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                                                    />
+                                                </div>
+                                            </td>
+                                            <td className="px-8 py-7">
+                                                <div className="flex flex-col">
+                                                    <span className="text-sm font-black text-gray-800 dark:text-white">
+                                                        {Array.isArray(deposit.depositDate) ? deposit.depositDate[2] : new Date(deposit.depositDate).getDate()}
+                                                    </span>
+                                                    <span className="text-[10px] font-black text-gray-400 uppercase">
+                                                        {Array.isArray(deposit.depositDate)
+                                                            ? new Date(deposit.depositDate[0], deposit.depositDate[1] - 1).toLocaleString('default', { month: 'short' }) + ', ' + deposit.depositDate[0]
+                                                            : new Date(deposit.depositDate).toLocaleString('default', { month: 'short' }) + ', ' + new Date(deposit.depositDate).getFullYear()}
+                                                    </span>
+                                                </div>
+                                            </td>
+                                            <td className="px-8 py-7">
+                                                <p className="font-bold text-gray-800 dark:text-white">{deposit.source}</p>
+                                            </td>
+                                            <td className="px-8 py-7">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-6 h-6 rounded-lg bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center text-[10px] font-black text-emerald-600">
+                                                        {deposit.username?.[0]?.toUpperCase() || "U"}
+                                                    </div>
+                                                    <span className="text-[11px] text-gray-500 font-black uppercase tracking-tight">{deposit.username || "Unknown"}</span>
+                                                </div>
+                                            </td>
+                                            <td className="px-8 py-7">
+                                                <p className="text-xs font-bold text-gray-400 line-clamp-1">{deposit.notes || "-"}</p>
+                                            </td>
+                                            <td className="px-8 py-7 text-right">
+                                                <p className="text-lg font-black text-emerald-600">+₹{(deposit.amount || 0).toLocaleString()}</p>
+                                            </td>
+                                            <td className="px-8 py-7">
+                                                <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300">
+                                                    <button
+                                                        onClick={() => onEditClick(deposit)}
+                                                        className="p-2.5 bg-white dark:bg-gray-800 text-gray-400 hover:text-amber-500 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 hover:scale-110 transition-all"
+                                                    >
+                                                        <Edit3 size={14} />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => {
+                                                            setSelectedDeposits([]); // Clear bulk selection if deleting single
+                                                            onDeleteClick(deposit);
+                                                        }}
+                                                        className="p-2.5 bg-white dark:bg-gray-800 text-gray-400 hover:text-rose-500 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 hover:scale-110 transition-all"
+                                                    >
+                                                        <Trash2 size={14} />
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    );
+                                })
+                            ) : (
+                                <tr>
+                                    <td colSpan="7" className="px-8 py-24 text-center">
+                                        <div className="flex flex-col items-center gap-4 text-gray-300">
+                                            <TrendingUp size={48} />
+                                            <p className="font-black uppercase tracking-widest text-xs">No deposits recorded yet</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 const BudgetsTab = ({ budgets, household, onAddClick, onEditClick, onDeleteClick }) => {
     const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
     const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
@@ -2083,12 +2390,17 @@ const HouseholdDetailsLogic = () => {
     const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
     const [isBudgetModalOpen, setIsBudgetModalOpen] = useState(false);
     const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
+    const [isDepositModalOpen, setIsDepositModalOpen] = useState(false);
     const [isEditBudgetModalOpen, setIsEditBudgetModalOpen] = useState(false);
     const [isDeleteBudgetModalOpen, setIsDeleteBudgetModalOpen] = useState(false);
     const [isEditExpenseModalOpen, setIsEditExpenseModalOpen] = useState(false);
     const [isDeleteExpenseModalOpen, setIsDeleteExpenseModalOpen] = useState(false);
+    const [isEditDepositModalOpen, setIsEditDepositModalOpen] = useState(false);
+    const [isDeleteDepositModalOpen, setIsDeleteDepositModalOpen] = useState(false);
     const [editingBudget, setEditingBudget] = useState(null);
     const [editingExpense, setEditingExpense] = useState(null);
+    const [editingDeposit, setEditingDeposit] = useState(null);
+    const [selectedDeposits, setSelectedDeposits] = useState([]);
 
     const handleEditBudget = (budget) => {
         setEditingBudget(budget);
@@ -2108,6 +2420,16 @@ const HouseholdDetailsLogic = () => {
     const handleDeleteExpense = (expense) => {
         setEditingExpense(expense);
         setIsDeleteExpenseModalOpen(true);
+    };
+
+    const handleEditDeposit = (deposit) => {
+        setEditingDeposit(deposit);
+        setIsEditDepositModalOpen(true);
+    };
+
+    const handleDeleteDeposit = (deposit) => {
+        setEditingDeposit(deposit);
+        setIsDeleteDepositModalOpen(true);
     };
 
     const fetchHouseholdDetails = useCallback(async () => {
@@ -2240,6 +2562,19 @@ const HouseholdDetailsLogic = () => {
                     console.warn("[Diagnostic] Failed to fetch full expenses for analytics:", e);
                 }
 
+                // FETCH DEPOSITS
+                try {
+                    const depositResponse = await postDataAsJson(`${API_CASHFLOW_BASE_URL}/households/deposits/deposit/search`, {
+                        householdRefId: data.refId
+                    });
+                    if (depositResponse?.data) {
+                        data.deposits = depositResponse.data;
+                        console.log(`[Diagnostic] Fetched ${data.deposits.length} deposits.`);
+                    }
+                } catch (e) {
+                    console.warn("[Diagnostic] Failed to fetch deposits:", e);
+                }
+
                 setHousehold(data);
             } else {
                 setError("Household not found.");
@@ -2277,6 +2612,7 @@ const HouseholdDetailsLogic = () => {
 
     const tabs = [
         { id: "overview", label: "Overview", icon: BarChart3 },
+        { id: "deposits", label: "Deposits", icon: TrendingUp },
         { id: "members", label: "Members", icon: Users },
         { id: "budgets", label: "Budgets", icon: TrendingUp },
         { id: "logs", label: "Logs", icon: History },
@@ -2338,6 +2674,16 @@ const HouseholdDetailsLogic = () => {
             {/* Tab Content */}
             <div className="mt-4">
                 {activeTab === "overview" && <OverviewTab household={household} />}
+                {activeTab === "deposits" && (
+                    <DepositsTab
+                        deposits={household.deposits}
+                        onAddClick={() => setIsDepositModalOpen(true)}
+                        onEditClick={handleEditDeposit}
+                        onDeleteClick={handleDeleteDeposit}
+                        selectedDeposits={selectedDeposits}
+                        setSelectedDeposits={setSelectedDeposits}
+                    />
+                )}
                 {activeTab === "members" && (
                     <MembersTab
                         members={household.members}
@@ -2414,6 +2760,255 @@ const HouseholdDetailsLogic = () => {
                 onSuccess={fetchHouseholdDetails}
                 expense={editingExpense}
             />
+
+            <AddDepositModal
+                isOpen={isDepositModalOpen}
+                onClose={() => setIsDepositModalOpen(false)}
+                onSuccess={fetchHouseholdDetails}
+                householdRefId={id}
+            />
+
+            <EditDepositModal
+                isOpen={isEditDepositModalOpen}
+                onClose={() => setIsEditDepositModalOpen(false)}
+                onSuccess={fetchHouseholdDetails}
+                deposit={editingDeposit}
+            />
+
+            <DeleteDepositModal
+                isOpen={isDeleteDepositModalOpen}
+                onClose={() => setIsDeleteDepositModalOpen(false)}
+                onSuccess={fetchHouseholdDetails}
+                deposits={selectedDeposits.length > 0 ? selectedDeposits : (editingDeposit ? [editingDeposit] : [])}
+            />
+        </div>
+    );
+};
+
+const EditDepositModal = ({ isOpen, onClose, onSuccess, deposit }) => {
+    const { user } = useAuth();
+    const [formData, setFormData] = useState({
+        amount: "",
+        depositDate: "",
+        source: "",
+        notes: ""
+    });
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [error, setError] = useState("");
+
+    useEffect(() => {
+        if (deposit) {
+            setFormData({
+                amount: deposit.amount || "",
+                depositDate: Array.isArray(deposit.depositDate)
+                    ? `${deposit.depositDate[0]}-${String(deposit.depositDate[1]).padStart(2, '0')}-${String(deposit.depositDate[2]).padStart(2, '0')}`
+                    : (deposit.depositDate || ""),
+                source: deposit.source || "",
+                notes: deposit.notes || ""
+            });
+        }
+    }, [deposit, isOpen]);
+
+    const handleChange = (e) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({ ...prev, [name]: value }));
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setIsSubmitting(true);
+        setError("");
+
+        const payload = [
+            {
+                refId: deposit.refId,
+                username: user?.username || deposit.username || "unknown",
+                amount: parseFloat(formData.amount),
+                depositDate: formData.depositDate,
+                source: formData.source,
+                notes: formData.notes
+            }
+        ];
+
+        try {
+            await updateData(`${API_CASHFLOW_BASE_URL}/households/deposits/deposit`, payload, 'PUT');
+            onSuccess();
+            onClose();
+        } catch (err) {
+            console.error("Failed to update deposit:", err);
+            setError("Failed to update deposit. Please try again.");
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-sm animate-in fade-in duration-300">
+            <div className="bg-white dark:bg-gray-800 rounded-[2.5rem] shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-300">
+                <div className="bg-amber-600 p-8 text-white relative">
+                    <button
+                        onClick={onClose}
+                        className="absolute top-6 right-6 p-2 hover:bg-white/20 rounded-xl transition-colors"
+                    >
+                        <X size={20} />
+                    </button>
+                    <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center mb-4 backdrop-blur-md border border-white/30">
+                        <Edit3 size={32} />
+                    </div>
+                    <h2 className="text-2xl font-black tracking-tight uppercase">Edit Deposit</h2>
+                    <p className="text-amber-100 text-sm font-medium mt-1">Update deposit details.</p>
+                </div>
+
+                <form onSubmit={handleSubmit} className="p-8 space-y-5 bg-gray-50 dark:bg-gray-900/50">
+                    {error && (
+                        <div className="bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400 p-4 rounded-2xl text-xs font-bold uppercase tracking-wider flex items-center gap-3 border border-rose-100 dark:border-rose-800">
+                            <span className="w-2 h-2 rounded-full bg-rose-600 animate-pulse" />
+                            {error}
+                        </div>
+                    )}
+
+                    <div className="space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Amount</label>
+                                <input
+                                    required
+                                    type="number"
+                                    name="amount"
+                                    value={formData.amount}
+                                    onChange={handleChange}
+                                    placeholder="0.00"
+                                    className="w-full bg-white dark:bg-gray-800 border-none rounded-2xl px-5 py-4 text-sm font-bold focus:ring-2 focus:ring-amber-500/20 shadow-sm dark:text-white"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Deposit Date</label>
+                                <input
+                                    required
+                                    type="date"
+                                    name="depositDate"
+                                    value={formData.depositDate}
+                                    onChange={handleChange}
+                                    className="w-full bg-white dark:bg-gray-800 border-none rounded-2xl px-5 py-4 text-sm font-bold focus:ring-2 focus:ring-amber-500/20 shadow-sm dark:text-white"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Source</label>
+                            <input
+                                required
+                                type="text"
+                                name="source"
+                                value={formData.source}
+                                onChange={handleChange}
+                                placeholder="e.g. Salary, Freelance..."
+                                className="w-full bg-white dark:bg-gray-800 border-none rounded-2xl px-5 py-4 text-sm font-bold focus:ring-2 focus:ring-amber-500/20 shadow-sm dark:text-white"
+                            />
+                        </div>
+
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Notes</label>
+                            <input
+                                type="text"
+                                name="notes"
+                                value={formData.notes}
+                                onChange={handleChange}
+                                placeholder="Any additional info..."
+                                className="w-full bg-white dark:bg-gray-800 border-none rounded-2xl px-5 py-4 text-sm font-bold focus:ring-2 focus:ring-amber-500/20 shadow-sm dark:text-white"
+                            />
+                        </div>
+                    </div>
+
+                    <div className="pt-4">
+                        <button
+                            disabled={isSubmitting}
+                            type="submit"
+                            className="w-full bg-amber-600 hover:bg-amber-700 disabled:bg-amber-400 text-white py-5 rounded-2xl font-black text-sm uppercase tracking-widest shadow-xl shadow-amber-100 transition-all active:scale-95 flex items-center justify-center gap-3"
+                        >
+                            {isSubmitting ? <Loader2 className="animate-spin" size={20} /> : <CheckCircle2 size={20} />}
+                            {isSubmitting ? "Updating..." : "Update Deposit"}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+};
+
+const DeleteDepositModal = ({ isOpen, onClose, onSuccess, deposits }) => {
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [error, setError] = useState("");
+
+    const handleDelete = async () => {
+        setIsSubmitting(true);
+        setError("");
+
+        const payload = deposits.map(d => ({ refId: d.refId }));
+
+        try {
+            await DeleteByObject(`${API_CASHFLOW_BASE_URL}/households/deposits/deposit`, payload);
+            onSuccess();
+            onClose();
+        } catch (err) {
+            console.error("Failed to delete deposits:", err);
+            setError("Failed to delete records. Please try again.");
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-sm animate-in fade-in duration-300">
+            <div className="bg-white dark:bg-gray-800 rounded-[2.5rem] shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-300">
+                <div className="bg-rose-600 p-8 text-white relative">
+                    <button
+                        onClick={onClose}
+                        className="absolute top-6 right-6 p-2 hover:bg-white/20 rounded-xl transition-colors"
+                    >
+                        <X size={20} />
+                    </button>
+                    <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center mb-4 backdrop-blur-md border border-white/30">
+                        <Trash2 size={32} />
+                    </div>
+                    <h2 className="text-2xl font-black tracking-tight uppercase">Delete Deposit</h2>
+                    <p className="text-rose-100 text-sm font-medium mt-1">Are you sure you want to delete {deposits.length > 1 ? `${deposits.length} deposits` : "this deposit"}?</p>
+                </div>
+
+                <div className="p-8 space-y-6 bg-gray-50 dark:bg-gray-900/50">
+                    {error && (
+                        <div className="bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400 p-4 rounded-2xl text-xs font-bold uppercase tracking-wider flex items-center gap-3 border border-rose-100 dark:border-rose-800">
+                            <span className="w-2 h-2 rounded-full bg-rose-600 animate-pulse" />
+                            {error}
+                        </div>
+                    )}
+
+                    <p className="text-gray-500 dark:text-gray-400 text-sm font-bold leading-relaxed">
+                        This action cannot be undone. These records will be permanently removed from the household history.
+                    </p>
+
+                    <div className="flex gap-4">
+                        <button
+                            onClick={onClose}
+                            className="flex-1 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 py-4 rounded-2xl font-black text-xs uppercase tracking-widest border border-gray-100 dark:border-gray-700 hover:bg-gray-50 transition-all"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            disabled={isSubmitting}
+                            onClick={handleDelete}
+                            className="flex-1 bg-rose-600 hover:bg-rose-700 disabled:bg-rose-400 text-white py-4 rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-rose-100 transition-all active:scale-95 flex items-center justify-center gap-2"
+                        >
+                            {isSubmitting ? <Loader2 className="animate-spin" size={16} /> : <Trash2 size={16} />}
+                            {isSubmitting ? "Deleting..." : "Delete"}
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
     );
 };
