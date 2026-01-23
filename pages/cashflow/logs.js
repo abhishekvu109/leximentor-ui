@@ -59,7 +59,8 @@ const ExpenseLogsLogic = () => {
         categoryRefId: "",
         householdRefId: "",
         expenseDate: new Date().toISOString().split('T')[0],
-        type: "ONE_TIME"
+        type: "ONE_TIME",
+        expenseFor: "FAMILY"
     });
     const [filteredCategories, setFilteredCategories] = useState([]);
     const [showCategoryList, setShowCategoryList] = useState(false);
@@ -172,7 +173,8 @@ const ExpenseLogsLogic = () => {
                 expenseDate: formData.expenseDate,
                 description: formData.description,
                 categoryRefId: formData.categoryRefId,
-                type: formData.type
+                type: formData.type,
+                expenseFor: formData.expenseFor
             }
         ];
 
@@ -185,7 +187,8 @@ const ExpenseLogsLogic = () => {
                 categoryRefId: "",
                 householdRefId: "",
                 expenseDate: new Date().toISOString().split('T')[0],
-                type: "ONE_TIME"
+                type: "ONE_TIME",
+                expenseFor: "FAMILY"
             });
             setShowLogForm(false);
             refreshData();
@@ -522,6 +525,19 @@ const ExpenseLogsLogic = () => {
                             >
                                 <option value="ONE_TIME">One Time</option>
                                 <option value="RECURRING">Recurring</option>
+                            </select>
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black text-indigo-400 uppercase tracking-widest ml-1">Expense For</label>
+                            <select
+                                name="expenseFor"
+                                value={formData.expenseFor}
+                                onChange={handleFormChange}
+                                className="w-full bg-white dark:bg-gray-800 border-none rounded-xl px-4 py-3 text-sm font-bold focus:ring-2 focus:ring-indigo-500/20 shadow-sm appearance-none dark:text-white cursor-pointer"
+                            >
+                                <option value="FAMILY">Family</option>
+                                <option value="PERSONAL">Personal</option>
+                                <option value="OTHERS">Others</option>
                             </select>
                         </div>
                         <div className="space-y-2">
