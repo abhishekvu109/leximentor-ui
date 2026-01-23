@@ -193,8 +193,7 @@ const AddBudgetModal = ({ isOpen, onClose, onSuccess, householdRefId }) => {
         categoryRefId: "",
         amount: "",
         period: "MONTHLY",
-        month: new Date().getMonth() + 1,
-        year: new Date().getFullYear()
+        budgetDate: new Date().toISOString().split('T')[0]
     });
     const [categories, setCategories] = useState([]);
     const [filteredCategories, setFilteredCategories] = useState([]);
@@ -254,8 +253,7 @@ const AddBudgetModal = ({ isOpen, onClose, onSuccess, householdRefId }) => {
                 amount: parseFloat(formData.amount),
                 period: formData.period,
                 householdRefId: householdRefId,
-                year: parseInt(formData.year),
-                moth: parseInt(formData.month),
+                budgetDate: formData.budgetDate,
                 categoryRefId: formData.categoryRefId
             }
         ];
@@ -269,8 +267,7 @@ const AddBudgetModal = ({ isOpen, onClose, onSuccess, householdRefId }) => {
                 categoryRefId: "",
                 amount: "",
                 period: "MONTHLY",
-                month: new Date().getMonth() + 1,
-                year: new Date().getFullYear()
+                budgetDate: new Date().toISOString().split('T')[0]
             });
         } catch (err) {
             console.error("Failed to add budget:", err);
@@ -359,20 +356,6 @@ const AddBudgetModal = ({ isOpen, onClose, onSuccess, householdRefId }) => {
                             />
                         </div>
                         <div className="space-y-2">
-                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Year</label>
-                            <input
-                                required
-                                type="number"
-                                name="year"
-                                value={formData.year}
-                                onChange={handleChange}
-                                className="w-full bg-white dark:bg-gray-800 border-none rounded-2xl px-5 py-4 text-sm font-bold focus:ring-2 focus:ring-emerald-500/20 shadow-sm dark:text-white"
-                            />
-                        </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
                             <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Period</label>
                             <select
                                 name="period"
@@ -384,19 +367,18 @@ const AddBudgetModal = ({ isOpen, onClose, onSuccess, householdRefId }) => {
                                 <option value="YEARLY">Yearly</option>
                             </select>
                         </div>
-                        <div className="space-y-2">
-                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Month</label>
-                            <select
-                                name="month"
-                                value={formData.month}
-                                onChange={handleChange}
-                                className="w-full bg-white dark:bg-gray-800 border-none rounded-2xl px-5 py-4 text-sm font-bold focus:ring-2 focus:ring-emerald-500/20 shadow-sm appearance-none dark:text-white"
-                            >
-                                {months.map((m, i) => (
-                                    <option key={m} value={i + 1}>{m}</option>
-                                ))}
-                            </select>
-                        </div>
+                    </div>
+
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Budget Date</label>
+                        <input
+                            required
+                            type="date"
+                            name="budgetDate"
+                            value={formData.budgetDate}
+                            onChange={handleChange}
+                            className="w-full bg-white dark:bg-gray-800 border-none rounded-2xl px-5 py-4 text-sm font-bold focus:ring-2 focus:ring-emerald-500/20 shadow-sm dark:text-white"
+                        />
                     </div>
 
                     <div className="pt-4">
@@ -421,8 +403,7 @@ const EditBudgetModal = ({ isOpen, onClose, onSuccess, budget, householdRefId })
         categoryRefId: "",
         amount: "",
         period: "MONTHLY",
-        month: new Date().getMonth() + 1,
-        year: new Date().getFullYear()
+        budgetDate: new Date().toISOString().split('T')[0]
     });
     const [categories, setCategories] = useState([]);
     const [filteredCategories, setFilteredCategories] = useState([]);
@@ -438,8 +419,7 @@ const EditBudgetModal = ({ isOpen, onClose, onSuccess, budget, householdRefId })
                 categoryRefId: budget.categoryRefId || "",
                 amount: budget.amount || "",
                 period: budget.period || "MONTHLY",
-                month: budget.moth || (new Date().getMonth() + 1),
-                year: budget.year || new Date().getFullYear()
+                budgetDate: budget.budgetDate || (new Date().toISOString().split('T')[0])
             });
         }
     }, [isOpen, budget]);
@@ -497,8 +477,7 @@ const EditBudgetModal = ({ isOpen, onClose, onSuccess, budget, householdRefId })
                 amount: parseFloat(formData.amount),
                 period: formData.period,
                 householdRefId: householdRefId,
-                year: parseInt(formData.year),
-                month: parseInt(formData.month)
+                budgetDate: formData.budgetDate
             }
         ];
 
@@ -593,20 +572,6 @@ const EditBudgetModal = ({ isOpen, onClose, onSuccess, budget, householdRefId })
                             />
                         </div>
                         <div className="space-y-2">
-                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Year</label>
-                            <input
-                                required
-                                type="number"
-                                name="year"
-                                value={formData.year}
-                                onChange={handleChange}
-                                className="w-full bg-white dark:bg-gray-800 border-none rounded-2xl px-5 py-4 text-sm font-bold focus:ring-2 focus:ring-indigo-500/20 shadow-sm dark:text-white"
-                            />
-                        </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
                             <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Period</label>
                             <select
                                 name="period"
@@ -618,19 +583,18 @@ const EditBudgetModal = ({ isOpen, onClose, onSuccess, budget, householdRefId })
                                 <option value="YEARLY">Yearly</option>
                             </select>
                         </div>
-                        <div className="space-y-2">
-                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Month</label>
-                            <select
-                                name="month"
-                                value={formData.month}
-                                onChange={handleChange}
-                                className="w-full bg-white dark:bg-gray-800 border-none rounded-2xl px-5 py-4 text-sm font-bold focus:ring-2 focus:ring-indigo-500/20 shadow-sm appearance-none dark:text-white"
-                            >
-                                {months.map((m, i) => (
-                                    <option key={m} value={i + 1}>{m}</option>
-                                ))}
-                            </select>
-                        </div>
+                    </div>
+
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Budget Date</label>
+                        <input
+                            required
+                            type="date"
+                            name="budgetDate"
+                            value={formData.budgetDate}
+                            onChange={handleChange}
+                            className="w-full bg-white dark:bg-gray-800 border-none rounded-2xl px-5 py-4 text-sm font-bold focus:ring-2 focus:ring-indigo-500/20 shadow-sm dark:text-white"
+                        />
                     </div>
 
                     <div className="pt-4">
@@ -1497,9 +1461,8 @@ const MembersTab = ({ members, household, onInviteClick }) => {
     const currentYear = new Date().getFullYear();
     const years = Array.from({ length: 5 }, (_, i) => currentYear - i);
 
-    // Analytics Logic
     const analyticsData = useMemo(() => {
-        const expenses = household?.expenses || [];
+        const expenses = household?.allExpenses || household?.expenses || [];
 
         // 1. Filter by selected period
         const periodExpenses = expenses.filter(exp => {
@@ -1548,7 +1511,7 @@ const MembersTab = ({ members, household, onInviteClick }) => {
             })).sort((a, b) => b.totalSpent - a.totalSpent),
             totalPeriodSpent: periodExpenses.reduce((sum, e) => sum + (Number(e.amount) || 0), 0)
         };
-    }, [household?.expenses, members, selectedMonth, selectedYear]);
+    }, [household?.allExpenses, household?.expenses, members, selectedMonth, selectedYear]);
 
     return (
         <div className="space-y-8 animate-in fade-in duration-500">
@@ -1613,25 +1576,29 @@ const MembersTab = ({ members, household, onInviteClick }) => {
 
                             <div className="space-y-4">
                                 <div className="flex justify-between items-end">
-                                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Spent this month</span>
+                                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Total Spent</span>
                                     <span className="text-lg font-black text-gray-900 dark:text-white">{currency} {stat.totalSpent.toLocaleString()}</span>
                                 </div>
-
                                 <div className="w-full h-1.5 bg-white dark:bg-gray-800 rounded-full overflow-hidden">
-                                    <div
-                                        className="h-full bg-indigo-500 rounded-full transition-all duration-1000"
-                                        style={{ width: `${analyticsData.totalPeriodSpent > 0 ? (stat.totalSpent / analyticsData.totalPeriodSpent) * 100 : 0}%` }}
-                                    />
+                                    <div className="h-full bg-indigo-500 rounded-full transition-all duration-1000" style={{ width: `${analyticsData.totalPeriodSpent > 0 ? (stat.totalSpent / analyticsData.totalPeriodSpent) * 100 : 0}%` }} />
                                 </div>
 
-                                <div className="pt-2 flex items-center justify-between">
-                                    <div className="flex items-center gap-1.5">
-                                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                                        <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Main Category</span>
+                                <div className="pt-2 border-t border-gray-100 dark:border-gray-800 space-y-2">
+                                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Category Breakdown</p>
+                                    <div className="grid grid-cols-1 gap-1.5">
+                                        {Object.entries(stat.categories).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([cat, amount]) => (
+                                            <div key={cat} className="flex flex-col gap-0.5">
+                                                <div className="flex justify-between text-[10px] font-bold">
+                                                    <span className="text-gray-500 truncate max-w-[100px]">{cat}</span>
+                                                    <span className="text-gray-700 dark:text-gray-300">{currency} {amount.toLocaleString()}</span>
+                                                </div>
+                                                <div className="w-full h-1 bg-white dark:bg-gray-800 rounded-full overflow-hidden">
+                                                    <div className="h-full bg-indigo-400/50 rounded-full" style={{ width: `${(amount / (stat.totalSpent || 1)) * 100}%` }} />
+                                                </div>
+                                            </div>
+                                        ))}
+                                        {Object.keys(stat.categories).length === 0 && <p className="text-[10px] text-gray-300 uppercase py-1 italic">No transactions</p>}
                                     </div>
-                                    <span className="text-[10px] font-bold text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-800 px-2 py-1 rounded-md border border-gray-100 dark:border-gray-700">
-                                        {stat.topCategory}
-                                    </span>
                                 </div>
                             </div>
                         </div>
@@ -1688,85 +1655,167 @@ const MembersTab = ({ members, household, onInviteClick }) => {
     );
 };
 
-const BudgetsTab = ({ budgets, currency, onAddClick, onEditClick, onDeleteClick }) => (
-    <div className="space-y-6 animate-in fade-in duration-500">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <h2 className="text-xl font-bold text-gray-800 dark:text-white">Category Budgets</h2>
-            <button
-                onClick={onAddClick}
-                className="flex items-center justify-center gap-2 bg-indigo-600 text-white px-5 py-3 rounded-xl font-bold text-sm hover:bg-indigo-700 shadow-lg shadow-indigo-100 transition-all w-full sm:w-auto"
-            >
-                <Plus size={18} /> Add Budget
-            </button>
-        </div>
-        <div className="bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700 overflow-hidden shadow-sm overflow-x-auto">
-            {budgets?.length > 0 ? (
-                <table className="w-full text-left min-w-[700px]">
-                    <thead>
-                        <tr className="bg-gray-50 dark:bg-gray-900/50 text-[11px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-100 dark:border-gray-700">
-                            <th className="px-8 py-5">Category</th>
-                            <th className="px-8 py-5">Monthly Target</th>
-                            <th className="px-8 py-5">Current Spend</th>
-                            <th className="px-8 py-5">Status</th>
-                            <th className="px-8 py-5 text-right">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-50 dark:divide-gray-700">
-                        {budgets.map((budget) => {
-                            const progress = (budget.amount || 0) > 0 ? ((budget.spent || 0) / budget.amount) * 100 : 0;
-                            return (
-                                <tr key={budget.uuid} className="hover:bg-gray-50 dark:hover:bg-gray-900/30 transition-colors group">
-                                    <td className="px-8 py-6 font-bold text-gray-800 dark:text-white">{budget.category}</td>
-                                    <td className="px-8 py-6 font-bold text-gray-600 dark:text-gray-400">{currency} {(budget.amount || 0).toLocaleString()}</td>
-                                    <td className="px-8 py-6">
-                                        <div className="flex flex-col gap-2">
-                                            <div className="flex justify-between text-[10px] font-black uppercase text-gray-400">
-                                                <span>{currency} {(budget.spent || 0).toLocaleString()}</span>
-                                                <span>{Math.round(progress)}%</span>
-                                            </div>
-                                            <div className="w-32 h-1.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
-                                                <div
-                                                    className={`h-full rounded-full ${progress > 90 ? 'bg-rose-500' : 'bg-indigo-500'}`}
-                                                    style={{ width: `${Math.min(progress, 100)}%` }}
-                                                />
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td className="px-8 py-6">
-                                        <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-md ${progress < 90 ? 'bg-green-50 text-green-600' : 'bg-rose-50 text-rose-600'}`}>
-                                            {progress < 90 ? 'Good' : 'At Risk'}
-                                        </span>
-                                    </td>
-                                    <td className="px-8 py-6 text-right">
-                                        <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <button
-                                                onClick={() => onEditClick(budget)}
-                                                className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
-                                            >
-                                                <Edit3 size={16} />
-                                            </button>
-                                            <button
-                                                onClick={() => onDeleteClick(budget)}
-                                                className="p-2 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
-                                            >
-                                                <Trash2 size={16} />
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            );
-                        })}
-                    </tbody>
-                </table>
-            ) : (
-                <div className="p-20 text-center flex flex-col items-center justify-center">
-                    <TrendingUp size={48} className="text-gray-100 dark:text-gray-800 mb-4" />
-                    <p className="text-gray-400 font-bold uppercase text-xs tracking-widest">No active budgets for this household.</p>
+const BudgetsTab = ({ budgets, household, onAddClick, onEditClick, onDeleteClick }) => {
+    const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
+    const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+    const currency = household?.currency || 'INR';
+
+    const months = [
+        "January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December"
+    ];
+
+    const currentYear = new Date().getFullYear();
+    const years = Array.from({ length: 5 }, (_, i) => currentYear - i);
+
+    // Map spend and filter budgets from allExpenses
+    const enrichedBudgets = useMemo(() => {
+        const expenses = household?.allExpenses || household?.expenses || [];
+
+        // 1. Filter budgets that match the selected period
+        const filteredBudgets = (budgets || []).filter(budget => {
+            if (!budget.budgetDate) return false;
+            let m, y;
+            if (Array.isArray(budget.budgetDate)) {
+                y = budget.budgetDate[0];
+                m = budget.budgetDate[1];
+            } else {
+                const d = new Date(budget.budgetDate);
+                y = d.getFullYear();
+                m = d.getMonth() + 1;
+            }
+            return m === parseInt(selectedMonth) && y === parseInt(selectedYear);
+        });
+
+        // 2. Map spend to these filtered budgets
+        return filteredBudgets.map(budget => {
+            const monthlySpend = expenses.reduce((sum, exp) => {
+                let m, y;
+                if (Array.isArray(exp.expenseDate)) {
+                    y = exp.expenseDate[0];
+                    m = exp.expenseDate[1];
+                } else {
+                    const d = new Date(exp.expenseDate);
+                    y = d.getFullYear();
+                    m = d.getMonth() + 1;
+                }
+
+                // Match category and user-selected period
+                if (m === parseInt(selectedMonth) && y === parseInt(selectedYear) && exp.category === budget.category) {
+                    return sum + (Number(exp.amount) || 0);
+                }
+                return sum;
+            }, 0);
+
+            return { ...budget, spent: monthlySpend };
+        });
+    }, [budgets, household?.allExpenses, household?.expenses, selectedMonth, selectedYear]);
+
+    return (
+        <div className="space-y-6 animate-in fade-in duration-500">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+                <div className="space-y-1">
+                    <h2 className="text-xl font-bold text-gray-800 dark:text-white">Category Budgets</h2>
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Target vs. Actual Spending</p>
                 </div>
-            )}
+
+                <div className="flex flex-wrap items-center gap-3">
+                    <div className="flex items-center gap-2 bg-gray-50 dark:bg-gray-900/50 p-1.5 rounded-2xl border border-gray-100 dark:border-gray-700">
+                        <Calendar size={14} className="ml-2 text-gray-400" />
+                        <select
+                            value={selectedMonth}
+                            onChange={(e) => setSelectedMonth(e.target.value)}
+                            className="bg-transparent border-none text-xs font-bold uppercase text-gray-600 dark:text-gray-300 outline-none focus:ring-0"
+                        >
+                            {months.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
+                        </select>
+                        <div className="w-px h-4 bg-gray-200 dark:bg-gray-700 mx-1" />
+                        <select
+                            value={selectedYear}
+                            onChange={(e) => setSelectedYear(e.target.value)}
+                            className="bg-transparent border-none text-xs font-bold uppercase text-gray-600 dark:text-gray-300 outline-none focus:ring-0 mr-2"
+                        >
+                            {years.map(y => <option key={y} value={y}>{y}</option>)}
+                        </select>
+                    </div>
+
+                    <button
+                        onClick={onAddClick}
+                        className="flex items-center justify-center gap-2 bg-indigo-600 text-white px-6 py-3 rounded-2xl font-bold text-sm hover:bg-indigo-700 shadow-lg shadow-indigo-100 transition-all w-full sm:w-auto"
+                    >
+                        <Plus size={18} /> Add Budget
+                    </button>
+                </div>
+            </div>
+            <div className="bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700 overflow-hidden shadow-sm overflow-x-auto">
+                {enrichedBudgets?.length > 0 ? (
+                    <table className="w-full text-left min-w-[700px]">
+                        <thead>
+                            <tr className="bg-gray-50 dark:bg-gray-900/50 text-[11px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-100 dark:border-gray-700">
+                                <th className="px-8 py-5">Category</th>
+                                <th className="px-8 py-5">Monthly Target</th>
+                                <th className="px-8 py-5">Current Spend</th>
+                                <th className="px-8 py-5">Status</th>
+                                <th className="px-8 py-5 text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-50 dark:divide-gray-700">
+                            {enrichedBudgets.map((budget) => {
+                                const progress = (budget.amount || 0) > 0 ? ((budget.spent || 0) / budget.amount) * 100 : 0;
+                                return (
+                                    <tr key={budget.uuid} className="hover:bg-gray-50 dark:hover:bg-gray-900/30 transition-colors group">
+                                        <td className="px-8 py-6 font-bold text-gray-800 dark:text-white">{budget.category}</td>
+                                        <td className="px-8 py-6 font-bold text-gray-600 dark:text-gray-400">{currency} {(budget.amount || 0).toLocaleString()}</td>
+                                        <td className="px-8 py-6">
+                                            <div className="flex flex-col gap-2">
+                                                <div className="flex justify-between text-[10px] font-black uppercase text-gray-400">
+                                                    <span>{currency} {(budget.spent || 0).toLocaleString()}</span>
+                                                    <span>{Math.round(progress)}%</span>
+                                                </div>
+                                                <div className="w-32 h-1.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                                                    <div
+                                                        className={`h-full rounded-full ${progress > 90 ? 'bg-rose-500' : 'bg-indigo-500'}`}
+                                                        style={{ width: `${Math.min(progress, 100)}%` }}
+                                                    />
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td className="px-8 py-6">
+                                            <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-md ${progress < 90 ? 'bg-green-50 text-green-600' : 'bg-rose-50 text-rose-600'}`}>
+                                                {progress < 90 ? 'Good' : 'At Risk'}
+                                            </span>
+                                        </td>
+                                        <td className="px-8 py-6 text-right">
+                                            <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <button
+                                                    onClick={() => onEditClick(budget)}
+                                                    className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                                                >
+                                                    <Edit3 size={16} />
+                                                </button>
+                                                <button
+                                                    onClick={() => onDeleteClick(budget)}
+                                                    className="p-2 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                                                >
+                                                    <Trash2 size={16} />
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                    </table>
+                ) : (
+                    <div className="p-20 text-center flex flex-col items-center justify-center">
+                        <TrendingUp size={48} className="text-gray-100 dark:text-gray-800 mb-4" />
+                        <p className="text-gray-400 font-bold uppercase text-xs tracking-widest">No active budgets for this household.</p>
+                    </div>
+                )}
+            </div>
         </div>
-    </div>
-);
+    );
+};
 
 const LogsTab = ({ expenses, currency, onEditClick, onDeleteClick }) => {
     const [searchQuery, setSearchQuery] = useState("");
@@ -2129,6 +2178,32 @@ const HouseholdDetailsLogic = () => {
                 if (data.budgets) data.budgets = resolveNames(data.budgets, "Budget");
                 if (data.expenses) data.expenses = resolveNames(data.expenses, "Expense");
 
+                // FETCH FULL BUDGETS FOR ACCURACY
+                try {
+                    const budgetResponse = await postDataAsJson(`${API_CASHFLOW_BASE_URL}/households/budgets/budget/search`, {
+                        householdRefId: data.refId
+                    });
+                    if (budgetResponse?.data) {
+                        data.budgets = resolveNames(budgetResponse.data, "AllBudget");
+                        console.log(`[Diagnostic] Fetched ${data.budgets.length} total budgets via Search API.`);
+                    }
+                } catch (e) {
+                    console.warn("[Diagnostic] Failed to fetch budgets via Search API:", e);
+                }
+
+                // FETCH FULL EXPENSES FOR ANALYTICS
+                try {
+                    const expResponse = await postDataAsJson(`${API_CASHFLOW_BASE_URL}/expenses/expense/search`, {
+                        householdRefId: data.refId
+                    });
+                    if (expResponse?.data) {
+                        data.allExpenses = resolveNames(expResponse.data, "AllExpense");
+                        console.log(`[Diagnostic] Fetched ${data.allExpenses.length} total expenses for analytics.`);
+                    }
+                } catch (e) {
+                    console.warn("[Diagnostic] Failed to fetch full expenses for analytics:", e);
+                }
+
                 setHousehold(data);
             } else {
                 setError("Household not found.");
@@ -2237,7 +2312,7 @@ const HouseholdDetailsLogic = () => {
                 {activeTab === "budgets" && (
                     <BudgetsTab
                         budgets={household.budgets}
-                        currency={household.currency}
+                        household={household}
                         onAddClick={() => setIsBudgetModalOpen(true)}
                         onEditClick={handleEditBudget}
                         onDeleteClick={handleDeleteBudget}
