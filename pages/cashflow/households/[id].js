@@ -1484,43 +1484,209 @@ const OverviewTab = ({ household }) => {
     );
 };
 
-const MembersTab = ({ members, onInviteClick }) => (
-    <div className="space-y-6 animate-in fade-in duration-500">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <h2 className="text-xl font-bold text-gray-800 dark:text-white">Household Members</h2>
-            <button
-                onClick={onInviteClick}
-                className="flex items-center justify-center gap-2 text-indigo-600 bg-indigo-50 dark:bg-indigo-900/30 px-6 py-3 rounded-2xl font-bold text-sm hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-all w-full sm:w-auto shadow-sm shadow-indigo-100/50 dark:shadow-none"
-            >
-                <Plus size={18} /> Invite Member
-            </button>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {members?.map((member) => (
-                <div key={member.uuid} className="bg-white dark:bg-gray-800 p-6 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm flex items-center gap-4 relative group hover:shadow-md transition-all">
-                    <div className="w-14 h-14 md:w-16 md:h-16 rounded-2xl bg-gradient-to-tr from-indigo-50 to-white dark:from-gray-700 dark:to-gray-800 border border-gray-100 dark:border-gray-600 flex items-center justify-center text-indigo-600 font-black text-xl">
-                        {member.user[0].toUpperCase()}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                        <h4 className="font-bold text-gray-800 dark:text-white truncate">{member.user}</h4>
-                        <div className="flex items-center gap-2 mt-1">
-                            <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md ${member.role === 'ADMIN' ? 'bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30' : 'bg-gray-50 text-gray-500 dark:bg-gray-700'}`}>
-                                {member.role}
-                            </span>
-                            <span className="text-[9px] text-green-500 font-bold flex items-center gap-1">
-                                <CheckCircle2 size={10} /> Active
-                            </span>
+const MembersTab = ({ members, household, onInviteClick }) => {
+    const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
+    const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+    const currency = household?.currency || 'INR';
+
+    const months = [
+        "January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December"
+    ];
+
+    const currentYear = new Date().getFullYear();
+    const years = Array.from({ length: 5 }, (_, i) => currentYear - i);
+
+    // Analytics Logic
+    const analyticsData = useMemo(() => {
+        const expenses = household?.expenses || [];
+
+        // 1. Filter by selected period
+        const periodExpenses = expenses.filter(exp => {
+            if (!exp.expenseDate) return false;
+            let m, y;
+            if (Array.isArray(exp.expenseDate)) {
+                y = exp.expenseDate[0];
+                m = exp.expenseDate[1];
+            } else {
+                const d = new Date(exp.expenseDate);
+                y = d.getFullYear();
+                m = d.getMonth() + 1;
+            }
+            return m === parseInt(selectedMonth) && y === parseInt(selectedYear);
+        });
+
+        // 2. Aggregate by Member
+        const memberAggregation = {};
+        // Initialize for all active members
+        members?.forEach(m => {
+            memberAggregation[m.user] = {
+                totalSpent: 0,
+                categories: {},
+                transactionCount: 0
+            };
+        });
+
+        periodExpenses.forEach(exp => {
+            const owner = exp.owner || "Unknown";
+            if (!memberAggregation[owner]) {
+                memberAggregation[owner] = { totalSpent: 0, categories: {}, transactionCount: 0 };
+            }
+
+            memberAggregation[owner].totalSpent += (Number(exp.amount) || 0);
+            memberAggregation[owner].transactionCount += 1;
+
+            const cat = exp.category || "Uncategorized";
+            memberAggregation[owner].categories[cat] = (memberAggregation[owner].categories[cat] || 0) + (Number(exp.amount) || 0);
+        });
+
+        return {
+            memberStats: Object.entries(memberAggregation).map(([user, stats]) => ({
+                user,
+                ...stats,
+                topCategory: Object.entries(stats.categories).sort((a, b) => b[1] - a[1])[0]?.[0] || 'N/A'
+            })).sort((a, b) => b.totalSpent - a.totalSpent),
+            totalPeriodSpent: periodExpenses.reduce((sum, e) => sum + (Number(e.amount) || 0), 0)
+        };
+    }, [household?.expenses, members, selectedMonth, selectedYear]);
+
+    return (
+        <div className="space-y-8 animate-in fade-in duration-500">
+            {/* Analytics Header & Controls */}
+            <div className="bg-white dark:bg-gray-800 p-8 rounded-[2.5rem] border border-gray-100 dark:border-gray-700 shadow-sm">
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-8">
+                    <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                            <TrendingUp size={20} className="text-indigo-600" />
+                            <h2 className="text-xl font-black text-gray-800 dark:text-white uppercase tracking-tight">Financial Footprint</h2>
                         </div>
-                        <p className="text-[9px] text-gray-400 font-bold mt-1 uppercase">Joined: {formatDate(member.joiningDate)}</p>
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Member-wise spending analysis</p>
                     </div>
-                    <button className="absolute top-4 right-4 text-gray-300 hover:text-gray-600 transition-colors">
-                        <MoreHorizontal size={20} />
+
+                    <div className="flex flex-wrap items-center gap-3">
+                        <div className="relative">
+                            <Calendar size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                            <select
+                                value={selectedMonth}
+                                onChange={(e) => setSelectedMonth(e.target.value)}
+                                className="bg-gray-50 dark:bg-gray-900/50 border-none rounded-xl pl-10 pr-4 py-2.5 text-xs font-bold uppercase tracking-wider text-gray-600 dark:text-gray-300 focus:ring-2 focus:ring-indigo-500/10 transition-all outline-none"
+                            >
+                                {months.map((m, i) => (
+                                    <option key={m} value={i + 1}>{m}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div className="relative">
+                            <select
+                                value={selectedYear}
+                                onChange={(e) => setSelectedYear(e.target.value)}
+                                className="bg-gray-50 dark:bg-gray-900/50 border-none rounded-xl px-6 py-2.5 text-xs font-bold uppercase tracking-wider text-gray-600 dark:text-gray-300 focus:ring-2 focus:ring-indigo-500/10 transition-all outline-none"
+                            >
+                                {years.map(y => (
+                                    <option key={y} value={y}>{y}</option>
+                                ))}
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Member Analytics Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                    {analyticsData.memberStats.map((stat, i) => (
+                        <div key={stat.user} className="p-6 bg-gray-50 dark:bg-gray-900/30 rounded-3xl border border-gray-100 dark:border-gray-800 group hover:border-indigo-200 dark:hover:border-indigo-900/40 transition-all">
+                            <div className="flex items-center justify-between mb-4">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 bg-indigo-600 text-white rounded-xl flex items-center justify-center font-black text-sm uppercase">
+                                        {stat.user[0]}
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-black text-gray-800 dark:text-white truncate max-w-[120px]">{stat.user}</p>
+                                        <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">{stat.transactionCount} Transactions</p>
+                                    </div>
+                                </div>
+                                <div className="text-right">
+                                    <p className="text-xs font-black text-indigo-600 uppercase tracking-tighter">
+                                        {analyticsData.totalPeriodSpent > 0 ? Math.round((stat.totalSpent / analyticsData.totalPeriodSpent) * 100) : 0}% share
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="space-y-4">
+                                <div className="flex justify-between items-end">
+                                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Spent this month</span>
+                                    <span className="text-lg font-black text-gray-900 dark:text-white">{currency} {stat.totalSpent.toLocaleString()}</span>
+                                </div>
+
+                                <div className="w-full h-1.5 bg-white dark:bg-gray-800 rounded-full overflow-hidden">
+                                    <div
+                                        className="h-full bg-indigo-500 rounded-full transition-all duration-1000"
+                                        style={{ width: `${analyticsData.totalPeriodSpent > 0 ? (stat.totalSpent / analyticsData.totalPeriodSpent) * 100 : 0}%` }}
+                                    />
+                                </div>
+
+                                <div className="pt-2 flex items-center justify-between">
+                                    <div className="flex items-center gap-1.5">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                                        <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Main Category</span>
+                                    </div>
+                                    <span className="text-[10px] font-bold text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-800 px-2 py-1 rounded-md border border-gray-100 dark:border-gray-700">
+                                        {stat.topCategory}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+
+                    {analyticsData.memberStats.length === 0 && (
+                        <div className="col-span-full py-12 text-center text-gray-300 dark:text-gray-700 font-bold uppercase text-xs tracking-[.25em]">
+                            No spending data for this period
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {/* Standard Member List */}
+            <div className="space-y-6">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="flex items-center gap-2">
+                        <Users size={20} className="text-indigo-600" />
+                        <h2 className="text-xl font-bold text-gray-800 dark:text-white">Household Members</h2>
+                    </div>
+                    <button
+                        onClick={onInviteClick}
+                        className="flex items-center justify-center gap-2 text-indigo-600 bg-indigo-50 dark:bg-indigo-900/30 px-6 py-3 rounded-2xl font-bold text-sm hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-all w-full sm:w-auto shadow-sm shadow-indigo-100/50 dark:shadow-none"
+                    >
+                        <Plus size={18} /> Invite Member
                     </button>
                 </div>
-            ))}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                    {members?.map((member) => (
+                        <div key={member.uuid} className="bg-white dark:bg-gray-800 p-6 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm flex items-center gap-4 relative group hover:shadow-md transition-all">
+                            <div className="w-14 h-14 md:w-16 md:h-16 rounded-2xl bg-gradient-to-tr from-indigo-50 to-white dark:from-gray-700 dark:to-gray-800 border border-gray-100 dark:border-gray-600 flex items-center justify-center text-indigo-600 font-black text-xl">
+                                {member.user[0].toUpperCase()}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <h4 className="font-bold text-gray-800 dark:text-white truncate">{member.user}</h4>
+                                <div className="flex items-center gap-2 mt-1">
+                                    <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md ${member.role === 'ADMIN' ? 'bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30' : 'bg-gray-50 text-gray-500 dark:bg-gray-700'}`}>
+                                        {member.role}
+                                    </span>
+                                    <span className="text-[9px] text-green-500 font-bold flex items-center gap-1">
+                                        <CheckCircle2 size={10} /> Active
+                                    </span>
+                                </div>
+                                <p className="text-[9px] text-gray-400 font-bold mt-1 uppercase">Joined: {formatDate(member.joiningDate)}</p>
+                            </div>
+                            <button className="absolute top-4 right-4 text-gray-300 hover:text-gray-600 transition-colors">
+                                <MoreHorizontal size={20} />
+                            </button>
+                        </div>
+                    ))}
+                </div>
+            </div>
         </div>
-    </div>
-);
+    );
+};
 
 const BudgetsTab = ({ budgets, currency, onAddClick, onEditClick, onDeleteClick }) => (
     <div className="space-y-6 animate-in fade-in duration-500">
@@ -2064,6 +2230,7 @@ const HouseholdDetailsLogic = () => {
                 {activeTab === "members" && (
                     <MembersTab
                         members={household.members}
+                        household={household}
                         onInviteClick={() => setIsInviteModalOpen(true)}
                     />
                 )}
