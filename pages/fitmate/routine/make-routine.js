@@ -340,7 +340,7 @@ const UnifiedRoutineBuilder = ({
     successMessage,
     setShowSuccess
 }) => {
-    const [selectedBodyPart, setSelectedBodyPart] = useState('Chest');
+    const [selectedBodyPart, setSelectedBodyPart] = useState(null);
     const [selectedMuscle, setSelectedMuscle] = useState(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [isGeneratorOpen, setIsGeneratorOpen] = useState(false);
@@ -450,7 +450,11 @@ const UnifiedRoutineBuilder = ({
                             <select
                                 className="bg-transparent border-none p-0 font-bold text-gray-800 focus:ring-0 cursor-pointer hover:text-blue-600 text-lg w-40"
                                 value={routine.training?.name || ''}
-                                onChange={(e) => setRoutine(prev => ({ ...prev, training: { name: e.target.value } }))}
+                                onChange={(e) => {
+                                    setRoutine(prev => ({ ...prev, training: { name: e.target.value } }));
+                                    setSelectedBodyPart(null);
+                                    setSelectedMuscle(null);
+                                }}
                             >
                                 <option value="" disabled>Select Type</option>
                                 {trainings.map((t, i) => <option key={i} value={t.name}>{t.name}</option>)}
@@ -501,8 +505,18 @@ const UnifiedRoutineBuilder = ({
                         <div className="grid grid-cols-2 gap-3">
                             {exercises
                                 .filter(e => {
-                                    if (searchQuery) return e.name.toLowerCase().includes(searchQuery.toLowerCase());
-                                    if (selectedMuscle) return e.targetMuscles?.some(m => m.name === selectedMuscle);
+                                    // 1. Search Query
+                                    if (searchQuery && !e.name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+
+                                    // 2. Training Type (Always filter by this if selected)
+                                    if (routine.training?.name && e.training?.name !== routine.training.name) return false;
+
+                                    // 3. Body Part (Incremental)
+                                    if (selectedBodyPart && e.bodyPart?.name !== selectedBodyPart) return false;
+
+                                    // 4. Muscle (Incremental)
+                                    if (selectedMuscle && !e.targetMuscles?.some(m => m.name === selectedMuscle)) return false;
+
                                     return true;
                                 })
                                 .map((ex, i) => <ExerciseGridItem key={i} name={ex.name} refId={ex.refId} onClick={() => addToCart(ex)} />)}
