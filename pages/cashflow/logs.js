@@ -60,7 +60,8 @@ const ExpenseLogsLogic = () => {
         householdRefId: "",
         expenseDate: new Date().toISOString().split('T')[0],
         type: "ONE_TIME",
-        expenseFor: "FAMILY"
+        expenseFor: "FAMILY",
+        paymentMode: "UPI"
     });
     const [filteredCategories, setFilteredCategories] = useState([]);
     const [showCategoryList, setShowCategoryList] = useState(false);
@@ -174,7 +175,8 @@ const ExpenseLogsLogic = () => {
                 description: formData.description,
                 categoryRefId: formData.categoryRefId,
                 type: formData.type,
-                expenseFor: formData.expenseFor
+                expenseFor: formData.expenseFor,
+                paymentMode: formData.paymentMode
             }
         ];
 
@@ -188,7 +190,8 @@ const ExpenseLogsLogic = () => {
                 householdRefId: "",
                 expenseDate: new Date().toISOString().split('T')[0],
                 type: "ONE_TIME",
-                expenseFor: "FAMILY"
+                expenseFor: "FAMILY",
+                paymentMode: "UPI"
             });
             setShowLogForm(false);
             refreshData();
@@ -541,6 +544,22 @@ const ExpenseLogsLogic = () => {
                             </select>
                         </div>
                         <div className="space-y-2">
+                            <label className="text-[10px] font-black text-indigo-400 uppercase tracking-widest ml-1">Payment Mode</label>
+                            <select
+                                name="paymentMode"
+                                value={formData.paymentMode}
+                                onChange={handleFormChange}
+                                className="w-full bg-white dark:bg-gray-800 border-none rounded-xl px-4 py-3 text-sm font-bold focus:ring-2 focus:ring-indigo-500/20 shadow-sm appearance-none dark:text-white cursor-pointer"
+                            >
+                                <option value="UPI">UPI</option>
+                                <option value="INTERNET BANKING">Internet Banking</option>
+                                <option value="DEBIT CARD">Debit Card</option>
+                                <option value="CREDIT CARD">Credit Card</option>
+                                <option value="CASH">Cash</option>
+                                <option value="OTHERS">Others</option>
+                            </select>
+                        </div>
+                        <div className="space-y-2">
                             <label className="text-[10px] font-black text-indigo-400 uppercase tracking-widest ml-1">Household</label>
                             <select
                                 required
@@ -732,6 +751,7 @@ const ExpenseLogsLogic = () => {
                                     </div>
                                 </th>
                                 <th className="px-8 py-6 text-[11px] font-black text-gray-400 uppercase tracking-[0.2em]">Payer</th>
+                                <th className="px-8 py-6 text-[11px] font-black text-gray-400 uppercase tracking-[0.2em]">Payment Mode</th>
                                 <th className="px-8 py-6 text-[11px] font-black text-gray-400 uppercase tracking-[0.2em]">Status</th>
                                 <th
                                     className="px-8 py-6 text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] text-right cursor-pointer hover:text-indigo-600 transition-colors"
@@ -809,6 +829,17 @@ const ExpenseLogsLogic = () => {
                                                 </div>
                                             </div>
                                         </td>
+                                        <td className="px-8 py-7">
+                                            <div className="flex items-center gap-3">
+                                                <div className="p-2 bg-gray-50 dark:bg-gray-700 rounded-lg text-gray-400 shrink-0">
+                                                    <User size={14} />
+                                                </div>
+                                                <div className="min-w-0">
+                                                    <p className="text-xs font-bold text-gray-700 dark:text-gray-300 truncate uppercase tracking-tight">{expense.paymentMode}</p>
+                                                </div>
+                                            </div>
+                                        </td>
+
                                         <td className="px-8 py-7">
                                             <div className="flex items-center gap-2">
                                                 <CheckCircle2 size={14} className="text-green-500" />
