@@ -30,7 +30,13 @@ const Layout = ({ content }) => {
         return name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
     };
 
-    const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
+    const toggleSidebar = () => {
+        const newState = !isSidebarOpen;
+        setIsSidebarOpen(newState);
+        if (typeof window !== "undefined") {
+            localStorage.setItem('sidebar_open', JSON.stringify(newState));
+        }
+    };
 
     const toggleUserDropdown = (e) => {
         e.preventDefault();
@@ -41,6 +47,15 @@ const Layout = ({ content }) => {
 
     useEffect(() => {
         console.log("Layout mounted");
+
+        // Restore sidebar state from localStorage
+        if (typeof window !== "undefined") {
+            const savedState = localStorage.getItem('sidebar_open');
+            if (savedState !== null) {
+                setIsSidebarOpen(JSON.parse(savedState));
+            }
+        }
+
         if (typeof window !== "undefined" && window.initFlowbite) {
             window.initFlowbite();
         }

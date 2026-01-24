@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '../../context/AuthContext';
 import {
@@ -30,11 +30,30 @@ const NewSidebar = ({ isOpen }) => {
     const [openSections, setOpenSections] = useState({});
 
     const toggleSection = (name) => {
-        setOpenSections(prev => ({
-            ...prev,
-            [name]: !prev[name]
-        }));
+        setOpenSections(prev => {
+            const newState = {
+                ...prev,
+                [name]: !prev[name]
+            };
+            if (typeof window !== "undefined") {
+                localStorage.setItem('sidebar_sections', JSON.stringify(newState));
+            }
+            return newState;
+        });
     };
+
+    useEffect(() => {
+        if (typeof window !== "undefined") {
+            const savedSections = localStorage.getItem('sidebar_sections');
+            if (savedSections) {
+                try {
+                    setOpenSections(JSON.parse(savedSections));
+                } catch (e) {
+                    console.error("Failed to parse sidebar sections", e);
+                }
+            }
+        }
+    }, []);
 
     const menuItems = [
         {
