@@ -769,7 +769,8 @@ const AddExpenseModal = ({ isOpen, onClose, onSuccess, householdRefId }) => {
         expenseDate: new Date().toISOString().split('T')[0],
         description: "",
         type: "ONE_TIME",
-        expenseFor: "FAMILY"
+        expenseFor: "FAMILY",
+        paymentMode: "UPI"
     });
     const [categories, setCategories] = useState([]);
     const [filteredCategories, setFilteredCategories] = useState([]);
@@ -833,7 +834,8 @@ const AddExpenseModal = ({ isOpen, onClose, onSuccess, householdRefId }) => {
                 description: formData.description,
                 categoryRefId: formData.categoryRefId,
                 type: formData.type,
-                expenseFor: formData.expenseFor
+                expenseFor: formData.expenseFor,
+                paymentMode: formData.paymentMode
             }
         ];
 
@@ -848,7 +850,8 @@ const AddExpenseModal = ({ isOpen, onClose, onSuccess, householdRefId }) => {
                 expenseDate: new Date().toISOString().split('T')[0],
                 description: "",
                 type: "ONE_TIME",
-                expenseFor: "FAMILY"
+                expenseFor: "FAMILY",
+                paymentMode: "UPI"
             });
         } catch (err) {
             console.error("Failed to log expense:", err);
@@ -973,6 +976,25 @@ const AddExpenseModal = ({ isOpen, onClose, onSuccess, householdRefId }) => {
                             </div>
                         </div>
 
+                        <div className="grid grid-cols-1 gap-4">
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Payment Mode</label>
+                                <select
+                                    name="paymentMode"
+                                    value={formData.paymentMode}
+                                    onChange={handleChange}
+                                    className="w-full bg-white dark:bg-gray-800 border-none rounded-2xl px-5 py-4 text-sm font-bold focus:ring-2 focus:ring-indigo-500/20 shadow-sm appearance-none dark:text-white"
+                                >
+                                    <option value="UPI">UPI</option>
+                                    <option value="INTERNET BANKING">Internet Banking</option>
+                                    <option value="DEBIT CARD">Debit Card</option>
+                                    <option value="CREDIT CARD">Credit Card</option>
+                                    <option value="CASH">Cash</option>
+                                    <option value="OTHERS">Others</option>
+                                </select>
+                            </div>
+                        </div>
+
                         <div className="space-y-2">
                             <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Description</label>
                             <input
@@ -1012,7 +1034,8 @@ const EditExpenseModal = ({ isOpen, onClose, onSuccess, expense, householdRefId 
         expenseDate: "",
         description: "",
         type: "ONE_TIME",
-        expenseFor: "FAMILY"
+        expenseFor: "FAMILY",
+        paymentMode: "UPI"
     });
     const [categories, setCategories] = useState([]);
     const [filteredCategories, setFilteredCategories] = useState([]);
@@ -1030,7 +1053,8 @@ const EditExpenseModal = ({ isOpen, onClose, onSuccess, expense, householdRefId 
                 expenseDate: expense.expenseDate ? (Array.isArray(expense.expenseDate) ? `${expense.expenseDate[0]}-${String(expense.expenseDate[1]).padStart(2, '0')}-${String(expense.expenseDate[2]).padStart(2, '0')}` : expense.expenseDate) : "",
                 description: expense.description || "",
                 type: expense.type || "ONE_TIME",
-                expenseFor: expense.expenseFor || "FAMILY"
+                expenseFor: expense.expenseFor || "FAMILY",
+                paymentMode: expense.paymentMode || "UPI"
             });
         }
     }, [isOpen, expense]);
@@ -1091,7 +1115,8 @@ const EditExpenseModal = ({ isOpen, onClose, onSuccess, expense, householdRefId 
                 description: formData.description,
                 categoryRefId: formData.categoryRefId,
                 type: formData.type,
-                expenseFor: formData.expenseFor
+                expenseFor: formData.expenseFor,
+                paymentMode: formData.paymentMode
             }
         ];
 
@@ -1217,6 +1242,24 @@ const EditExpenseModal = ({ isOpen, onClose, onSuccess, expense, householdRefId 
                                 >
                                     <option value="FAMILY">Family</option>
                                     <option value="PERSONAL">Personal</option>
+                                    <option value="OTHERS">Others</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-4">
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Payment Mode</label>
+                                <select
+                                    name="paymentMode"
+                                    value={formData.paymentMode}
+                                    onChange={handleChange}
+                                    className="w-full bg-white dark:bg-gray-800 border-none rounded-2xl px-5 py-4 text-sm font-bold focus:ring-2 focus:ring-amber-500/20 shadow-sm appearance-none dark:text-white"
+                                >
+                                    <option value="UPI">UPI</option>
+                                    <option value="INTERNET BANKING">Internet Banking</option>
+                                    <option value="DEBIT CARD">Debit Card</option>
+                                    <option value="CREDIT CARD">Credit Card</option>
                                     <option value="OTHERS">Others</option>
                                 </select>
                             </div>
@@ -2264,6 +2307,7 @@ const LogsTab = ({ expenses, currency, onEditClick, onDeleteClick }) => {
                                         <div className="flex items-center">Category <SortIcon column="category" /></div>
                                     </th>
                                     <th className="px-8 py-6">Owner</th>
+                                    <th className="px-8 py-6">Payment Mode</th>
                                     <th className="px-8 py-6 text-right cursor-pointer hover:text-indigo-600 transition-colors" onClick={() => handleSort('amount')}>
                                         <div className="flex items-center justify-end">Amount <SortIcon column="amount" /></div>
                                     </th>
@@ -2299,6 +2343,14 @@ const LogsTab = ({ expenses, currency, onEditClick, onDeleteClick }) => {
                                                     {expense.owner?.[0]?.toUpperCase()}
                                                 </div>
                                                 <span className="text-[11px] text-gray-500 font-black uppercase tracking-tight">{expense.owner}</span>
+                                            </div>
+                                        </td>
+                                        <td className="px-8 py-6">
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-6 h-6 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-[10px] font-black text-indigo-600">
+                                                    {expense.paymentMode?.[0]?.toUpperCase()}
+                                                </div>
+                                                <span className="text-[11px] text-gray-500 font-black uppercase tracking-tight">{expense.paymentMode}</span>
                                             </div>
                                         </td>
                                         <td className="px-8 py-6 text-right">
