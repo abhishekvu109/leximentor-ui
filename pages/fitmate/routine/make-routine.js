@@ -358,12 +358,18 @@ const UnifiedRoutineBuilder = ({
     };
 
     const addToCart = (exercise) => {
+        const exerciseUnit = exercise.unit || 'reps';
+        let defaultSetUnit = 'REPS';
+        if (exerciseUnit === 'weight') defaultSetUnit = 'KG';
+        else if (exerciseUnit === 'time') defaultSetUnit = 'sec';
+
         setExerciseCart(prev => [...prev, {
             exercise: exercise.name,
             refId: exercise.refId,
             bodyPart: exercise.bodyPart?.name || selectedBodyPart,
             muscle: selectedMuscle || exercise.targetMuscles?.[0]?.name,
-            sets: [{ id: Date.now(), weight: '', reps: '', unit: 'kg', completed: false }],
+            exerciseUnit: exerciseUnit,
+            sets: [{ id: Date.now(), weight: '', reps: '', unit: defaultSetUnit, completed: false }],
             notes: ''
         }]);
     };
@@ -376,7 +382,7 @@ const UnifiedRoutineBuilder = ({
         setExerciseCart(prev => {
             const newCart = [...prev];
             const exercise = newCart[exerciseIndex];
-            const lastSet = exercise.sets[exercise.sets.length - 1] || { weight: '', reps: '', unit: 'kg' };
+            const lastSet = exercise.sets[exercise.sets.length - 1] || { weight: '', reps: '', unit: 'REPS' };
             exercise.sets.push({ id: Date.now() + Math.random(), weight: lastSet.weight, reps: lastSet.reps, unit: lastSet.unit, completed: false });
             return newCart;
         });
@@ -568,21 +574,37 @@ const UnifiedRoutineBuilder = ({
                                     <div className="border-t border-gray-100">
                                         <div className="grid grid-cols-12 gap-2 px-4 py-2 bg-gray-50/50 text-[10px] font-bold text-gray-400 uppercase tracking-widest text-center">
                                             <div className="col-span-1">Set</div>
-                                            <div className="col-span-3">Weight</div>
-                                            <div className="col-span-2">Reps</div>
+                                            <div className={item.exerciseUnit === 'reps' ? 'col-span-5' : 'col-span-3'}>
+                                                {item.exerciseUnit === 'weight' ? 'Weight' : item.exerciseUnit === 'time' ? 'Time' : 'Reps'}
+                                            </div>
+                                            {item.exerciseUnit !== 'reps' && <div className="col-span-2">Reps</div>}
                                             <div className="col-span-6">Actions</div>
                                         </div>
                                         <div className="divide-y divide-gray-50">
                                             {item.sets.map((set, setIdx) => (
                                                 <div key={set.id} className={`grid grid-cols-12 gap-2 px-4 py-2 items-center text-center ${set.completed ? 'bg-green-50/50' : 'bg-white'}`}>
                                                     <div className="col-span-1 font-bold text-blue-600 text-sm">{setIdx + 1}</div>
-                                                    <div className="col-span-3 flex items-center justify-center gap-1">
+                                                    <div className={`${item.exerciseUnit === 'reps' ? 'col-span-5' : 'col-span-3'} flex items-center justify-center gap-1`}>
                                                         <input type="number" className="w-16 bg-gray-100 border-none rounded-md py-1 text-center font-bold text-gray-700 text-sm" value={set.weight} onChange={(e) => handleUpdateSet(exIdx, setIdx, 'weight', e.target.value)} placeholder="0" />
-                                                        <button onClick={() => handleUpdateSet(exIdx, setIdx, 'unit', set.unit === 'kg' ? 'lb' : 'kg')} className="text-[10px] font-bold text-gray-400 hover:text-blue-600 uppercase">{set.unit}</button>
+                                                        <button
+                                                            onClick={() => {
+                                                                const units = item.exerciseUnit === 'weight' ? ['KG', 'LB'] :
+                                                                    item.exerciseUnit === 'time' ? ['min', 'HR', 'sec'] :
+                                                                        ['REPS'];
+                                                                const currentIndex = units.indexOf(set.unit);
+                                                                const nextIndex = (currentIndex + 1) % units.length;
+                                                                handleUpdateSet(exIdx, setIdx, 'unit', units[nextIndex]);
+                                                            }}
+                                                            className="text-[10px] font-bold text-gray-400 hover:text-blue-600 uppercase"
+                                                        >
+                                                            {set.unit}
+                                                        </button>
                                                     </div>
-                                                    <div className="col-span-2">
-                                                        <input type="number" className="w-full bg-gray-100 border-none rounded-md py-1 text-center font-bold text-gray-700 text-sm" value={set.reps} onChange={(e) => handleUpdateSet(exIdx, setIdx, 'reps', e.target.value)} placeholder="0" />
-                                                    </div>
+                                                    {item.exerciseUnit !== 'reps' && (
+                                                        <div className="col-span-2">
+                                                            <input type="number" className="w-full bg-gray-100 border-none rounded-md py-1 text-center font-bold text-gray-700 text-sm" value={set.reps} onChange={(e) => handleUpdateSet(exIdx, setIdx, 'reps', e.target.value)} placeholder="0" />
+                                                        </div>
+                                                    )}
                                                     <div className="col-span-6 flex justify-center gap-2">
                                                         <button onClick={() => handleToggleSet(exIdx, setIdx)} className={`w-7 h-7 rounded-md flex items-center justify-center transition-all ${set.completed ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-400 hover:bg-green-100 hover:text-green-600'}`}><Check size={14} strokeWidth={3} /></button>
                                                         <button onClick={() => removeSet(exIdx, setIdx)} className="w-7 h-7 rounded-md flex items-center justify-center bg-gray-100 text-gray-400 hover:bg-red-100 hover:text-red-500"><Trash2 size={12} /></button>
