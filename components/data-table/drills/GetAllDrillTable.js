@@ -1,7 +1,6 @@
-import { API_LEXIMENTOR_BASE_URL } from "@/constants";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
-import { useCallback, useEffect, useState, useMemo } from "react";
-import { fetchWithAuth } from "@/dataService";
+import leximentorService from "../../../services/leximentor.service";
 import {
     MagnifyingGlassIcon,
     BookOpenIcon,
@@ -141,11 +140,7 @@ export const GetAllDrillTable = ({ drillMetadata }) => {
     const GetDrillAnalytics = useCallback(async (drillRefId) => {
         if (analyticsCache[drillRefId]) return;
         try {
-            const response = await fetchWithAuth(`${API_LEXIMENTOR_BASE_URL}/analytics/drill/${drillRefId}`, {
-                method: 'GET'
-            });
-            if (!response.ok) throw new Error('Network response was not ok');
-            const data = await response.json();
+            const data = await leximentorService.getDrillAnalytics(drillRefId);
             setAnalyticsCache(prev => ({
                 ...prev, [drillRefId]: {
                     avgScore: data.data.avgDrillScore,
@@ -165,12 +160,7 @@ export const GetAllDrillTable = ({ drillMetadata }) => {
     const RemoveDrill = async (drillRefId) => {
         if (!confirm("Are you sure you want to delete this drill?")) return;
         try {
-            const response = await fetchWithAuth(`${API_LEXIMENTOR_BASE_URL}/drill/metadata/${drillRefId}`, {
-                method: 'DELETE'
-            });
-            if (!response.ok) throw new Error('Network response was not ok');
-            // Optimistic Update or Page Refresh could happen here. 
-            // For now alerting as per original behavior pattern
+            await leximentorService.deleteDrill(drillRefId);
             alert("Drill deleted.");
             window.location.reload();
         } catch (error) { console.error('Error:', error); }
@@ -178,10 +168,7 @@ export const GetAllDrillTable = ({ drillMetadata }) => {
 
     const GenerateName = async (drillRefId) => {
         try {
-            const response = await fetchWithAuth(`${API_LEXIMENTOR_BASE_URL}/drill/metadata/assign-name/${drillRefId}`, {
-                method: 'POST'
-            });
-            if (!response.ok) throw new Error('Network response was not ok');
+            await leximentorService.assignDrillName(drillRefId);
             alert("Name generation triggered.");
             window.location.reload();
         } catch (error) { console.error('Error:', error); }

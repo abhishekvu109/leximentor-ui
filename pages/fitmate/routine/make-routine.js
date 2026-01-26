@@ -3,8 +3,7 @@ import Layout from "@/components/layout/Layout";
 import { ChevronDown, Option, CheckCircle2, MoreVertical, Plus, Trash2, Timer, Check, X, Dumbbell, Calendar, Save, Filter, Search, ArrowRight, Download, FileText, History, Info, Clock, Sparkles } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState } from "react";
-import { API_FITMATE_BASE_URL } from "@/constants";
-import { fetchData, POST, postData, fetchWithAuth } from "@/dataService";
+import fitmateService from "../../../services/fitmate.service";
 import { useRouter } from "next/router";
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -147,9 +146,7 @@ const CartExerciseThumb = ({ refId, name }) => {
     useEffect(() => {
         const fetchThumb = async () => {
             try {
-                const res = await fetchWithAuth(`${API_FITMATE_BASE_URL}/exercises/exercise/resources/resource?refId=${refId}&placeholder=THUMBNAIL&resourceId=`);
-                if (!res.ok) return;
-                const blob = await res.blob();
+                const blob = await fitmateService.getThumbnail(refId);
                 if (blob.size > 0 && blob.type.startsWith('image/')) {
                     setThumbUrl(URL.createObjectURL(blob));
                 }
@@ -286,9 +283,7 @@ const ExerciseGridItem = ({ name, refId, isSelected, onClick }) => {
     useEffect(() => {
         const fetchThumb = async () => {
             try {
-                const res = await fetchWithAuth(`${API_FITMATE_BASE_URL}/exercises/exercise/resources/resource?refId=${refId}&placeholder=THUMBNAIL&resourceId=`);
-                if (!res.ok) return;
-                const blob = await res.blob();
+                const blob = await fitmateService.getThumbnail(refId);
                 if (blob.size > 0 && blob.type.startsWith('image/')) {
                     setThumbUrl(URL.createObjectURL(blob));
                 }
@@ -349,7 +344,7 @@ const UnifiedRoutineBuilder = ({
     const openHistory = async (exerciseName) => {
         setHistoryPanel({ open: true, exercise: exerciseName, data: [], loading: true });
         try {
-            const res = await fetchData(`${API_FITMATE_BASE_URL}/drill/${encodeURIComponent(exerciseName)}`);
+            const res = await fitmateService.getExerciseHistory(exerciseName);
             setHistoryPanel(prev => ({ ...prev, data: res.data || [], loading: false }));
         } catch (e) {
             console.error("Failed to fetch history:", e);
@@ -414,7 +409,7 @@ const UnifiedRoutineBuilder = ({
 
     const handleGenerateWorkout = async (params) => {
         try {
-            const res = await postData(`${API_FITMATE_BASE_URL}/routines/routine/generate`, params);
+            const res = await fitmateService.generateRoutine(params);
             if (res.meta?.code === "000" && res.data?.drills) {
                 const newDrills = res.data.drills.map(drill => ({
                     exercise: drill.exercise.name,
@@ -645,16 +640,15 @@ const FitmateMakeRoutine = () => {
         const fetchInitialData = async () => {
             try {
                 const [bodyRes, muscleRes, exerciseRes, trainingRes] = await Promise.all([
-                    fetchWithAuth(`${API_FITMATE_BASE_URL}/bodyparts`),
-                    fetchWithAuth(`${API_FITMATE_BASE_URL}/muscles`),
-                    fetchWithAuth(`${API_FITMATE_BASE_URL}/exercises`),
-                    fetchWithAuth(`${API_FITMATE_BASE_URL}/trainings`)
+                    fitmateService.getBodyParts(),
+                    fitmateService.getMuscles(),
+                    fitmateService.getExercises(),
+                    fitmateService.getTrainings()
                 ]);
-                const [bodyData, muscleData, exerciseData, trainingData] = await Promise.all([bodyRes.json(), muscleRes.json(), exerciseRes.json(), trainingRes.json()]);
-                setBodyParts(bodyData.data || []);
-                setMuscles(muscleData.data || []);
-                setExercises(exerciseData.data || []);
-                setTrainings(trainingData.data || []);
+                setBodyParts(bodyRes.data || []);
+                setMuscles(muscleRes.data || []);
+                setExercises(exerciseRes.data || []);
+                setTrainings(trainingRes.data || []);
             } catch (error) { console.error("Error fetching dropdown data:", error); }
         };
         fetchInitialData();
@@ -706,7 +700,7 @@ const FitmateMakeRoutine = () => {
             });
         });
         try {
-            await postData(`${API_FITMATE_BASE_URL}/routines/routine`, { ...routine, workoutDate, description, drills });
+            await fitmateService.createRoutine({ ...routine, workoutDate, description, drills });
             setSuccessMessage("Routine created successfully!");
             setShowSuccess(true);
             setTimeout(() => setShowSuccess(false), 5000);

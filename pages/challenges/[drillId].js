@@ -2,8 +2,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
-import { API_LEXIMENTOR_BASE_URL } from "@/constants";
-import { deleteData, fetchData, postData, fetchWithAuth } from "@/dataService";
+import leximentorService from "../../services/leximentor.service";
 import Layout from "@/components/layout/Layout";
 import { motion } from "framer-motion";
 import {
@@ -341,11 +340,9 @@ const Challenges = () => {
     const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'analytics'
 
     const loadChallenges = useCallback(async (id) => {
-        const URL = `${API_LEXIMENTOR_BASE_URL}/drill/metadata/challenges/${id}`;
         try {
-            const res = await fetchWithAuth(URL);
-            const data = await res.json();
-            setChallengeData(data);
+            const res = await leximentorService.getChallenges(id);
+            setChallengeData(res);
         } catch (error) {
             console.error("Failed to load challenges:", error);
         }
@@ -372,8 +369,7 @@ const Challenges = () => {
     const handleCreateChallenge = async (type) => {
         setCreatingType(type);
         try {
-            const URL = `${API_LEXIMENTOR_BASE_URL}/drill/metadata/challenges/challenge?drillId=${drillRefId}&drillType=${type}`;
-            await fetchWithAuth(URL, { method: 'POST' });
+            await leximentorService.createChallenge(drillRefId, type);
             await loadChallenges(drillRefId);
         } catch (error) {
             console.error(error);
@@ -385,9 +381,8 @@ const Challenges = () => {
 
     const handleDelete = async (refId) => {
         if (!confirm("Are you sure you want to delete this challenge?")) return;
-        const URL = `${API_LEXIMENTOR_BASE_URL}/drill/metadata/challenges/${refId}`;
         try {
-            await fetchWithAuth(URL, { method: 'DELETE' });
+            await leximentorService.deleteChallenge(refId);
             await loadChallenges(drillRefId);
         } catch (error) {
             console.error("Failed to delete challenge:", error);
@@ -397,20 +392,17 @@ const Challenges = () => {
     const handleOpenEvaluator = async (challengeId) => {
         setActiveChallengeId(challengeId);
         setIsEvaluatorVisible(true);
-        const URL = `${API_LEXIMENTOR_BASE_URL}/drill/metadata/challenges/challenge/evaluators?challengeRefId=${challengeId}`;
         try {
-            const res = await fetchWithAuth(URL);
-            const data = await res.json();
-            setChallengeEvaluators(data);
+            const res = await leximentorService.getEvaluators(challengeId);
+            setChallengeEvaluators(res);
         } catch (error) {
             console.error("Failed to fetch evaluators:", error);
         }
     };
 
     const handleSubmitEvaluation = async (challengeId, evaluator) => {
-        const URL = `${API_LEXIMENTOR_BASE_URL}/drill/metadata/challenges/challenge/${challengeId}/evaluate?challengeId=${challengeId}&evaluator=${evaluator}`;
         try {
-            await fetchWithAuth(URL, { method: 'POST' });
+            await leximentorService.submitEvaluation(challengeId, evaluator);
             setIsEvaluatorVisible(false);
             setActiveChallengeId(null);
             alert("Evaluation submitted!"); // Replace with toast

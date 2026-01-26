@@ -29,8 +29,9 @@ import {
     AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
     BarChart, Bar, Cell, PieChart, Pie
 } from "recharts";
-import { postDataAsJson, fetchData, updateData, DeleteByObject } from "../../../dataService";
-import { API_CASHFLOW_BASE_URL, API_AUTH_URL, API_CATEGORY_SEARCH_URL } from "../../../constants";
+import householdService from "../../../services/household.service";
+import userService from "../../../services/user.service";
+import categoryService from "../../../services/category.service";
 import { useAuth } from "../../../context/AuthContext";
 
 const COLORS = ['#4f46e5', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
@@ -54,7 +55,7 @@ const InviteMemberModal = ({ isOpen, onClose, onSuccess, householdRefId }) => {
             const getUsers = async () => {
                 setLoadingUsers(true);
                 try {
-                    const response = await fetchData(`${API_AUTH_URL}/user`);
+                    const response = await userService.getUsers();
                     if (response?.data) {
                         setUsers(response.data);
                     }
@@ -87,7 +88,7 @@ const InviteMemberModal = ({ isOpen, onClose, onSuccess, householdRefId }) => {
         ];
 
         try {
-            await postDataAsJson(`${API_CASHFLOW_BASE_URL}/households/household-members/household-member`, payload);
+            await householdService.inviteMember(payload);
             onSuccess();
             onClose();
             setSelectedUser("");
@@ -207,7 +208,7 @@ const AddBudgetModal = ({ isOpen, onClose, onSuccess, householdRefId }) => {
             const fetchCategories = async () => {
                 setLoadingCategories(true);
                 try {
-                    const response = await postDataAsJson(API_CATEGORY_SEARCH_URL, {});
+                    const response = await householdService.searchCategories({});
                     if (response?.data) {
                         setCategories(response.data);
                     }
@@ -259,7 +260,7 @@ const AddBudgetModal = ({ isOpen, onClose, onSuccess, householdRefId }) => {
         ];
 
         try {
-            await postDataAsJson(`${API_CASHFLOW_BASE_URL}/households/budgets/budget`, payload);
+            await householdService.addBudget(payload);
             onSuccess();
             onClose();
             setFormData({
@@ -429,7 +430,7 @@ const EditBudgetModal = ({ isOpen, onClose, onSuccess, budget, householdRefId })
             const fetchCategories = async () => {
                 setLoadingCategories(true);
                 try {
-                    const response = await postDataAsJson(API_CATEGORY_SEARCH_URL, {});
+                    const response = await householdService.searchCategories({});
                     if (response?.data) {
                         setCategories(response.data);
                     }
@@ -482,7 +483,7 @@ const EditBudgetModal = ({ isOpen, onClose, onSuccess, budget, householdRefId })
         ];
 
         try {
-            await updateData(`${API_CASHFLOW_BASE_URL}/households/budgets/budget`, payload);
+            await householdService.updateBudget(payload);
             onSuccess();
             onClose();
         } catch (err) {
@@ -646,7 +647,7 @@ const AddDepositModal = ({ isOpen, onClose, onSuccess, householdRefId }) => {
         ];
 
         try {
-            await postDataAsJson(`${API_CASHFLOW_BASE_URL}/households/deposits/deposit`, payload);
+            await householdService.addDeposit(payload);
             onSuccess();
             onClose();
             setFormData({
@@ -840,7 +841,7 @@ const AddExpenseModal = ({ isOpen, onClose, onSuccess, householdRefId }) => {
         ];
 
         try {
-            await postDataAsJson(`${API_CASHFLOW_BASE_URL}/expenses/expense`, payload);
+            await householdService.addExpense(payload);
             onSuccess();
             onClose();
             setFormData({
@@ -1064,7 +1065,7 @@ const EditExpenseModal = ({ isOpen, onClose, onSuccess, expense, householdRefId 
             const fetchCategories = async () => {
                 setLoadingCategories(true);
                 try {
-                    const response = await postDataAsJson(API_CATEGORY_SEARCH_URL, {});
+                    const response = await householdService.searchCategories({});
                     if (response?.data) {
                         setCategories(response.data);
                     }
@@ -1121,7 +1122,7 @@ const EditExpenseModal = ({ isOpen, onClose, onSuccess, expense, householdRefId 
         ];
 
         try {
-            await updateData(`${API_CASHFLOW_BASE_URL}/expenses/expense`, payload);
+            await householdService.updateExpense(payload);
             onSuccess();
             onClose();
         } catch (err) {
@@ -1310,7 +1311,7 @@ const DeleteExpenseModal = ({ isOpen, onClose, onSuccess, expense }) => {
         ];
 
         try {
-            await DeleteByObject(`${API_CASHFLOW_BASE_URL}/expenses/expense`, payload);
+            await householdService.deleteExpense(payload);
             onSuccess();
             onClose();
         } catch (err) {
@@ -1391,7 +1392,7 @@ const DeleteBudgetModal = ({ isOpen, onClose, onSuccess, budget }) => {
         ];
 
         try {
-            await DeleteByObject(`${API_CASHFLOW_BASE_URL}/households/budgets/budget`, payload);
+            await householdService.deleteBudget(payload);
             onSuccess();
             onClose();
         } catch (err) {
@@ -2505,9 +2506,7 @@ const HouseholdDetailsLogic = () => {
                 console.log(`[Diagnostic] Category Lookup Map Populated with ${Object.keys(categoryMap).length} keys`);
             }
 
-            const response = await postDataAsJson(`${API_CASHFLOW_BASE_URL}/households/household/search`, {
-                refId: id
-            });
+            const response = await householdService.getHousehold(id);
 
             if (response?.data && response.data.length > 0) {
                 const data = response.data[0];
@@ -2540,7 +2539,7 @@ const HouseholdDetailsLogic = () => {
                     console.log(`[Diagnostic] Triggering individual resolution for ${missingIds.size} missing categories:`, Array.from(missingIds));
                     await Promise.all(Array.from(missingIds).map(async (refId) => {
                         try {
-                            const res = await fetchData(`${API_CASHFLOW_BASE_URL}/categories/category/${refId}`);
+                            const res = await categoryService.getCategory(refId);
                             if (res?.data?.name) {
                                 categoryMap[refId] = res.data.name;
                                 if (res.data.uuid) categoryMap[res.data.uuid] = res.data.name;
@@ -2590,7 +2589,7 @@ const HouseholdDetailsLogic = () => {
 
                 // FETCH FULL BUDGETS FOR ACCURACY
                 try {
-                    const budgetResponse = await postDataAsJson(`${API_CASHFLOW_BASE_URL}/households/budgets/budget/search`, {
+                    const budgetResponse = await householdService.searchBudgets({
                         householdRefId: data.refId
                     });
                     if (budgetResponse?.data) {
@@ -2603,7 +2602,7 @@ const HouseholdDetailsLogic = () => {
 
                 // FETCH FULL EXPENSES FOR ANALYTICS
                 try {
-                    const expResponse = await postDataAsJson(`${API_CASHFLOW_BASE_URL}/expenses/expense/search`, {
+                    const expResponse = await householdService.searchExpenses({
                         householdRefId: data.refId
                     });
                     if (expResponse?.data) {
@@ -2616,7 +2615,7 @@ const HouseholdDetailsLogic = () => {
 
                 // FETCH DEPOSITS
                 try {
-                    const depositResponse = await postDataAsJson(`${API_CASHFLOW_BASE_URL}/households/deposits/deposit/search`, {
+                    const depositResponse = await householdService.searchDeposits({
                         householdRefId: data.refId
                     });
                     if (depositResponse?.data) {
@@ -2883,7 +2882,7 @@ const EditDepositModal = ({ isOpen, onClose, onSuccess, deposit }) => {
         ];
 
         try {
-            await updateData(`${API_CASHFLOW_BASE_URL}/households/deposits/deposit`, payload, 'PUT');
+            await householdService.updateDeposit(payload);
             onSuccess();
             onClose();
         } catch (err) {
@@ -3001,7 +3000,7 @@ const DeleteDepositModal = ({ isOpen, onClose, onSuccess, deposits }) => {
         const payload = deposits.map(d => ({ refId: d.refId }));
 
         try {
-            await DeleteByObject(`${API_CASHFLOW_BASE_URL}/households/deposits/deposit`, payload);
+            await householdService.deleteDeposit(payload);
             onSuccess();
             onClose();
         } catch (err) {

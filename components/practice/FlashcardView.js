@@ -1,9 +1,7 @@
 import { useEffect, useState } from "react";
-import { API_LEXIMENTOR_BASE_URL } from "@/constants";
-import { fetchData, fetchWithAuth } from "@/dataService";
+import leximentorService from "../../services/leximentor.service";
 import { ChevronLeftIcon, ChevronRightIcon, SpeakerWaveIcon } from "@heroicons/react/24/solid";
 import { BookOpenIcon, LightBulbIcon, TagIcon } from "@heroicons/react/24/outline";
-import { API_TEXT_TO_SPEECH } from "@/constants";
 
 const ModernFlashcard = ({ word, onFlip, isFlipped }) => {
     const [localFlipped, setLocalFlipped] = useState(false);
@@ -130,11 +128,15 @@ const FlashcardView = ({ drillSetData, wordMetadata, sourcesData }) => {
     const [isFlipped, setIsFlipped] = useState(false);
 
     const fetchWordData = async (wordId, source) => {
-        const wordDataResponse = await fetchData(`${API_LEXIMENTOR_BASE_URL}/inventory/words/${wordId}/sources/${source}`);
-        const sourcesDataResponse = await fetchData(`${API_LEXIMENTOR_BASE_URL}/inventory/words/${wordId}/sources`);
-        setWordData(wordDataResponse);
-        setSources(sourcesDataResponse);
-        setIsFlipped(false); // Reset flip on word change
+        try {
+            const wordDataResponse = await leximentorService.getWordSourceData(wordId, source);
+            const sourcesDataResponse = await leximentorService.getWordSources(wordId);
+            setWordData(wordDataResponse);
+            setSources(sourcesDataResponse);
+            setIsFlipped(false); // Reset flip on word change
+        } catch (error) {
+            console.error('Error fetching word data:', error);
+        }
     };
 
     useEffect(() => {
@@ -151,12 +153,7 @@ const FlashcardView = ({ drillSetData, wordMetadata, sourcesData }) => {
 
     const handleConvertToSpeech = async (text) => {
         try {
-            const response = await fetchWithAuth(API_TEXT_TO_SPEECH, {
-                method: 'POST',
-                body: JSON.stringify({ text }),
-            });
-            if (!response.ok) throw new Error('TTS failed');
-            const data = await response.arrayBuffer();
+            const data = await leximentorService.textToSpeech(text);
             const audioUrl = URL.createObjectURL(new Blob([data]));
             const audio = new Audio(audioUrl);
             await audio.play();

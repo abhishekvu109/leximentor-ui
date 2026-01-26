@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
-import { API_LEXIMENTOR_BASE_URL } from "@/constants";
-import { fetchWithAuth } from "@/dataService";
+import leximentorService from "../../../services/leximentor.service";
 import Link from "next/link";
 import Layout from "@/components/layout/Layout";
 import {
@@ -163,8 +162,7 @@ const EvaluationReport = () => {
             const loadData = async () => {
                 setLoading(true);
                 try {
-                    const res = await fetchWithAuth(`${API_LEXIMENTOR_BASE_URL}/drill/metadata/challenges/challenge/${challengeId}/report`);
-                    const data = await res.json();
+                    const data = await leximentorService.getChallengeReport(challengeId);
                     setEvaluationReportData(data);
                 } catch (error) {
                     console.error("Failed to load evaluation report:", error);
