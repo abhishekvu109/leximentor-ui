@@ -1,8 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { API_LEXIMENTOR_BASE_URL } from "@/constants";
-import { GetAllDrillTable } from "@/components/data-table/drills/GetAllDrillTable";
-import { fetchData, postData, deleteData } from "@/dataService";
+import leximentorService from "../../services/leximentor.service";
 import {
     Plus,
     List,
@@ -12,7 +10,7 @@ import {
     Trophy,
     BookOpen
 } from "lucide-react";
-
+import { GetAllDrillTable } from "../data-table/drills/GetAllDrillTable";
 const ActionButton = ({ onClick, icon: Icon, label, colorClass, dataModalTarget, dataModalToggle }) => (
     <button
         type="button"
@@ -75,8 +73,7 @@ const GetAllDrills = ({ data }) => {
     const submitDillCreation = async (e) => {
         e.preventDefault();
         try {
-            const queryString = new URLSearchParams(drillData).toString();
-            const data = await postData(`${API_LEXIMENTOR_BASE_URL}/drill/metadata?${queryString}`);
+            const data = await leximentorService.createDrill(drillData);
 
             if (data) {
                 console.log('Response data:', data);
@@ -94,7 +91,7 @@ const GetAllDrills = ({ data }) => {
 
     const LoadTable = async () => {
         try {
-            const data = await fetchData(`${API_LEXIMENTOR_BASE_URL}/drill/metadata`);
+            const data = await leximentorService.getDrills();
             if (data) {
                 setDrillMetadata(data);
                 console.log('Response data:', data);
@@ -108,7 +105,7 @@ const GetAllDrills = ({ data }) => {
         if (analyticsCache[drillRefId]) return;
 
         try {
-            const data = await fetchData(`${API_LEXIMENTOR_BASE_URL}/analytics/drill/${drillRefId}`);
+            const data = await leximentorService.getDrillAnalytics(drillRefId);
             if (data && data.data) {
                 setAnalyticsCache(prev => ({
                     ...prev, [drillRefId]: {
@@ -132,7 +129,7 @@ const GetAllDrills = ({ data }) => {
 
     const RemoveDrill = async (drillRefId) => {
         try {
-            const data = await deleteData(`${API_LEXIMENTOR_BASE_URL}/drill/metadata/${drillRefId}`);
+            const data = await leximentorService.deleteDrill(drillRefId);
             if (data) {
                 console.log('Response data:', data);
                 await LoadTable();
@@ -144,7 +141,7 @@ const GetAllDrills = ({ data }) => {
 
     const GenerateName = async (drillRefId) => {
         try {
-            const data = await postData(`${API_LEXIMENTOR_BASE_URL}/drill/metadata/assign-name/${drillRefId}`);
+            const data = await leximentorService.assignDrillName(drillRefId);
             if (data) {
                 console.log('Response data:', data);
                 await LoadTable();

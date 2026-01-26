@@ -1,5 +1,4 @@
-import { API_FITMATE_BASE_URL } from "@/constants";
-import { fetchWithAuth } from "@/dataService";
+import fitmateService from "../../../services/fitmate.service";
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import ModalDialog from "@/components/modal_notifications/modal_notification_dialog";
@@ -15,9 +14,8 @@ const FitmateTraining = () => {
 
     const loadData = async () => {
         try {
-            const res = await fetchWithAuth(`${API_FITMATE_BASE_URL}/trainings`);
-            const data = await res.json();
-            setTrainingData(data);
+            const res = await fitmateService.getTrainings();
+            setTrainingData(res);
         } catch (error) {
             console.error("Failed to load trainings:", error);
         } finally {
@@ -47,14 +45,7 @@ const FitmateTraining = () => {
         e.preventDefault();
         const dataInAnArray = [bodyPartFormData];
         try {
-            const URL = `${API_FITMATE_BASE_URL}/trainings/training`;
-            const res = await fetchWithAuth(URL, {
-                method: "POST",
-                body: JSON.stringify(dataInAnArray),
-            });
-
-            if (!res.ok) throw new Error("Failed to create training.");
-
+            await fitmateService.addTraining(dataInAnArray);
             setNotificationModal(true);
             loadData(); // Reload list
         } catch (error) {

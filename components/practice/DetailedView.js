@@ -1,8 +1,8 @@
-import { API_LEXIMENTOR_BASE_URL, API_TEXT_TO_SPEECH } from "@/constants";
+import { API_TEXT_TO_SPEECH } from "@/constants";
 import Link from "next/link";
 import { SpeakerWaveIcon, ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/24/solid";
 import { BookOpenIcon, LightBulbIcon, TagIcon, ChatBubbleLeftRightIcon, ArrowsRightLeftIcon } from "@heroicons/react/24/outline";
-import { fetchData, fetchWithAuth } from "@/dataService";
+import leximentorService from "../../services/leximentor.service";
 import { useEffect, useState } from "react";
 
 const Main = ({ drillSetData, wordMetadata, sourcesData }) => {
@@ -18,10 +18,14 @@ const Main = ({ drillSetData, wordMetadata, sourcesData }) => {
     };
 
     const fetchWordData = async (wordId, source) => {
-        const wordDataResponse = await fetchData(`${API_LEXIMENTOR_BASE_URL}/inventory/words/${wordId}/sources/${source}`);
-        const sourcesDataResponse = await fetchData(`${API_LEXIMENTOR_BASE_URL}/inventory/words/${wordId}/sources`);
-        setWordData(wordDataResponse);
-        setSources(sourcesDataResponse);
+        try {
+            const wordDataResponse = await leximentorService.getWordSourceData(wordId, source);
+            const sourcesDataResponse = await leximentorService.getWordSources(wordId);
+            setWordData(wordDataResponse);
+            setSources(sourcesDataResponse);
+        } catch (error) {
+            console.error('Error fetching word data:', error);
+        }
     };
 
     useEffect(() => {
@@ -38,12 +42,7 @@ const Main = ({ drillSetData, wordMetadata, sourcesData }) => {
 
     const handleConvertToSpeech = async (text) => {
         try {
-            const response = await fetchWithAuth(API_TEXT_TO_SPEECH, {
-                method: 'POST',
-                body: JSON.stringify({ text }),
-            });
-            if (!response.ok) throw new Error('TTS failed');
-            const data = await response.arrayBuffer();
+            const data = await leximentorService.textToSpeech(text);
             const audioUrl = URL.createObjectURL(new Blob([data]));
             const audio = new Audio(audioUrl);
             await audio.play();

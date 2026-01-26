@@ -1,12 +1,11 @@
 
 import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
-import { API_FITMATE_BASE_URL } from '@/constants';
 import Layout from "@/components/layout/Layout";
 import Link from 'next/link';
 import { ArrowLeft, Dumbbell, Activity, Calendar, PlayCircle, Edit2, Camera, Save, Loader2, Check, AlertCircle, Info, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { fetchData, updateData, fetchWithAuth } from '@/dataService';
+import fitmateService from "@/services/fitmate.service";
 
 
 const EditExerciseModal = ({ isOpen, onClose, exercise, onSuccess, onNotification, data: { trainings, bodyParts, musclesAll } }) => {
@@ -68,7 +67,7 @@ const EditExerciseModal = ({ isOpen, onClose, exercise, onSuccess, onNotificatio
                 unit: form.unit
             };
 
-            await updateData(`${API_FITMATE_BASE_URL}/exercises/exercise`, payload);
+            await fitmateService.updateExercise(payload);
             onNotification({ message: `Successfully updated "${form.name}"`, type: 'success' });
             onSuccess();
             onClose();
@@ -252,7 +251,7 @@ const ExerciseDetailContent = () => {
 
     const fetchExerciseImage = async (refId) => {
         try {
-            const res = await fetchWithAuth(`${API_FITMATE_BASE_URL}/exercises/exercise/resources/resource?refId=${refId}&placeholder=GIF&resourceId=`);
+            const res = await fitmateService.getExerciseResource(refId, 'GIF');
             if (!res.ok) throw new Error("Image fetch failed");
 
             // The API returns binary data direttamente, not JSON
@@ -274,8 +273,7 @@ const ExerciseDetailContent = () => {
     const loadExerciseData = () => {
         if (id) {
             setLoading(true);
-            fetchWithAuth(`${API_FITMATE_BASE_URL}/exercises/exercise/${id}`)
-                .then((res) => res.json())
+            fitmateService.getExercise(id)
                 .then((data) => {
                     setExercise(data.data);
                     if (data.data?.refId) {
@@ -298,9 +296,9 @@ const ExerciseDetailContent = () => {
         const fetchRefData = async () => {
             try {
                 const [trRes, bpRes, mRes] = await Promise.all([
-                    fetchData(`${API_FITMATE_BASE_URL}/trainings`),
-                    fetchData(`${API_FITMATE_BASE_URL}/bodyparts`),
-                    fetchData(`${API_FITMATE_BASE_URL}/muscles`)
+                    fitmateService.getTrainings(),
+                    fitmateService.getBodyParts(),
+                    fitmateService.getMuscles()
                 ]);
                 setRefData({
                     trainings: trRes.data || [],
@@ -323,10 +321,7 @@ const ExerciseDetailContent = () => {
         formData.append('files', file);
 
         try {
-            const res = await fetchWithAuth(`${API_FITMATE_BASE_URL}/exercises/exercise/resources?refId=${exercise.refId}&placeholder=GIF`, {
-                method: 'PUT',
-                body: formData
-            });
+            const res = await fitmateService.updateExerciseResources(exercise.refId, 'GIF', formData);
 
             if (res.ok) {
                 showNotification({ message: "Image updated successfully", type: 'success' });
@@ -351,10 +346,7 @@ const ExerciseDetailContent = () => {
         formData.append('files', file);
 
         try {
-            const res = await fetchWithAuth(`${API_FITMATE_BASE_URL}/exercises/exercise/resources?refId=${exercise.refId}&placeholder=THUMBNAIL`, {
-                method: 'PUT',
-                body: formData
-            });
+            const res = await fitmateService.updateExerciseResources(exercise.refId, 'THUMBNAIL', formData);
 
             if (res.ok) {
                 showNotification({ message: "Thumbnail updated successfully", type: 'success' });

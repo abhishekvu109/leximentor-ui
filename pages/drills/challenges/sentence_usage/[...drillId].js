@@ -1,9 +1,8 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
-import { API_LEXIMENTOR_BASE_URL } from "@/constants";
-import { fetchWithAuth } from "@/dataService";
 import Link from "next/link";
 import Layout from "@/components/layout/Layout";
+import leximentorService from "../../../../services/leximentor.service";
 import {
     ArrowLeftIcon,
     CheckCircleIcon,
@@ -93,8 +92,7 @@ const SentenceUsageChallenge = () => {
     useEffect(() => {
         if (drillRefId && challengeId) {
             setLoading(true);
-            fetchWithAuth(`${API_LEXIMENTOR_BASE_URL}/drill/metadata/sets/${drillRefId}`)
-                .then(res => res.json())
+            leximentorService.getDrillSet(drillRefId)
                 .then(data => {
                     const actualData = data || { data: [] };
                     setDrillSetData(actualData);
@@ -136,13 +134,7 @@ const SentenceUsageChallenge = () => {
         e.preventDefault();
         setIsSubmitting(true);
         try {
-            const URL = `${API_LEXIMENTOR_BASE_URL}/drill/metadata/challenges/challenge/${challengeId}/scores`;
-            const response = await fetchWithAuth(URL, {
-                method: 'PUT',
-                body: JSON.stringify(formData),
-            });
-
-            if (!response.ok) throw new Error("Submission failed");
+            await leximentorService.updateChallengeScores(challengeId, formData);
 
             setNotification({ visible: true, message: "Drill submitted successfully!", type: 'success' });
 

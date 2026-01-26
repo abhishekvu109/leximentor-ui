@@ -1,6 +1,5 @@
 
-import { fetchData, updateData, DeleteByObject, fetchWithAuth } from "@/dataService";
-import { API_FITMATE_BASE_URL } from "@/constants";
+import fitmateService from "../../../../services/fitmate.service";
 import Layout from "@/components/layout/Layout";
 import { useRouter } from "next/router";
 import Link from "next/link";
@@ -262,7 +261,7 @@ const RoutineLogger = ({ initialData }) => {
             ...extraData
         };
         try {
-            await updateData(`${API_FITMATE_BASE_URL}/routines/routine`, payload);
+            await fitmateService.updateRoutine(payload);
             alert(`Routine updated to ${newStatus}`); // Simple feedback (can be toast)
             // Ideally we refresh data or update local state
             setRoutine(prev => ({ ...prev, status: newStatus, ...extraData }));
@@ -290,7 +289,7 @@ const RoutineLogger = ({ initialData }) => {
             const newDrills = oldDrills.map(d => d.refId === updatedDrill.refId ? updatedDrill : d);
             setRoutine({ ...routine, drills: newDrills });
 
-            await updateData(`${API_FITMATE_BASE_URL}/drills/drill`, updatedDrill);
+            await fitmateService.updateDrill(updatedDrill);
         } catch (e) {
             console.error(e);
             alert("Failed to save drill");
@@ -436,8 +435,7 @@ const RoutineDetail = () => {
     useEffect(() => {
         if (routineId) {
             setLoading(true);
-            fetchWithAuth(`${API_FITMATE_BASE_URL}/routines/routine/${routineId}`)
-                .then(res => res.json())
+            fitmateService.getRoutine(routineId)
                 .then(data => {
                     setRoutine(data.data);
                     setLoading(false);

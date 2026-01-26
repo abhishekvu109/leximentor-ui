@@ -1,14 +1,12 @@
 import { useEffect, useState } from "react";
-import { API_LEXIMENTOR_BASE_URL } from "@/constants";
-import { fetchWithAuth } from "@/dataService";
+import leximentorService from "../../services/leximentor.service";
 
 const GetChallengeMetadata = () => {
     const [drillChallengeAnalytics, setDrillChallengeAnalytics] = useState([]);
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const res1 = await fetchWithAuth(`${API_LEXIMENTOR_BASE_URL}/analytics/drill/challenge/metadata`);
-                const getChallengeMetadata = await res1.json();
+                const getChallengeMetadata = await leximentorService.getChallengeMetadataAnalytics();
                 setDrillChallengeAnalytics(getChallengeMetadata);
             } catch (error) {
                 console.error("Failed to fetch challenge metadata:", error);

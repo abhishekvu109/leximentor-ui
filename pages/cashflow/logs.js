@@ -27,9 +27,10 @@ import {
     ArrowUp,
     Trash2
 } from "lucide-react";
+export const API_CATEGORY_SEARCH_URL = null; // To be removed
 import { useAuth } from "../../context/AuthContext";
-import { postDataAsJson, fetchData, DeleteByObject } from "../../dataService";
-import { API_CASHFLOW_BASE_URL, API_CATEGORY_SEARCH_URL } from "../../constants";
+import householdService from "../../services/household.service";
+import categoryService from "../../services/category.service";
 
 const formatDateArray = (dateArray) => {
     if (!dateArray || !Array.isArray(dateArray)) return "N/A";
@@ -96,7 +97,7 @@ const ExpenseLogsLogic = () => {
         try {
             // Fetch Households (Keep these cached or only fetch if empty)
             if (households.length === 0) {
-                const houseRes = await postDataAsJson(`${API_CASHFLOW_BASE_URL}/households/household/search`, {
+                const houseRes = await householdService.searchHouseholds({
                     owner: user.username
                 });
                 if (houseRes?.data) setHouseholds(houseRes.data);
@@ -104,7 +105,7 @@ const ExpenseLogsLogic = () => {
 
             // Fetch Categories (Cache if possible)
             if (categories.length === 0) {
-                const catRes = await postDataAsJson(API_CATEGORY_SEARCH_URL, {});
+                const catRes = await categoryService.searchCategories({});
                 if (catRes?.data) setCategories(catRes.data);
             }
 
@@ -117,7 +118,7 @@ const ExpenseLogsLogic = () => {
             };
 
             // Fetch Transactions with Filters
-            const transRes = await postDataAsJson(`${API_CASHFLOW_BASE_URL}/expenses/expense/search`, searchPayload);
+            const transRes = await householdService.searchExpenses(searchPayload);
             if (transRes?.data) {
                 setTransactions(transRes.data);
                 setCurrentPage(1); // Reset to first page on new search
@@ -181,7 +182,7 @@ const ExpenseLogsLogic = () => {
         ];
 
         try {
-            await postDataAsJson(`${API_CASHFLOW_BASE_URL}/expenses/expense`, payload);
+            await householdService.addExpense(payload);
             setFormData({
                 description: "",
                 amount: "",
@@ -289,7 +290,7 @@ const ExpenseLogsLogic = () => {
 
         try {
             const payload = selectedRefIds.map(refId => ({ refId }));
-            await DeleteByObject(`${API_CASHFLOW_BASE_URL}/expenses/expense`, payload);
+            await householdService.deleteExpense(payload);
             setSelectedRefIds([]);
             refreshData();
         } catch (err) {
