@@ -18,7 +18,7 @@ const leximentorService = {
         return apiClient.get(`${ENDPOINTS.LEXIMENTOR.BASE}/drill/metadata`);
     },
     getChallengeReport: (challengeId) => {
-        return apiClient.get(`${ENDPOINTS.LEXIMENTOR.BASE}/drill/metadata/challenges/challenge/${challengeId}/report`);
+        return apiClient.get(`${ENDPOINTS.LEXIMENTOR.CHALLENGE(challengeId)}/report`);
     },
     getWordDetails: (wordRefId) => {
         return apiClient.get(`${ENDPOINTS.LEXIMENTOR.BASE}/inventory/words/${wordRefId}`);
@@ -43,6 +43,9 @@ const leximentorService = {
             params: { drillId, drillType }
         });
     },
+    getChallenge: (id) => {
+        return apiClient.get(ENDPOINTS.LEXIMENTOR.CHALLENGE(id));
+    },
     deleteChallenge: (refId) => {
         return apiClient.delete(`${ENDPOINTS.LEXIMENTOR.BASE}/drill/metadata/challenges/${refId}`);
     },
@@ -60,13 +63,13 @@ const leximentorService = {
         return apiClient.get(`${ENDPOINTS.LEXIMENTOR.BASE}/drill/metadata/sets/words/data/${drillRefId}`);
     },
     getChallengeScores: (challengeId) => {
-        return apiClient.get(`${ENDPOINTS.LEXIMENTOR.BASE}/drill/metadata/challenges/challenge/${challengeId}/scores`);
+        return apiClient.get(`${ENDPOINTS.LEXIMENTOR.CHALLENGE(challengeId)}/scores`);
     },
     getDrillSet: (drillId) => {
         return apiClient.get(`${ENDPOINTS.LEXIMENTOR.BASE}/drill/metadata/sets/${drillId}`);
     },
     updateChallengeScores: (challengeId, payload) => {
-        return apiClient.put(`${ENDPOINTS.LEXIMENTOR.BASE}/drill/metadata/challenges/challenge/${challengeId}/scores`, payload);
+        return apiClient.put(`${ENDPOINTS.LEXIMENTOR.CHALLENGE(challengeId)}/scores`, payload);
     },
     textToSpeech: (text) => {
         return apiClient.post(ENDPOINTS.LEXIMENTOR.TTS, { text }, {

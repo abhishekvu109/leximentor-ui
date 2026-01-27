@@ -10,7 +10,7 @@ export const ENDPOINTS = {
     CASHFLOW: {
         BASE: '/cashflow',
         HOUSEHOLDS: '/cashflow/households',
-        HOUSEHOLD: (id) => `/cashflow/households/${id}`,
+        HOUSEHOLD: (id) => `/cashflow/households/household/${id}`,
         HOUSEHOLD_MEMBERS: '/cashflow/households/household-members/household-member',
         BUDGETS: '/cashflow/households/budgets/budget',
         DEPOSITS: '/cashflow/households/deposits/deposit',
@@ -21,13 +21,16 @@ export const ENDPOINTS = {
     FITMATE: {
         BASE: '/fitmate',
         EXERCISES: '/fitmate/exercises',
+        EXERCISE: (id) => `/fitmate/exercises/exercise/${id}`,
         ROUTINES: '/fitmate/routines',
+        ROUTINE: (id) => `/fitmate/routines/routine/${id}`,
         BODY_PARTS: '/fitmate/bodyparts',
     },
     LEXIMENTOR: {
         BASE: '/leximentor',
-        DRILLS: '/leximentor/drills',
-        CHALLENGES: '/leximentor/challenges',
+        DRILLS: '/leximentor/drill/metadata',
+        CHALLENGES: '/leximentor/drill/metadata/challenges',
+        CHALLENGE: (id) => `/leximentor/drill/metadata/challenges/challenge/${id}`,
         TTS: '/tts/text2speech',
     },
     SYNAPSTER: {

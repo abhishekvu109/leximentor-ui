@@ -9,7 +9,7 @@ const fitmateService = {
         return apiClient.post(`${ENDPOINTS.FITMATE.EXERCISES}/search`, payload);
     },
     getExercise: (id) => {
-        return apiClient.get(`${ENDPOINTS.FITMATE.EXERCISES}/${id}`);
+        return apiClient.get(ENDPOINTS.FITMATE.EXERCISE(id));
     },
     getRoutines: () => {
         return apiClient.get(`${ENDPOINTS.FITMATE.ROUTINES}/routine`);
@@ -18,7 +18,7 @@ const fitmateService = {
         return apiClient.get(`${ENDPOINTS.FITMATE.ROUTINES}/routines`);
     },
     getRoutine: (id) => {
-        return apiClient.get(`${ENDPOINTS.FITMATE.ROUTINES}/routine/${id}`);
+        return apiClient.get(ENDPOINTS.FITMATE.ROUTINE(id));
     },
     createRoutine: (payload) => {
         return apiClient.post(`${ENDPOINTS.FITMATE.ROUTINES}/routine`, payload);
