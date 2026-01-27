@@ -30,7 +30,10 @@ const fitmateService = {
         return apiClient.delete(`${ENDPOINTS.FITMATE.ROUTINES}/routine`, { data: [{ refId }] });
     },
     updateDrill: (payload) => {
-        return apiClient.put(`${ENDPOINTS.FITMATE.BASE}/drills/drill`, payload);
+        return apiClient.put(`${ENDPOINTS.FITMATE.DRILLS}/drill`, payload);
+    },
+    deleteDrill: (refId) => {
+        return apiClient.delete(`${ENDPOINTS.FITMATE.DRILLS}/drill`, { data: { refId } });
     },
     getBodyParts: () => {
         return apiClient.get(ENDPOINTS.FITMATE.BODY_PARTS);

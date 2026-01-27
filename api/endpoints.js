@@ -25,6 +25,7 @@ export const ENDPOINTS = {
         ROUTINES: '/fitmate/routines',
         ROUTINE: (id) => `/fitmate/routines/routine/${id}`,
         BODY_PARTS: '/fitmate/bodyparts',
+        DRILLS: '/fitmate/drills',
     },
     LEXIMENTOR: {
         BASE: '/leximentor',

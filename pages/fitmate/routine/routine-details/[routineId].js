@@ -299,13 +299,17 @@ const RoutineLogger = ({ initialData }) => {
     const handleDrillDelete = async (drill) => {
         if (!confirm("Remove this exercise from routine?")) return;
         try {
-            // Assuming delete drill endpoint or similar logic
-            // Ideally we need an endpoint for deleting drill
-            // For now just removing from UI to mock
-            const newDrills = routine.drills.filter(d => d.refId !== drill.refId);
-            setRoutine({ ...routine, drills: newDrills });
-            alert("Deleted (Mock)"); // Replace with actual API call if available
-        } catch (e) { console.error(e); }
+            await fitmateService.deleteDrill(drill.refId);
+            // Refresh routine data after successful deletion
+            const updatedRoutine = await fitmateService.getRoutine(routineId);
+            if (updatedRoutine?.data) {
+                setRoutine(updatedRoutine.data);
+            }
+            alert("Exercise removed successfully!");
+        } catch (e) {
+            console.error("Failed to delete drill:", e);
+            alert("Failed to remove exercise. Please try again.");
+        }
     };
 
 
