@@ -1,8 +1,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import Script from "next/script";
-import { API_LEXIMENTOR_BASE_URL } from "@/constants";
-import { fetchWithAuth } from "@/dataService";
+import leximentorService from "../../../../services/leximentor.service";
 import Layout from "@/components/layout/Layout";
 import React from 'react';
 
@@ -31,8 +30,8 @@ const LoadGuessWordDrillChallenge = () => {
                     setChallengeId(challengeIdVal);
 
                     const [setData, wordData] = await Promise.all([
-                        fetchWithAuth(`${API_LEXIMENTOR_BASE_URL}/drill/metadata/sets/${drillRefIdVal}`).then(res => res.json()),
-                        fetchWithAuth(`${API_LEXIMENTOR_BASE_URL}/drill/metadata/sets/words/data/${drillRefIdVal}`).then(res => res.json())
+                        leximentorService.getDrillSet(drillRefIdVal),
+                        leximentorService.getDrillSetWords(drillRefIdVal)
                     ]);
 
                     if (setData && wordData) {
@@ -136,18 +135,9 @@ const LoadGuessWordDrillChallenge = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            const URL = `${API_LEXIMENTOR_BASE_URL}/drill/metadata/challenges/challenge/${challengeId}/scores`;
-            const response = await fetchWithAuth(URL, {
-                method: 'PUT',
-                body: JSON.stringify(formData),
-            });
+            await leximentorService.updateChallengeScores(challengeId, formData);
 
-            if (!response.ok) {
-                setNotificationSuccess(false);
-                setNotificationMessage("Network response was not ok");
-                setNotificationVisible(true);
-                throw new Error('Network response was not ok');
-            }
+            await leximentorService.updateChallengeScores(challengeId, formData);
 
             setNotificationSuccess(true);
             setNotificationMessage("Response has been updated.");

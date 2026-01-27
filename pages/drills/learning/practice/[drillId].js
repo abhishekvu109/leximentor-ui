@@ -1,8 +1,7 @@
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { fetchWithAuth } from "@/dataService";
-import { API_LEXIMENTOR_BASE_URL } from "@/constants";
+import leximentorService from "../../../../services/leximentor.service";
 import Layout from "@/components/layout/Layout";
 import FlashcardView from "@/components/practice/FlashcardView";
 import DetailedView from "@/components/practice/DetailedView";
@@ -29,25 +28,20 @@ export default function VocabularyCard() {
         const loadData = async () => {
             setLoading(true);
             try {
-                const drillSetRes = await fetchWithAuth(`${API_LEXIMENTOR_BASE_URL}/drill/metadata/sets/${drillId}`);
-                if (!drillSetRes.ok) throw new Error("Failed to load drill set");
-                const drillSetJson = await drillSetRes.json();
+                const drillSetRes = await leximentorService.getDrillSet(drillId);
+                const drillSetJson = drillSetRes;
                 setDrillSetData(drillSetJson);
 
                 if (drillSetJson.data?.[0]?.wordRefId) {
                     const wordRefId = drillSetJson.data[0].wordRefId;
-                    const sourcesRes = await fetchWithAuth(`${API_LEXIMENTOR_BASE_URL}/inventory/words/${wordRefId}/sources`);
-                    if (sourcesRes.ok) {
-                        const sourcesJson = await sourcesRes.json();
-                        setSourcesData(sourcesJson);
+                    const sourcesRes = await leximentorService.getWordSources(wordRefId);
+                    const sourcesJson = sourcesRes;
+                    setSourcesData(sourcesJson);
 
-                        if (sourcesJson.data?.[0]) {
-                            const firstSource = sourcesJson.data[0];
-                            const metaRes = await fetchWithAuth(`${API_LEXIMENTOR_BASE_URL}/inventory/words/${wordRefId}/sources/${firstSource}`);
-                            if (metaRes.ok) {
-                                setWordMetadata(await metaRes.json());
-                            }
-                        }
+                    if (sourcesJson.data?.[0]) {
+                        const firstSource = sourcesJson.data[0];
+                        const metaRes = await leximentorService.getWordMetadata(wordRefId, firstSource);
+                        setWordMetadata(metaRes);
                     }
                 }
             } catch (error) {

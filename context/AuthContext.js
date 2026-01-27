@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
-import { API_LOGIN_URL, API_REGISTER_URL, API_LOGOUT_URL } from '../constants';
-import { setTokens, clearTokens, getAuthToken, fetchWithAuth } from '../dataService';
+import authService from '../services/auth.service';
 import { AlertCircle, LogOut } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -28,7 +27,7 @@ export const AuthProvider = ({ children }) => {
     const router = useRouter();
 
     useEffect(() => {
-        const token = getAuthToken();
+        const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
         const storedUsername = typeof window !== 'undefined' ? localStorage.getItem('username') : null;
         if (token) {
             const decoded = parseJwt(token);
@@ -51,16 +50,11 @@ export const AuthProvider = ({ children }) => {
 
     const login = async (username, password) => {
         try {
-            const response = await fetch(API_LOGIN_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, password }),
-            });
-
-            const result = await response.json();
-            if (response.ok && result.data && result.data.token) {
-                setTokens(result.data.token, result.data.refreshToken);
+            const result = await authService.login(username, password);
+            if (result.data && result.data.token) {
                 if (typeof window !== 'undefined') {
+                    localStorage.setItem('token', result.data.token);
+                    localStorage.setItem('refreshToken', result.data.refreshToken);
                     localStorage.setItem('username', username);
                 }
 
@@ -78,38 +72,30 @@ export const AuthProvider = ({ children }) => {
                 return { success: false, message: result.meta?.description || 'Login failed' };
             }
         } catch (error) {
-            return { success: false, message: 'An error occurred during login' };
+            console.error('Login error:', error);
+            return { success: false, message: error.response?.data?.meta?.description || 'An error occurred during login' };
         }
     };
 
     const register = async (userData) => {
         try {
-            const response = await fetch(API_REGISTER_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(userData),
-            });
-
-            const result = await response.json();
-            if (response.ok) {
-                return { success: true };
-            } else {
-                return { success: false, message: result.meta?.description || 'Registration failed' };
-            }
+            await authService.register(userData);
+            return { success: true };
         } catch (error) {
-            return { success: false, message: 'An error occurred during registration' };
+            console.error('Registration error:', error);
+            return { success: false, message: error.response?.data?.meta?.description || 'An error occurred during registration' };
         }
     };
 
     const logout = async () => {
         try {
-            // Send request to logout endpoint
-            await fetchWithAuth(API_LOGOUT_URL, { method: 'POST' });
+            await authService.logout();
         } catch (error) {
             console.error('Logout API call failed:', error);
         } finally {
-            clearTokens();
             if (typeof window !== 'undefined') {
+                localStorage.removeItem('token');
+                localStorage.removeItem('refreshToken');
                 localStorage.removeItem('username');
             }
             setUser(null);
@@ -119,7 +105,11 @@ export const AuthProvider = ({ children }) => {
 
     const handleConfirmExpiry = () => {
         setSessionExpired(false);
-        clearTokens();
+        if (typeof window !== 'undefined') {
+            localStorage.removeItem('token');
+            localStorage.removeItem('refreshToken');
+            localStorage.removeItem('username');
+        }
         setUser(null);
         router.push('/auth/login');
     };

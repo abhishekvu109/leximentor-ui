@@ -18,8 +18,7 @@ import {
 } from "recharts";
 import Link from "next/link";
 import { useAuth } from "../../context/AuthContext";
-import { postDataAsJson } from "../../dataService";
-import { API_CASHFLOW_BASE_URL } from "../../constants";
+import householdService from "../../services/household.service";
 
 // --- Mock Data ---
 const MOCK_STATS = [
@@ -85,7 +84,7 @@ const CashflowDashboard = () => {
 
             try {
                 // Fetch Households
-                const houseResponse = await postDataAsJson(`${API_CASHFLOW_BASE_URL}/households/household/search`, {
+                const houseResponse = await householdService.searchHouseholds({
                     user: user.username
                 });
                 if (houseResponse?.data) {
@@ -93,7 +92,7 @@ const CashflowDashboard = () => {
                 }
 
                 // Fetch Recent Transactions
-                const transResponse = await postDataAsJson(`${API_CASHFLOW_BASE_URL}/expenses/expense/search`, {
+                const transResponse = await householdService.searchExpenses({
                     owner: user.username
                 });
                 if (transResponse?.data) {

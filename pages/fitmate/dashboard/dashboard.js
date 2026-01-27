@@ -1,8 +1,7 @@
 
 import Layout from "@/components/layout/Layout";
 import { useEffect, useState } from "react";
-import { fetchData } from "@/dataService";
-import { API_FITMATE_BASE_URL } from "@/constants";
+import fitmateService from "../../../services/fitmate.service";
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
     PieChart, Pie, Cell, AreaChart, Area
@@ -72,9 +71,7 @@ const FitmateDashboardLogic = () => {
     useEffect(() => {
         const loadData = async () => {
             try {
-                // Fetching all routines for analytics
-                // Note: In production you'd want aggregation endpoints
-                const res = await fetchData(`${API_FITMATE_BASE_URL}/routines/routines`);
+                const res = await fitmateService.getRoutinesList();
                 const routines = res.data || [];
 
                 // 1. Calculate KPIs
