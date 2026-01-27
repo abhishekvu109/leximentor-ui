@@ -785,7 +785,7 @@ const AddExpenseModal = ({ isOpen, onClose, onSuccess, householdRefId }) => {
             const fetchCategories = async () => {
                 setLoadingCategories(true);
                 try {
-                    const response = await postDataAsJson(API_CATEGORY_SEARCH_URL, {});
+                    const response = await categoryService.searchCategories({});
                     if (response?.data) {
                         setCategories(response.data);
                     }
