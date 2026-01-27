@@ -2491,7 +2491,7 @@ const HouseholdDetailsLogic = () => {
         setError("");
         try {
             // Fetch all categories once for mapping names to IDs
-            const catResponse = await postDataAsJson(API_CATEGORY_SEARCH_URL, {});
+            const catResponse = await categoryService.searchCategories({});
             const categoryMap = {};
             if (catResponse?.data && Array.isArray(catResponse.data)) {
                 catResponse.data.forEach(cat => {
