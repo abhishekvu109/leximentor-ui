@@ -2507,9 +2507,19 @@ const HouseholdDetailsLogic = () => {
             }
 
             const response = await householdService.getHousehold(id);
+            console.log("[Diagnostic] getHousehold response:", response);
 
-            if (response?.data && response.data.length > 0) {
-                const data = response.data[0];
+            // Handle both array and single object responses
+            let data = null;
+            if (response?.data) {
+                if (Array.isArray(response.data)) {
+                    data = response.data.length > 0 ? response.data[0] : null;
+                } else {
+                    data = response.data;
+                }
+            }
+
+            if (data) {
                 console.log("[Diagnostic] Raw Household Data:", data);
 
                 // Final Fallback: Resolve missing categories individually via GET API
