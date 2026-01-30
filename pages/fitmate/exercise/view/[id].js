@@ -251,12 +251,9 @@ const ExerciseDetailContent = () => {
 
     const fetchExerciseImage = async (refId) => {
         try {
-            const res = await fitmateService.getExerciseResource(refId, 'GIF');
-            if (!res.ok) throw new Error("Image fetch failed");
+            const blob = await fitmateService.getExerciseResource(refId, 'GIF');
 
-            // The API returns binary data direttamente, not JSON
-            const blob = await res.blob();
-            if (blob.size > 0 && blob.type.startsWith('image/')) {
+            if (blob && blob.size > 0 && blob.type.startsWith('image/')) {
                 const imageUrl = URL.createObjectURL(blob);
                 setExerciseImage(imageUrl);
                 console.log("Fitmate: Image blob converted to URL:", imageUrl);
@@ -321,14 +318,9 @@ const ExerciseDetailContent = () => {
         formData.append('files', file);
 
         try {
-            const res = await fitmateService.updateExerciseResources(exercise.refId, 'GIF', formData);
-
-            if (res.ok) {
-                showNotification({ message: "Image updated successfully", type: 'success' });
-                loadExerciseData();
-            } else {
-                throw new Error("Upload failed");
-            }
+            await fitmateService.updateExerciseResources(exercise.refId, 'GIF', formData);
+            showNotification({ message: "Image updated successfully", type: 'success' });
+            loadExerciseData();
         } catch (error) {
             console.error(error);
             showNotification({ message: "Failed to upload image", type: 'error' });
@@ -346,16 +338,11 @@ const ExerciseDetailContent = () => {
         formData.append('files', file);
 
         try {
-            const res = await fitmateService.updateExerciseResources(exercise.refId, 'THUMBNAIL', formData);
-
-            if (res.ok) {
-                showNotification({ message: "Thumbnail updated successfully", type: 'success' });
-                // We don't necessarily need to reload all data if the thumb isn't shown here, 
-                // but good for consistency.
-                loadExerciseData();
-            } else {
-                throw new Error("Thumbnail upload failed");
-            }
+            await fitmateService.updateExerciseResources(exercise.refId, 'THUMBNAIL', formData);
+            showNotification({ message: "Thumbnail updated successfully", type: 'success' });
+            // We don't necessarily need to reload all data if the thumb isn't shown here, 
+            // but good for consistency.
+            loadExerciseData();
         } catch (error) {
             console.error(error);
             showNotification({ message: "Failed to upload thumbnail", type: 'error' });

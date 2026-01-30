@@ -145,9 +145,25 @@ const CartExerciseThumb = ({ refId, name }) => {
 
     useEffect(() => {
         const fetchThumb = async () => {
+            setThumbUrl(null); // Reset when refId changes or fetch starts
             try {
-                const blob = await fitmateService.getThumbnail(refId);
-                if (blob.size > 0 && blob.type.startsWith('image/')) {
+                let blob;
+                try {
+                    blob = await fitmateService.getThumbnail(refId);
+                } catch (err) {
+                    // Ignore THUMBNAIL error, will try GIF fallback
+                }
+
+                // If thumbnail is missing or invalid, try falling back to GIF
+                if (!blob || blob.size === 0 || !blob.type.startsWith('image/')) {
+                    try {
+                        blob = await fitmateService.getExerciseResource(refId, 'GIF');
+                    } catch (err) {
+                        // Both failed
+                    }
+                }
+
+                if (blob && blob.size > 0 && blob.type.startsWith('image/')) {
                     setThumbUrl(URL.createObjectURL(blob));
                 }
             } catch (e) {
@@ -282,9 +298,25 @@ const ExerciseGridItem = ({ name, refId, isSelected, onClick }) => {
 
     useEffect(() => {
         const fetchThumb = async () => {
+            setThumbUrl(null); // Reset when refId changes or fetch starts
             try {
-                const blob = await fitmateService.getThumbnail(refId);
-                if (blob.size > 0 && blob.type.startsWith('image/')) {
+                let blob;
+                try {
+                    blob = await fitmateService.getThumbnail(refId);
+                } catch (err) {
+                    // Ignore THUMBNAIL error, will try GIF fallback
+                }
+
+                // If thumbnail is missing or invalid, try falling back to GIF
+                if (!blob || blob.size === 0 || !blob.type.startsWith('image/')) {
+                    try {
+                        blob = await fitmateService.getExerciseResource(refId, 'GIF');
+                    } catch (err) {
+                        // Both failed
+                    }
+                }
+
+                if (blob && blob.size > 0 && blob.type.startsWith('image/')) {
                     setThumbUrl(URL.createObjectURL(blob));
                 }
             } catch (e) {
@@ -520,7 +552,7 @@ const UnifiedRoutineBuilder = ({
 
                                     return true;
                                 })
-                                .map((ex, i) => <ExerciseGridItem key={i} name={ex.name} refId={ex.refId} onClick={() => addToCart(ex)} />)}
+                                .map((ex) => <ExerciseGridItem key={ex.refId || Math.random()} name={ex.name} refId={ex.refId} onClick={() => addToCart(ex)} />)}
                         </div>
                     </div>
                 </div>
@@ -536,7 +568,7 @@ const UnifiedRoutineBuilder = ({
                     ) : (
                         <div className="flex-1 overflow-y-auto p-8 space-y-6">
                             {exerciseCart.map((item, exIdx) => (
-                                <div key={exIdx} className="bg-white rounded-2xl shadow-sm border border-gray-100/50 overflow-hidden animate-in slide-in-from-right-4 duration-300">
+                                <div key={item.refId ? `${item.refId}-${exIdx}` : exIdx} className="bg-white rounded-2xl shadow-sm border border-gray-100/50 overflow-hidden animate-in slide-in-from-right-4 duration-300">
                                     <div className="p-4 flex gap-5 items-start bg-gradient-to-r from-white to-gray-50/30">
                                         <div className="w-16 h-16 bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden shrink-0 flex items-center justify-center p-1">
                                             <CartExerciseThumb refId={item.refId} name={item.exercise} />

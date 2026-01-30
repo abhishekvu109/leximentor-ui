@@ -18,13 +18,30 @@ const ExerciseCard = ({ exercise, onDelete, onEdit, onThumbnailUpload }) => {
 
     useEffect(() => {
         const fetchThumb = async () => {
+            setThumbUrl(null); // Reset when refId changes or fetch starts
+
             try {
-                const blob = await fitmateService.getThumbnail(exercise.refId);
-                if (blob.size > 0 && blob.type.startsWith('image/')) {
+                let blob;
+                try {
+                    blob = await fitmateService.getThumbnail(exercise.refId);
+                } catch (err) {
+                    // Ignore THUMBNAIL error, will try GIF fallback
+                }
+
+                // If thumbnail is missing or invalid (or failed), try falling back to GIF
+                if (!blob || blob.size === 0 || !blob.type.startsWith('image/')) {
+                    try {
+                        blob = await fitmateService.getExerciseResource(exercise.refId, 'GIF');
+                    } catch (err) {
+                        // Both failed
+                    }
+                }
+
+                if (blob && blob.size > 0 && blob.type.startsWith('image/')) {
                     setThumbUrl(URL.createObjectURL(blob));
                 }
             } catch (e) {
-                console.error("Thumb fetch failed", e);
+                console.error("Image fetch failed", e);
             }
         };
         if (exercise.refId) fetchThumb();
@@ -534,9 +551,9 @@ const ExerciseLibrary = () => {
                 </div>
             ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                    {paginatedExercises.map((ex, i) => (
+                    {paginatedExercises.map((ex) => (
                         <ExerciseCard
-                            key={i}
+                            key={ex.refId || ex.id || Math.random()}
                             exercise={ex}
                             onDelete={handleDelete}
                             onEdit={() => { }}
