@@ -1,30 +1,32 @@
-
 import Layout from "@/components/layout/Layout";
 import { useEffect, useState } from "react";
 import fitmateService from "../../../services/fitmate.service";
+import { useAuth } from "../../../context/AuthContext";
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
-    PieChart, Pie, Cell, AreaChart, Area
+    PieChart, Pie, Cell, AreaChart, Area, Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis
 } from "recharts";
 import {
     Activity, Dumbbell, Calendar, Flame, TrendingUp, Clock,
-    Award, ChevronRight, User, MoreHorizontal
+    Award, ChevronRight, User, MoreHorizontal, Sparkles, Target, Zap
 } from "lucide-react";
 import Link from "next/link";
 
 
 // --- Chart Config & Components ---
-const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
+const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#ec4899'];
 
 const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
         return (
-            <div className="bg-white p-3 border border-gray-100 shadow-lg rounded-xl text-xs">
-                <p className="font-bold text-gray-700">{label}</p>
+            <div className="bg-white p-4 border border-gray-100 shadow-xl rounded-2xl text-xs">
+                <p className="font-bold text-gray-800 mb-2">{label}</p>
                 {payload.map((p, i) => (
-                    <p key={i} style={{ color: p.color }} className="font-medium">
-                        {p.name}: {p.value}
-                    </p>
+                    <div key={i} className="flex items-center gap-2 mb-1">
+                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: p.color }} />
+                        <span className="text-gray-500 font-medium">{p.name}:</span>
+                        <span className="text-gray-800 font-black">{p.value}</span>
+                    </div>
                 ))}
             </div>
         );
@@ -32,15 +34,18 @@ const CustomTooltip = ({ active, payload, label }) => {
     return null;
 };
 
-const DashboardCard = ({ title, value, subtext, icon: Icon, colorClass }) => (
-    <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm flex items-start justify-between transition-all hover:shadow-md">
-        <div>
-            <p className="text-sm font-medium text-gray-400 mb-1">{title}</p>
-            <h3 className="text-2xl font-bold text-gray-800 tracking-tight">{value}</h3>
-            {subtext && <p className={`text-xs mt-1 font-medium ${subtext.includes('+') ? 'text-green-500' : 'text-gray-400'}`}>{subtext}</p>}
+const DashboardCard = ({ title, value, subtext, icon: Icon, colorClass, trend }) => (
+    <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm flex items-start justify-between transition-all hover:shadow-xl hover:-translate-y-1 group">
+        <div className="flex-1">
+            <p className="text-[10px] uppercase font-black text-gray-400 tracking-widest mb-1">{title}</p>
+            <div className="flex items-baseline gap-2">
+                <h3 className="text-3xl font-black text-gray-900 tracking-tight">{value}</h3>
+                {trend && <span className={`text-[10px] font-bold ${trend > 0 ? 'text-green-500' : 'text-gray-400'}`}>{trend > 0 ? `+${trend}%` : `${trend}%`}</span>}
+            </div>
+            {subtext && <p className="text-xs mt-2 font-bold text-gray-400">{subtext}</p>}
         </div>
-        <div className={`p-3 rounded-xl ${colorClass} bg-opacity-10 text-opacity-100`}>
-            <Icon size={22} className={colorClass.replace('bg-', 'text-')} />
+        <div className={`p-4 rounded-2xl ${colorClass} bg-opacity-10 text-opacity-100 group-hover:scale-110 transition-transform`}>
+            <Icon size={24} className={colorClass.replace('bg-', 'text-')} />
         </div>
     </div>
 );
@@ -48,8 +53,8 @@ const DashboardCard = ({ title, value, subtext, icon: Icon, colorClass }) => (
 const SectionHeader = ({ title, subtitle, action }) => (
     <div className="flex justify-between items-center mb-6">
         <div>
-            <h2 className="text-lg font-bold text-gray-800">{title}</h2>
-            {subtitle && <p className="text-sm text-gray-400">{subtitle}</p>}
+            <h2 className="text-xl font-black text-gray-800 tracking-tight">{title}</h2>
+            {subtitle && <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mt-1">{subtitle}</p>}
         </div>
         {action}
     </div>
@@ -57,272 +62,271 @@ const SectionHeader = ({ title, subtitle, action }) => (
 
 
 const FitmateDashboardLogic = () => {
-    const [stats, setStats] = useState({
-        totalWorkouts: 0,
-        volume: 0,
-        streak: 3, // Mocked for now
-        calories: 0
-    });
-    const [recentActivity, setRecentActivity] = useState([]);
-    const [chartData, setChartData] = useState([]);
-    const [pieData, setPieData] = useState([]);
+    const { user } = useAuth();
+    const [analytics, setAnalytics] = useState(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         const loadData = async () => {
+            if (!user?.username) return;
             try {
-                const res = await fitmateService.getRoutinesList();
-                const routines = res.data || [];
-
-                // 1. Calculate KPIs
-                const totalWorkouts = routines.length;
-
-                // Estimate volume (sum of all weights in all sets in all drills)
-                let volume = 0;
-                let cals = 0;
-
-                // 2. Process for Charts
-                // Group by Date for Bar Chart
-                const groupedByDate = {};
-                const groupedByType = {};
-
-                routines.forEach(r => {
-                    const date = r.workoutDate; // YYYY-MM-DD
-                    if (!groupedByDate[date]) groupedByDate[date] = { date, workouts: 0, volume: 0 };
-                    groupedByDate[date].workouts += 1;
-
-                    // Training Type distribution
-                    const type = r.training?.name || 'Other';
-                    if (!groupedByType[type]) groupedByType[type] = 0;
-                    groupedByType[type] += 1;
-
-                    // Metrics Drill Check
-                    if (r.drills) {
-                        r.drills.forEach(drill => {
-                            // Assuming drill has flattened sets or we might need to look deeper. 
-                            // The structure in previous steps was Flattened drills (1 set = 1 drill entry) for API,
-                            // OR embedded sets. Let's assume the read model returns drilled arrays.
-                            // Actually user's API structure: Routine -> drills (array).
-
-                            // Simple volume calc: weight * reps
-                            if (drill.measurement && drill.repetition) {
-                                volume += (drill.measurement * drill.repetition);
-                            }
-                        });
-                    }
-                });
-
-                // Convert charts to Arrays
-                // Sort by date and take last 7-14 entries
-                const barData = Object.values(groupedByDate)
-                    .sort((a, b) => new Date(a.date) - new Date(b.date))
-                    .slice(-7);
-
-                const pData = Object.keys(groupedByType).map(k => ({
-                    name: k, value: groupedByType[k]
-                }));
-
-                setChartData(barData);
-                setPieData(pData);
-                setStats({
-                    totalWorkouts,
-                    volume: Math.round(volume),
-                    streak: 4, // Mock
-                    calories: totalWorkouts * 320 // Mock avg cals
-                });
-
-                // Recent Activity
-                setRecentActivity(routines.slice(0, 5)); // routines usually returned desc? if not sort.
+                const res = await fitmateService.getOverallAnalytics(user.username);
+                setAnalytics(res.data);
                 setLoading(false);
-
             } catch (e) {
                 console.error("Dashboard Load Error", e);
                 setLoading(false);
             }
         };
         loadData();
-    }, []);
+    }, [user?.username]);
 
     if (loading) return (
-        <div className="flex h-96 items-center justify-center text-gray-400">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <div className="flex h-96 items-center justify-center">
+            <div className="flex flex-col items-center gap-4">
+                <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-600 border-t-transparent shadow-xl shadow-blue-200"></div>
+                <p className="text-sm font-black text-gray-400 uppercase tracking-widest animate-pulse">Analyzing Performance...</p>
+            </div>
         </div>
     );
 
+    if (!analytics) return (
+        <div className="flex h-96 items-center justify-center text-gray-400 flex-col gap-4">
+            <Activity size={48} className="opacity-20" />
+            <p className="font-bold">No analytics found. Start logging workouts!</p>
+        </div>
+    );
+
+    const { summary, workoutTrends, bodyPartWorkoutVolume, mostFrequentExercises, routineDistributionByTrainingType } = analytics;
+
+    // Process Body Part volume for Radar Chart
+    const radarData = Object.keys(bodyPartWorkoutVolume || {}).map(k => ({
+        subject: k,
+        A: bodyPartWorkoutVolume[k],
+        fullMark: 100
+    })).sort((a, b) => b.A - a.A).slice(0, 8);
+
+    // Process Pie Data
+    const pieData = Object.keys(routineDistributionByTrainingType || {}).map(k => ({
+        name: k, value: routineDistributionByTrainingType[k]
+    }));
+
     return (
-        <div className="max-w-7xl mx-auto space-y-8">
+        <div className="max-w-7xl mx-auto space-y-10 pb-20">
             {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-800">Welcome back, Athlete! 👋</h1>
-                    <p className="text-gray-500 text-sm">Here is your fitness activity for this week.</p>
+                    <h1 className="text-4xl font-black text-gray-900 tracking-tighter">Athlete Dashboard <span className="text-blue-600">.</span></h1>
+                    <p className="text-gray-400 font-bold mt-1">Hustle for the muscle, {user?.username || 'Champion'}.</p>
                 </div>
-                <div className="flex gap-3">
+                <div className="flex gap-4">
                     <Link href="/fitmate/routine/make-routine">
-                        <button className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-bold shadow-lg shadow-blue-200 transition-all active:scale-95">
-                            <Dumbbell size={18} /> Log Workout
+                        <button className="flex items-center gap-3 bg-slate-900 border-2 border-slate-900 hover:bg-black hover:border-black text-white px-8 py-4 rounded-3xl font-black text-sm uppercase tracking-widest shadow-2xl transition-all active:scale-95 group">
+                            <Zap size={18} className="text-yellow-400 group-hover:scale-125 transition-transform" /> Start Session
                         </button>
                     </Link>
                 </div>
             </div>
 
             {/* KPI Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <DashboardCard
-                    title="Total Workouts"
-                    value={stats.totalWorkouts}
-                    subtext="+2 this week"
-                    icon={Activity}
-                    colorClass="bg-blue-500 text-blue-500" // Light bg is handled by 'bg-opacity-10' in component
+                    title="Total Routines"
+                    value={summary.totalRoutinesCompleted}
+                    subtext="Sessions finished"
+                    icon={Award}
+                    colorClass="bg-blue-500 text-blue-500"
                 />
                 <DashboardCard
-                    title="Volume Lifted"
-                    value={`${(stats.volume / 1000).toFixed(1)}k kg`}
-                    subtext="Cumulative load"
-                    icon={Dumbbell}
+                    title="Workout Time"
+                    value={`${Math.round(summary.totalWorkoutDurationMinutes)}m`}
+                    subtext="Total duration"
+                    icon={Clock}
                     colorClass="bg-purple-500 text-purple-500"
                 />
                 <DashboardCard
-                    title="Total Duration"
-                    value={`${Math.floor(stats.totalWorkouts * 45 / 60)}h`}
-                    subtext="Approximate time"
-                    icon={Clock}
+                    title="Calories Burnt"
+                    value={summary.totalCaloriesBurnt}
+                    subtext="Energy expenditure"
+                    icon={Flame}
                     colorClass="bg-orange-500 text-orange-500"
                 />
                 <DashboardCard
-                    title="Current Streak"
-                    value={`${stats.streak} Days`}
-                    subtext="Keep it up!"
-                    icon={Flame}
-                    colorClass="bg-red-500 text-red-500"
+                    title="Unique Exercises"
+                    value={summary.totalUniqueExercises}
+                    subtext="Movement variety"
+                    icon={Target}
+                    colorClass="bg-emerald-500 text-emerald-500"
                 />
             </div>
 
             {/* Charts Section */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Main Activity Chart */}
-                <div className="lg:col-span-2 bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
-                    <SectionHeader title="Activity Overview" subtitle="Workouts per day (Last 7 Days)" />
-                    <div className="h-72">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                {/* Workout Trends */}
+                <div className="lg:col-span-2 bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm">
+                    <SectionHeader title="Workout Trends" subtitle="Performance over time" />
+                    <div className="h-80 w-full mt-4">
                         <ResponsiveContainer width="100%" height="100%">
-                            <AreaChart data={chartData}>
+                            <AreaChart data={workoutTrends}>
                                 <defs>
-                                    <linearGradient id="colorWorkouts" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.2} />
+                                    <linearGradient id="colorWave" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
                                         <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
                                     </linearGradient>
                                 </defs>
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                                 <XAxis
                                     dataKey="date"
-                                    tick={{ fill: '#9ca3af', fontSize: 12 }}
+                                    tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 'bold' }}
                                     axisLine={false}
                                     tickLine={false}
-                                    tickFormatter={(val) => new Date(val).toLocaleDateString(undefined, { weekday: 'short' })}
+                                    tickFormatter={(val) => new Date(val).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                                 />
                                 <YAxis hide domain={[0, 'auto']} />
-                                <Tooltip content={<CustomTooltip />} cursor={{ fill: '#f9fafb' }} />
+                                <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#3b82f6', strokeWidth: 2 }} />
                                 <Area
                                     type="monotone"
-                                    dataKey="workouts"
+                                    dataKey="caloriesBurnt"
+                                    name="Calories"
+                                    stroke="#ec4899"
+                                    strokeWidth={4}
+                                    fillOpacity={0}
+                                />
+                                <Area
+                                    type="monotone"
+                                    dataKey="workoutDurationMinutes"
+                                    name="Duration (min)"
                                     stroke="#3b82f6"
-                                    strokeWidth={3}
+                                    strokeWidth={4}
                                     fillOpacity={1}
-                                    fill="url(#colorWorkouts)"
+                                    fill="url(#colorWave)"
                                 />
                             </AreaChart>
                         </ResponsiveContainer>
                     </div>
                 </div>
 
-                {/* Pie Chart */}
-                <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col">
-                    <SectionHeader title="Training Split" subtitle="Distribution by type" />
-                    <div className="flex-1 min-h-[250px] relative">
+                {/* Training Split */}
+                <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm flex flex-col">
+                    <SectionHeader title="Training Split" subtitle="Volume by category" />
+                    <div className="flex-1 min-h-[300px] relative mt-4">
                         <ResponsiveContainer width="100%" height="100%">
                             <PieChart>
                                 <Pie
                                     data={pieData}
                                     cx="50%"
                                     cy="50%"
-                                    innerRadius={60}
-                                    outerRadius={80}
-                                    paddingAngle={5}
+                                    innerRadius={70}
+                                    outerRadius={100}
+                                    paddingAngle={8}
                                     dataKey="value"
+                                    stroke="none"
                                 >
                                     {pieData.map((entry, index) => (
                                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                                     ))}
                                 </Pie>
-                                <Tooltip />
-                                <Legend verticalAlign="bottom" height={36} iconType="circle" />
+                                <Tooltip content={<CustomTooltip />} />
                             </PieChart>
                         </ResponsiveContainer>
-                        {/* Center Text */}
                         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                            <div className="text-center pb-8">
-                                <p className="text-2xl font-bold text-gray-800">{stats.totalWorkouts}</p>
-                                <p className="text-xs text-gray-400 font-medium uppercase">Sessions</p>
+                            <div className="text-center">
+                                <p className="text-3xl font-black text-gray-800">{summary.totalRoutinesCompleted}</p>
+                                <p className="text-[10px] text-gray-400 font-black uppercase tracking-[0.2em]">Total</p>
                             </div>
                         </div>
+                    </div>
+                    <div className="mt-6 flex flex-wrap justify-center gap-4">
+                        {pieData.map((d, i) => (
+                            <div key={i} className="flex items-center gap-2">
+                                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
+                                <span className="text-xs font-bold text-gray-500">{d.name}</span>
+                            </div>
+                        ))}
                     </div>
                 </div>
             </div>
 
-            {/* Recent History List */}
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-                <div className="p-6 border-b border-gray-50 flex justify-between items-center">
-                    <h2 className="font-bold text-gray-800">Recent History</h2>
-                    <Link href="#" className="text-sm font-semibold text-blue-600 hover:text-blue-700">View All</Link>
+            {/* Exercise & Body Part Grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {/* Body Part Workout Volume */}
+                <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm">
+                    <SectionHeader title="Muscle Focus" subtitle="Regional distribution" />
+                    <div className="h-[350px] w-full">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <RadarChart outerRadius={120} data={radarData}>
+                                <PolarGrid stroke="#f1f5f9" />
+                                <PolarAngleAxis dataKey="subject" tick={{ fill: '#64748b', fontSize: 10, fontWeight: 'bold' }} />
+                                <PolarRadiusAxis hide />
+                                <Radar
+                                    name="Volume"
+                                    dataKey="A"
+                                    stroke="#3b82f6"
+                                    fill="#3b82f6"
+                                    fillOpacity={0.6}
+                                />
+                            </RadarChart>
+                        </ResponsiveContainer>
+                    </div>
                 </div>
-                <div>
-                    {recentActivity.length === 0 ? (
-                        <div className="p-8 text-center text-gray-400">No recent activity found.</div>
-                    ) : (
-                        recentActivity.map((routine, idx) => (
-                            <div key={idx} className="p-4 hover:bg-gray-50 transition-colors border-b border-gray-50 last:border-none flex items-center justify-between group">
+
+                {/* Most Frequent Exercises */}
+                <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm">
+                    <SectionHeader title="Frequent Drill" subtitle="Most performed movements" />
+                    <div className="space-y-4 mt-6">
+                        {mostFrequentExercises?.slice(0, 6).map((ex, idx) => (
+                            <div key={idx} className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl hover:bg-blue-50 transition-colors group">
                                 <div className="flex items-center gap-4">
-                                    <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
-                                        <Dumbbell size={20} />
+                                    <div className="w-10 h-10 bg-white rounded-xl shadow-sm flex items-center justify-center text-blue-600 font-black text-xs">
+                                        {idx + 1}
                                     </div>
                                     <div>
-                                        <h4 className="font-bold text-gray-800">{routine.description || routine.training?.name || 'Untitled Workout'}</h4>
-                                        <div className="flex items-center gap-2 text-xs text-gray-400 mt-1">
-                                            <Calendar size={12} />
-                                            <span>{routine.workoutDate}</span>
-                                            <span className="w-1 h-1 bg-gray-300 rounded-full"></span>
-                                            <span>{routine.training?.name}</span>
-                                        </div>
+                                        <p className="text-sm font-black text-gray-800 group-hover:text-blue-700 transition-colors">{ex.exerciseName}</p>
+                                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Strength Training</p>
                                     </div>
                                 </div>
-
-                                <div className="flex items-center gap-6">
-                                    <div className="hidden sm:block text-right">
-                                        <p className="text-xs font-bold text-gray-500 uppercase">Status</p>
-                                        <p className="text-sm font-bold text-green-600 flex items-center gap-1">
-                                            Completed <CheckCircleIcon size={12} />
-                                        </p>
-                                    </div>
-                                    <button className="p-2 text-gray-300 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all">
-                                        <ChevronRight size={20} />
-                                    </button>
+                                <div className="text-right">
+                                    <p className="text-lg font-black text-gray-800">{ex.frequency}</p>
+                                    <p className="text-[10px] text-gray-400 font-black uppercase">Sets</p>
                                 </div>
                             </div>
-                        ))
-                    )}
+                        ))}
+                    </div>
                 </div>
             </div>
+
+            {/* Efficiency Stat */}
+            {analytics.routineEfficiency && (
+                <div className="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-[2.5rem] p-10 text-white relative overflow-hidden shadow-2xl shadow-blue-200">
+                    <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-10">
+                        <div className="flex-1 space-y-4">
+                            <div className="flex items-center gap-3">
+                                <Sparkles className="text-yellow-300" />
+                                <span className="uppercase font-black tracking-[0.3em] text-[10px] opacity-80">System Insight</span>
+                            </div>
+                            <h2 className="text-3xl font-black tracking-tight leading-tight">Your routine efficiency is <span className="text-blue-200">{analytics.routineEfficiency.averageCaloriesPerMinute.toFixed(1)} cal/min</span></h2>
+                            <p className="text-blue-100 font-medium">You average {analytics.routineEfficiency.averageDrillsPerMinute.toFixed(2)} drills per minute. Keep pushing your intensity!</p>
+                        </div>
+                        <div className="flex gap-10 shrink-0">
+                            <div className="text-center">
+                                <p className="text-4xl font-black mb-1">{analytics.routineEfficiency.averageCaloriesPerMinute.toFixed(1)}</p>
+                                <p className="text-[10px] font-black uppercase tracking-widest opacity-60">Avg Burn Rate</p>
+                            </div>
+                            <div className="h-12 w-px bg-white/20" />
+                            <div className="text-center">
+                                <p className="text-4xl font-black mb-1">{analytics.routineEfficiency.averageDrillsPerMinute.toFixed(2)}</p>
+                                <p className="text-[10px] font-black uppercase tracking-widest opacity-60">Avg Drills/Min</p>
+                            </div>
+                        </div>
+                    </div>
+                    {/* Abstract Shapes */}
+                    <div className="absolute top-0 right-0 -translate-y-1/2 translate-x-1/2 w-64 h-64 bg-white/10 rounded-full blur-3xl" />
+                    <div className="absolute bottom-0 left-0 translate-y-1/2 -translate-x-1/2 w-96 h-96 bg-blue-400/20 rounded-full blur-3xl" />
+                </div>
+            )}
         </div>
     );
 };
-
-// Mini Icon helper for the missing one in imports or just SVG inline
-const CheckCircleIcon = ({ size }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-        <polyline points="22 4 12 14.01 9 11.01" />
-    </svg>
-)
 
 const MainDesign = () => {
     return <Layout content={<FitmateDashboardLogic />} />;

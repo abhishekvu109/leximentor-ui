@@ -4,6 +4,7 @@ import { ChevronDown, Option, CheckCircle2, MoreVertical, Plus, Trash2, Timer, C
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState } from "react";
 import fitmateService from "../../../services/fitmate.service";
+import { useAuth } from "../../../context/AuthContext";
 import { useRouter } from "next/router";
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -441,7 +442,7 @@ const UnifiedRoutineBuilder = ({
 
     const handleGenerateWorkout = async (params) => {
         try {
-            const res = await fitmateService.generateRoutine(params);
+            const res = await fitmateService.generateRoutine({ ...params, username: user?.username });
             if (res.meta?.code === "000" && res.data?.drills) {
                 const newDrills = res.data.drills.map(drill => ({
                     exercise: drill.exercise.name,
@@ -657,6 +658,7 @@ const UnifiedRoutineBuilder = ({
 };
 
 const FitmateMakeRoutine = () => {
+    const { user } = useAuth();
     const [routine, setRoutine] = useState({ training: { name: '' }, description: '', workoutDate: new Date().toISOString().split('T')[0], drills: [] });
     const [workoutDate, setWorkoutDate] = useState(new Date().toISOString().split('T')[0]);
     const [description, setDescription] = useState('');
@@ -732,7 +734,7 @@ const FitmateMakeRoutine = () => {
             });
         });
         try {
-            await fitmateService.createRoutine({ ...routine, workoutDate, description, drills });
+            await fitmateService.createRoutine({ ...routine, workoutDate, description, drills, username: user?.username });
             setSuccessMessage("Routine created successfully!");
             setShowSuccess(true);
             setTimeout(() => setShowSuccess(false), 5000);

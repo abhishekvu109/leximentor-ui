@@ -96,6 +96,9 @@ const fitmateService = {
     },
     getExerciseHistory: (exerciseName) => {
         return apiClient.get(`${ENDPOINTS.FITMATE.BASE}/drill/${encodeURIComponent(exerciseName)}`);
+    },
+    getOverallAnalytics: (username) => {
+        return apiClient.get(ENDPOINTS.FITMATE.ANALYTICS_OVERALL, { params: { username } });
     }
 };
 
