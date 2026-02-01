@@ -99,6 +99,9 @@ const fitmateService = {
     },
     getOverallAnalytics: (username) => {
         return apiClient.get(ENDPOINTS.FITMATE.ANALYTICS_OVERALL, { params: { username } });
+    },
+    getExerciseAnalytics: (username) => {
+        return apiClient.get(ENDPOINTS.FITMATE.ANALYTICS_EXERCISE, { params: { username } });
     }
 };
 

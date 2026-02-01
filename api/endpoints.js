@@ -27,6 +27,7 @@ export const ENDPOINTS = {
         BODY_PARTS: '/fitmate/bodyparts',
         DRILLS: '/fitmate/drills',
         ANALYTICS_OVERALL: '/fitmate/analytics/overall',
+        ANALYTICS_EXERCISE: '/fitmate/analytics/exercise',
     },
     LEXIMENTOR: {
         BASE: '/leximentor',
