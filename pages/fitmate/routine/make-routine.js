@@ -368,6 +368,7 @@ const UnifiedRoutineBuilder = ({
     successMessage,
     setShowSuccess
 }) => {
+    const { user } = useAuth();
     const [selectedBodyPart, setSelectedBodyPart] = useState(null);
     const [selectedMuscle, setSelectedMuscle] = useState(null);
     const [searchQuery, setSearchQuery] = useState('');
