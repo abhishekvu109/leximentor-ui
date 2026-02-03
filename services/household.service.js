@@ -55,6 +55,12 @@ const householdService = {
     },
     searchHouseholds: (payload) => {
         return apiClient.post(`${ENDPOINTS.CASHFLOW.BASE}/households/household/search`, payload);
+    },
+    getDashboardData: (username) => {
+        return apiClient.get(ENDPOINTS.CASHFLOW.DASHBOARD, { params: { username } });
+    },
+    getHouseholdDashboardData: (householdRefId, username) => {
+        return apiClient.get(ENDPOINTS.CASHFLOW.HOUSEHOLD_DASHBOARD, { params: { householdRefId, username } });
     }
 };
 

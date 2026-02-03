@@ -1459,74 +1459,71 @@ const DeleteBudgetModal = ({ isOpen, onClose, onSuccess, budget }) => {
 };
 
 const OverviewTab = ({ household }) => {
-    const currency = household.currency || 'INR';
+    const { user } = useAuth();
+    const [dashboardData, setDashboardData] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const currency = household?.currency || 'INR';
 
-    // Calculate Financial Metrics with real data
-    const { totalSpentThisMonth, totalMonthlyBudget, chartData, categoryPieData } = useMemo(() => {
-        const now = new Date();
-        const expenses = household.expenses || [];
-        const budgets = household.budgets || [];
-        const currentMonth = now.getMonth() + 1; // 1-12
-        const currentYear = now.getFullYear();
+    useEffect(() => {
+        const fetchDashboardData = async () => {
+            if (!household?.refId || !user?.username) return;
+            setLoading(true);
+            try {
+                const response = await householdService.getHouseholdDashboardData(household.refId, user.username);
+                if (response?.data) {
+                    setDashboardData(response.data);
+                }
+            } catch (error) {
+                console.error("Failed to fetch household dashboard data:", error);
+            } finally {
+                setLoading(false);
+            }
+        };
 
-        // 1. Filter expenses for the current month
-        const monthlyExpenses = expenses.filter(exp => {
-            if (!exp.expenseDate) return false;
-            const d = new Date(exp.expenseDate);
-            // Handle array format [yyyy, mm, dd] if present, otherwise assume string
-            const expMonth = Array.isArray(exp.expenseDate) ? exp.expenseDate[1] : (d.getMonth() + 1);
-            const expYear = Array.isArray(exp.expenseDate) ? exp.expenseDate[0] : d.getFullYear();
-            return expMonth === currentMonth && expYear === currentYear;
-        });
+        fetchDashboardData();
+    }, [household?.refId, user?.username]);
 
-        const totalSpent = monthlyExpenses.reduce((sum, exp) => sum + (Number(exp.amount) || 0), 0);
+    const { totalSpentThisMonth, budgetLeft, chartData, categoryPieData } = useMemo(() => {
+        if (!dashboardData) return {
+            totalSpentThisMonth: 0,
+            budgetLeft: 0,
+            chartData: [],
+            categoryPieData: [{ name: 'No Spending', value: 1, fill: '#f3f4f6' }]
+        };
 
-        // 2. Aggregate spending by category
-        const spendingByCategory = monthlyExpenses.reduce((acc, exp) => {
-            // Normalize key: prioritize refId, fallback to lowercase name
-            const key = exp.categoryRefId || (exp.category ? exp.category.toLowerCase() : 'uncategorized');
-            acc[key] = (acc[key] || 0) + (Number(exp.amount) || 0);
-            return acc;
-        }, {});
+        const budgetVsActual = dashboardData.budgetVsActual || {};
+        const spendingSplit = dashboardData.spendingSplit || {};
 
-        // 3. Prepare Budget vs Actual Logic
-        // We iterate through defined budgets and find their actual spending
-        const mergedBudgets = budgets.map(budget => {
-            const key = budget.categoryRefId || (budget.category ? budget.category.toLowerCase() : 'uncategorized');
-            const spent = spendingByCategory[key] || 0;
-            return {
-                ...budget,
-                spent: spent,
-                fill: spent > budget.amount ? '#ef4444' : '#4f46e5' // Red if over budget
-            };
-        });
+        const chart = Object.entries(budgetVsActual).map(([name, data]) => ({
+            category: name,
+            amount: data.budget || 0,
+            spent: data.actual || 0,
+            fill: (data.actual || 0) > (data.budget || 0) ? '#ef4444' : '#4f46e5'
+        }));
 
-        // 4. Calculate Total Monthly Budget
-        const totalBudget = budgets
-            .filter(b => b.period === 'MONTHLY') // Ensure we only sum monthly budgets
-            .reduce((sum, b) => sum + (Number(b.amount) || 0), 0);
-
-        // 5. Prepare Pie Chart Data (Spending Split)
-        // Group by Category Name for display
-        const categoryMapForPie = {};
-        monthlyExpenses.forEach(exp => {
-            const name = exp.category || 'Uncategorized';
-            categoryMapForPie[name] = (categoryMapForPie[name] || 0) + (Number(exp.amount) || 0);
-        });
-
-        const pieData = Object.entries(categoryMapForPie).map(([name, value]) => ({ name, value }));
+        const pie = Object.entries(spendingSplit).map(([name, value]) => ({
+            name,
+            value: value || 0
+        }));
 
         return {
-            totalSpentThisMonth: totalSpent,
-            totalMonthlyBudget: totalBudget,
-            chartData: mergedBudgets.length > 0 ? mergedBudgets : [],
-            categoryPieData: pieData.length > 0 ? pieData : [{ name: 'No Spending', value: 1, fill: '#f3f4f6' }]
+            totalSpentThisMonth: dashboardData.totalSpent || 0,
+            budgetLeft: dashboardData.budgetLeft || 0,
+            chartData: chart,
+            categoryPieData: pie.length > 0 ? pie : [{ name: 'No Spending', value: 1, fill: '#f3f4f6' }]
         };
-    }, [household.expenses, household.budgets]);
+    }, [dashboardData]);
 
-    const balance = household.balance || 0;
-    // If balance is 0, maybe calculate it? (Income - Expenses)? 
-    // For now trust the household object or assume 0 if not provided.
+    const balance = dashboardData?.availableBalance || 0;
+
+    if (loading) {
+        return (
+            <div className="flex flex-col items-center justify-center py-20">
+                <Loader2 className="animate-spin text-indigo-500 mb-4" size={48} />
+                <p className="text-sm font-black text-gray-400 uppercase tracking-widest">Loading Overview...</p>
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-8 animate-in fade-in duration-500">
@@ -1570,8 +1567,8 @@ const OverviewTab = ({ household }) => {
                     </div>
                     <div>
                         <p className="text-gray-400 dark:text-gray-500 text-sm font-bold uppercase tracking-wide">Budget Left</p>
-                        <h3 className={`text-3xl md:text-4xl font-black mt-1 tracking-tight ${totalMonthlyBudget - totalSpentThisMonth < 0 ? 'text-rose-600' : 'text-gray-800 dark:text-white'}`}>
-                            {currency} {(totalMonthlyBudget - totalSpentThisMonth).toLocaleString()}
+                        <h3 className={`text-3xl md:text-4xl font-black mt-1 tracking-tight ${budgetLeft < 0 ? 'text-rose-600' : 'text-gray-800 dark:text-white'}`}>
+                            {currency} {budgetLeft.toLocaleString()}
                         </h3>
                     </div>
                 </div>

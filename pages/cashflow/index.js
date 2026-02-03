@@ -69,46 +69,23 @@ const StatCard = ({ title, value, change, icon: Icon, color, bg }) => (
 
 const CashflowDashboard = () => {
     const { user } = useAuth();
-    const [households, setHouseholds] = useState([]);
-    const [transactions, setTransactions] = useState([]);
-    const [timeRange, setTimeRange] = useState("7"); // Default to 7 days
-    const [loadingHouseholds, setLoadingHouseholds] = useState(true);
-    const [loadingTransactions, setLoadingTransactions] = useState(true);
+    const [dashboardData, setDashboardData] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [timeRange, setTimeRange] = useState("7"); // Reserved for future if API supports filtering
 
     useEffect(() => {
         const fetchDashboardData = async () => {
             if (!user?.username) return;
-
-            setLoadingHouseholds(true);
-            setLoadingTransactions(true);
-
+            setLoading(true);
             try {
-                // Fetch Households
-                const houseResponse = await householdService.searchHouseholds({
-                    user: user.username
-                });
-                if (houseResponse?.data) {
-                    setHouseholds(houseResponse.data);
-                }
-
-                // Fetch Recent Transactions
-                const transResponse = await householdService.searchExpenses({
-                    owner: user.username
-                });
-                if (transResponse?.data) {
-                    // Sorting by date (newest first)
-                    const sorted = [...transResponse.data].sort((a, b) => {
-                        const dateA = Array.isArray(a.expenseDate) ? new Date(a.expenseDate[0], a.expenseDate[1] - 1, a.expenseDate[2]) : new Date(a.expenseDate);
-                        const dateB = Array.isArray(b.expenseDate) ? new Date(b.expenseDate[0], b.expenseDate[1] - 1, b.expenseDate[2]) : new Date(b.expenseDate);
-                        return dateB - dateA;
-                    });
-                    setTransactions(sorted);
+                const response = await householdService.getDashboardData(user.username);
+                if (response?.data) {
+                    setDashboardData(response.data);
                 }
             } catch (error) {
                 console.error("Dashboard data fetch failed:", error);
             } finally {
-                setLoadingHouseholds(false);
-                setLoadingTransactions(false);
+                setLoading(false);
             }
         };
 
@@ -116,41 +93,19 @@ const CashflowDashboard = () => {
     }, [user?.username]);
 
     const chartData = useMemo(() => {
-        const days = parseInt(timeRange);
-        const data = [];
-        const now = new Date();
-
-        // Initialize days
-        for (let i = days - 1; i >= 0; i--) {
-            const date = new Date(now);
-            date.setDate(date.getDate() - i);
-            const dayName = date.toLocaleDateString('en-US', { weekday: 'short' });
-            data.push({
-                name: dayName,
-                spend: 0,
-                fullDate: date.toISOString().split('T')[0]
-            });
-        }
-
-        // Fill data from transactions
-        transactions.forEach(tx => {
-            const txDateObj = Array.isArray(tx.expenseDate)
-                ? new Date(tx.expenseDate[0], tx.expenseDate[1] - 1, tx.expenseDate[2])
-                : new Date(tx.expenseDate);
-            // Use local date for matching
-            const localY = txDateObj.getFullYear();
-            const localM = String(txDateObj.getMonth() + 1).padStart(2, '0');
-            const localD = String(txDateObj.getDate()).padStart(2, '0');
-            const txDate = `${localY}-${localM}-${localD}`;
-
-            const dayEntry = data.find(d => d.fullDate === txDate);
-            if (dayEntry) {
-                dayEntry.spend += (tx.amount || 0);
-            }
-        });
-
-        return data;
-    }, [transactions, timeRange]);
+        if (!dashboardData?.spendingTrends) return [];
+        return dashboardData.spendingTrends.map(trend => {
+            const date = Array.isArray(trend.transactionDate)
+                ? new Date(trend.transactionDate[0], trend.transactionDate[1] - 1, trend.transactionDate[2])
+                : new Date(trend.transactionDate);
+            return {
+                name: date.toLocaleDateString('en-US', { weekday: 'short' }),
+                spend: trend.amount,
+                fullDate: date.toISOString().split('T')[0],
+                rawDate: date
+            };
+        }).sort((a, b) => a.rawDate - b.rawDate);
+    }, [dashboardData]);
 
     const formatDate = (dateArray) => {
         if (!dateArray) return "N/A";
@@ -169,31 +124,44 @@ const CashflowDashboard = () => {
         "bg-amber-500",
         "bg-blue-500"
     ];
+
     const stats = useMemo(() => {
-        const totalBalance = households.reduce((sum, h) => sum + (h.balance || 0), 0);
-
-        const now = new Date();
-        const currentMonth = now.getMonth();
-        const currentYear = now.getFullYear();
-
-        const monthlySpending = transactions.reduce((sum, tx) => {
-            const txDate = Array.isArray(tx.expenseDate)
-                ? new Date(tx.expenseDate[0], tx.expenseDate[1] - 1, tx.expenseDate[2])
-                : new Date(tx.expenseDate);
-
-            if (txDate.getMonth() === currentMonth && txDate.getFullYear() === currentYear) {
-                return sum + (tx.amount || 0);
-            }
-            return sum;
-        }, 0);
-
+        if (!dashboardData) return MOCK_STATS;
         return [
-            { title: "Total Balance", value: `₹${totalBalance.toLocaleString()}`, change: households.length > 0 ? "Live" : "No Data", icon: Wallet, color: "text-emerald-600", bg: "bg-emerald-50" },
-            { title: "Monthly Spending", value: `₹${monthlySpending.toLocaleString()}`, change: transactions.length > 0 ? "Current" : "No Data", icon: ArrowUpRight, color: "text-rose-600", bg: "bg-rose-50" },
-            { title: "Active Households", value: households.length.toString(), change: "Active", icon: Home, color: "text-blue-600", bg: "bg-blue-50" },
-            { title: "Recent Activity", value: transactions.length.toString(), change: "Total Logs", icon: TrendingUp, color: "text-indigo-600", bg: "bg-indigo-50" },
+            {
+                title: "Total Balance",
+                value: `₹${(dashboardData.totalBalance || 0).toLocaleString()}`,
+                change: "Live",
+                icon: Wallet,
+                color: "text-emerald-600",
+                bg: "bg-emerald-50"
+            },
+            {
+                title: "Monthly Spending",
+                value: `₹${(dashboardData.currentMonthlySpending || 0).toLocaleString()}`,
+                change: "Current",
+                icon: ArrowUpRight,
+                color: "text-rose-600",
+                bg: "bg-rose-50"
+            },
+            {
+                title: "Active Households",
+                value: (dashboardData.activeHouseholds || 0).toString(),
+                change: "Active",
+                icon: Home,
+                color: "text-blue-600",
+                bg: "bg-blue-50"
+            },
+            {
+                title: "Today Transactions",
+                value: (dashboardData.todayTransactions || 0).toString(),
+                change: "Today",
+                icon: TrendingUp,
+                color: "text-indigo-600",
+                bg: "bg-indigo-50"
+            },
         ];
-    }, [households, transactions]);
+    }, [dashboardData]);
 
     return (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -291,13 +259,13 @@ const CashflowDashboard = () => {
                         <Link href="/cashflow/households" className="text-sm font-bold text-indigo-600 hover:text-indigo-700">View All</Link>
                     </div>
                     <div className="space-y-4">
-                        {loadingHouseholds ? (
+                        {loading ? (
                             <div className="flex flex-col items-center justify-center py-12 bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700 border-dashed">
                                 <Loader2 className="animate-spin text-indigo-500 mb-2" size={32} />
                                 <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Loading Households...</p>
                             </div>
-                        ) : households.length > 0 ? (
-                            households.slice(0, 3).map((house, i) => (
+                        ) : (dashboardData?.households || []).length > 0 ? (
+                            dashboardData.households.slice(0, 3).map((house, i) => (
                                 <Link href={`/cashflow/households/${house.refId}`} key={house.refId || i} className="block">
                                     <div className="bg-white dark:bg-gray-800 p-5 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm hover:border-indigo-100 dark:hover:border-indigo-900 transition-all flex items-center justify-between group">
                                         <div className="flex items-center gap-4">
@@ -312,7 +280,7 @@ const CashflowDashboard = () => {
                                             </div>
                                         </div>
                                         <div className="text-right shrink-0">
-                                            <p className="text-sm font-black text-gray-800 dark:text-white">{house.currency || '₹'} {(house.balance || 0).toLocaleString()}</p>
+                                            <p className="text-sm font-black text-gray-800 dark:text-white">{house.currency || '₹'} {(house.availableBalance || 0).toLocaleString()}</p>
                                             <p className="text-[10px] text-gray-400 font-bold uppercase">Balance</p>
                                         </div>
                                     </div>
@@ -341,13 +309,13 @@ const CashflowDashboard = () => {
                 </div>
                 <div className="divide-y divide-gray-50 dark:divide-gray-700 overflow-x-auto">
                     <div className="min-w-[700px] lg:min-w-0">
-                        {loadingTransactions ? (
+                        {loading ? (
                             <div className="flex flex-col items-center justify-center py-20">
                                 <Loader2 className="animate-spin text-indigo-500 mb-2" size={32} />
                                 <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Fetching Transactions...</p>
                             </div>
-                        ) : transactions.length > 0 ? (
-                            transactions.slice(0, 5).map((log) => (
+                        ) : (dashboardData?.recentTransactions || []).length > 0 ? (
+                            dashboardData.recentTransactions.slice(0, 5).map((log) => (
                                 <div key={log.uuid || log.refId} className="p-5 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-900/50 transition-colors group">
                                     <div className="flex items-center gap-4">
                                         <div className="p-3 bg-gray-50 dark:bg-gray-700 text-gray-400 rounded-xl group-hover:bg-indigo-50 dark:group-hover:bg-indigo-900/30 group-hover:text-indigo-600 transition-all">

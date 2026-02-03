@@ -17,6 +17,8 @@ export const ENDPOINTS = {
         EXPENSES: '/cashflow/households/expenses/expense',
         EXPENSE_SEARCH: '/cashflow/households/expenses/expense/search',
         CATEGORIES: '/cashflow/categories/category/search',
+        DASHBOARD: '/cashflow/dashboard',
+        HOUSEHOLD_DASHBOARD: '/cashflow/dashboard/household',
     },
     FITMATE: {
         BASE: '/fitmate',
