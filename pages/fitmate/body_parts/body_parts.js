@@ -1,5 +1,4 @@
-import { API_FITMATE_BASE_URL } from "@/constants";
-import { fetchWithAuth } from "@/dataService";
+import fitmateService from "../../../services/fitmate.service";
 import Link from "next/link";
 import { useState, useEffect, useCallback } from "react";
 import ModalDialog from "@/components/modal_notifications/modal_notification_dialog";
@@ -19,9 +18,8 @@ const FitmateDashboard = () => {
 
     const LoadBodyPartsData = useCallback(async () => {
         try {
-            const res = await fetchWithAuth(`${API_FITMATE_BASE_URL}/bodyparts`);
-            const data = await res.json();
-            setBodyPartsData(data);
+            const res = await fitmateService.getBodyParts();
+            setBodyPartsData(res);
         } catch (error) {
             console.error("Unable to load the body parts", error);
         } finally {
@@ -48,14 +46,7 @@ const FitmateDashboard = () => {
         e.preventDefault();
         const dataInAnArray = [bodyPartFormData];
         try {
-            const URL = `${API_FITMATE_BASE_URL}/bodyparts/bodypart`;
-            const res = await fetchWithAuth(URL, {
-                method: "POST",
-                body: JSON.stringify(dataInAnArray),
-            });
-
-            if (!res.ok) throw new Error("Failed to create body part.");
-
+            await fitmateService.addBodyPart(dataInAnArray);
             setNotificationModal(true);
             await LoadBodyPartsData();
         } catch (error) {
@@ -91,13 +82,7 @@ const FitmateDashboard = () => {
     const DeleteBodyPart = async (refId) => {
         if (!confirm("Are you sure you want to delete this body part?")) return;
         try {
-            const data = [{ refId: refId, name: "", description: "", status: "active", primaryName: "" }];
-            const res = await fetchWithAuth(`${API_FITMATE_BASE_URL}/bodyparts/bodypart`, {
-                method: "DELETE",
-                body: JSON.stringify(data),
-            });
-
-            if (!res.ok) throw new Error("Failed to delete body part.");
+            await fitmateService.deleteBodyPart(refId);
 
             await LoadBodyPartsData();
         } catch (error) {

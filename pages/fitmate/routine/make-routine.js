@@ -3,8 +3,8 @@ import Layout from "@/components/layout/Layout";
 import { ChevronDown, Option, CheckCircle2, MoreVertical, Plus, Trash2, Timer, Check, X, Dumbbell, Calendar, Save, Filter, Search, ArrowRight, Download, FileText, History, Info, Clock, Sparkles } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState } from "react";
-import { API_FITMATE_BASE_URL } from "@/constants";
-import { fetchData, POST, postData, fetchWithAuth } from "@/dataService";
+import fitmateService from "../../../services/fitmate.service";
+import { useAuth } from "../../../context/AuthContext";
 import { useRouter } from "next/router";
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -146,11 +146,25 @@ const CartExerciseThumb = ({ refId, name }) => {
 
     useEffect(() => {
         const fetchThumb = async () => {
+            setThumbUrl(null); // Reset when refId changes or fetch starts
             try {
-                const res = await fetchWithAuth(`${API_FITMATE_BASE_URL}/exercises/exercise/resources/resource?refId=${refId}&placeholder=THUMBNAIL&resourceId=`);
-                if (!res.ok) return;
-                const blob = await res.blob();
-                if (blob.size > 0 && blob.type.startsWith('image/')) {
+                let blob;
+                try {
+                    blob = await fitmateService.getThumbnail(refId);
+                } catch (err) {
+                    // Ignore THUMBNAIL error, will try GIF fallback
+                }
+
+                // If thumbnail is missing or invalid, try falling back to GIF
+                if (!blob || blob.size === 0 || !blob.type.startsWith('image/')) {
+                    try {
+                        blob = await fitmateService.getExerciseResource(refId, 'GIF');
+                    } catch (err) {
+                        // Both failed
+                    }
+                }
+
+                if (blob && blob.size > 0 && blob.type.startsWith('image/')) {
                     setThumbUrl(URL.createObjectURL(blob));
                 }
             } catch (e) {
@@ -285,11 +299,25 @@ const ExerciseGridItem = ({ name, refId, isSelected, onClick }) => {
 
     useEffect(() => {
         const fetchThumb = async () => {
+            setThumbUrl(null); // Reset when refId changes or fetch starts
             try {
-                const res = await fetchWithAuth(`${API_FITMATE_BASE_URL}/exercises/exercise/resources/resource?refId=${refId}&placeholder=THUMBNAIL&resourceId=`);
-                if (!res.ok) return;
-                const blob = await res.blob();
-                if (blob.size > 0 && blob.type.startsWith('image/')) {
+                let blob;
+                try {
+                    blob = await fitmateService.getThumbnail(refId);
+                } catch (err) {
+                    // Ignore THUMBNAIL error, will try GIF fallback
+                }
+
+                // If thumbnail is missing or invalid, try falling back to GIF
+                if (!blob || blob.size === 0 || !blob.type.startsWith('image/')) {
+                    try {
+                        blob = await fitmateService.getExerciseResource(refId, 'GIF');
+                    } catch (err) {
+                        // Both failed
+                    }
+                }
+
+                if (blob && blob.size > 0 && blob.type.startsWith('image/')) {
                     setThumbUrl(URL.createObjectURL(blob));
                 }
             } catch (e) {
@@ -340,6 +368,7 @@ const UnifiedRoutineBuilder = ({
     successMessage,
     setShowSuccess
 }) => {
+    const { user } = useAuth();
     const [selectedBodyPart, setSelectedBodyPart] = useState(null);
     const [selectedMuscle, setSelectedMuscle] = useState(null);
     const [searchQuery, setSearchQuery] = useState('');
@@ -349,7 +378,7 @@ const UnifiedRoutineBuilder = ({
     const openHistory = async (exerciseName) => {
         setHistoryPanel({ open: true, exercise: exerciseName, data: [], loading: true });
         try {
-            const res = await fetchData(`${API_FITMATE_BASE_URL}/drill/${encodeURIComponent(exerciseName)}`);
+            const res = await fitmateService.getExerciseHistory(exerciseName);
             setHistoryPanel(prev => ({ ...prev, data: res.data || [], loading: false }));
         } catch (e) {
             console.error("Failed to fetch history:", e);
@@ -414,7 +443,7 @@ const UnifiedRoutineBuilder = ({
 
     const handleGenerateWorkout = async (params) => {
         try {
-            const res = await postData(`${API_FITMATE_BASE_URL}/routines/routine/generate`, params);
+            const res = await fitmateService.generateRoutine({ ...params, username: user?.username });
             if (res.meta?.code === "000" && res.data?.drills) {
                 const newDrills = res.data.drills.map(drill => ({
                     exercise: drill.exercise.name,
@@ -525,7 +554,7 @@ const UnifiedRoutineBuilder = ({
 
                                     return true;
                                 })
-                                .map((ex, i) => <ExerciseGridItem key={i} name={ex.name} refId={ex.refId} onClick={() => addToCart(ex)} />)}
+                                .map((ex) => <ExerciseGridItem key={ex.refId || Math.random()} name={ex.name} refId={ex.refId} onClick={() => addToCart(ex)} />)}
                         </div>
                     </div>
                 </div>
@@ -541,7 +570,7 @@ const UnifiedRoutineBuilder = ({
                     ) : (
                         <div className="flex-1 overflow-y-auto p-8 space-y-6">
                             {exerciseCart.map((item, exIdx) => (
-                                <div key={exIdx} className="bg-white rounded-2xl shadow-sm border border-gray-100/50 overflow-hidden animate-in slide-in-from-right-4 duration-300">
+                                <div key={item.refId ? `${item.refId}-${exIdx}` : exIdx} className="bg-white rounded-2xl shadow-sm border border-gray-100/50 overflow-hidden animate-in slide-in-from-right-4 duration-300">
                                     <div className="p-4 flex gap-5 items-start bg-gradient-to-r from-white to-gray-50/30">
                                         <div className="w-16 h-16 bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden shrink-0 flex items-center justify-center p-1">
                                             <CartExerciseThumb refId={item.refId} name={item.exercise} />
@@ -630,6 +659,7 @@ const UnifiedRoutineBuilder = ({
 };
 
 const FitmateMakeRoutine = () => {
+    const { user } = useAuth();
     const [routine, setRoutine] = useState({ training: { name: '' }, description: '', workoutDate: new Date().toISOString().split('T')[0], drills: [] });
     const [workoutDate, setWorkoutDate] = useState(new Date().toISOString().split('T')[0]);
     const [description, setDescription] = useState('');
@@ -645,16 +675,15 @@ const FitmateMakeRoutine = () => {
         const fetchInitialData = async () => {
             try {
                 const [bodyRes, muscleRes, exerciseRes, trainingRes] = await Promise.all([
-                    fetchWithAuth(`${API_FITMATE_BASE_URL}/bodyparts`),
-                    fetchWithAuth(`${API_FITMATE_BASE_URL}/muscles`),
-                    fetchWithAuth(`${API_FITMATE_BASE_URL}/exercises`),
-                    fetchWithAuth(`${API_FITMATE_BASE_URL}/trainings`)
+                    fitmateService.getBodyParts(),
+                    fitmateService.getMuscles(),
+                    fitmateService.getExercises(),
+                    fitmateService.getTrainings()
                 ]);
-                const [bodyData, muscleData, exerciseData, trainingData] = await Promise.all([bodyRes.json(), muscleRes.json(), exerciseRes.json(), trainingRes.json()]);
-                setBodyParts(bodyData.data || []);
-                setMuscles(muscleData.data || []);
-                setExercises(exerciseData.data || []);
-                setTrainings(trainingData.data || []);
+                setBodyParts(bodyRes.data || []);
+                setMuscles(muscleRes.data || []);
+                setExercises(exerciseRes.data || []);
+                setTrainings(trainingRes.data || []);
             } catch (error) { console.error("Error fetching dropdown data:", error); }
         };
         fetchInitialData();
@@ -706,7 +735,7 @@ const FitmateMakeRoutine = () => {
             });
         });
         try {
-            await postData(`${API_FITMATE_BASE_URL}/routines/routine`, { ...routine, workoutDate, description, drills });
+            await fitmateService.createRoutine({ ...routine, workoutDate, description, drills, username: user?.username });
             setSuccessMessage("Routine created successfully!");
             setShowSuccess(true);
             setTimeout(() => setShowSuccess(false), 5000);

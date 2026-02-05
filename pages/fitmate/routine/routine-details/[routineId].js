@@ -1,14 +1,14 @@
 
-import { fetchData, updateData, DeleteByObject, fetchWithAuth } from "@/dataService";
-import { API_FITMATE_BASE_URL } from "@/constants";
+import fitmateService from "../../../../services/fitmate.service";
 import Layout from "@/components/layout/Layout";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import {
     Pen, Trash2, Check, X, Play, Flag, Clock, Flame,
-    Dumbbell, Calendar, ArrowLeft, Save, AlertCircle, Info
+    Dumbbell, Calendar, ArrowLeft, Save, AlertCircle, Info, Download, FileSpreadsheet, FileText
 } from "lucide-react";
 import { useState, useEffect } from "react";
+import { exportToExcel, exportToPDF } from "../../../../utils/exportRoutine";
 
 // --- Components ---
 
@@ -248,11 +248,25 @@ const RoutineLogger = ({ initialData }) => {
     const router = useRouter();
     const [routine, setRoutine] = useState(initialData);
     const [isCompleteModalOpen, setIsCompleteModalOpen] = useState(false);
+    const [showExportMenu, setShowExportMenu] = useState(false);
 
     // Status Logic
     const status = (routine?.status || 'not_started').toLowerCase();
     const isActive = status === 'in_progress';
     const isCompleted = status === 'completed';
+
+    // Close export menu when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (showExportMenu && !event.target.closest('.export-menu-container')) {
+                setShowExportMenu(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [showExportMenu]);
+
 
     // Actions
     const handleStatusUpdate = async (newStatus, extraData = {}) => {
@@ -262,7 +276,7 @@ const RoutineLogger = ({ initialData }) => {
             ...extraData
         };
         try {
-            await updateData(`${API_FITMATE_BASE_URL}/routines/routine`, payload);
+            await fitmateService.updateRoutine(payload);
             alert(`Routine updated to ${newStatus}`); // Simple feedback (can be toast)
             // Ideally we refresh data or update local state
             setRoutine(prev => ({ ...prev, status: newStatus, ...extraData }));
@@ -290,7 +304,7 @@ const RoutineLogger = ({ initialData }) => {
             const newDrills = oldDrills.map(d => d.refId === updatedDrill.refId ? updatedDrill : d);
             setRoutine({ ...routine, drills: newDrills });
 
-            await updateData(`${API_FITMATE_BASE_URL}/drills/drill`, updatedDrill);
+            await fitmateService.updateDrill(updatedDrill);
         } catch (e) {
             console.error(e);
             alert("Failed to save drill");
@@ -300,13 +314,17 @@ const RoutineLogger = ({ initialData }) => {
     const handleDrillDelete = async (drill) => {
         if (!confirm("Remove this exercise from routine?")) return;
         try {
-            // Assuming delete drill endpoint or similar logic
-            // Ideally we need an endpoint for deleting drill
-            // For now just removing from UI to mock
-            const newDrills = routine.drills.filter(d => d.refId !== drill.refId);
-            setRoutine({ ...routine, drills: newDrills });
-            alert("Deleted (Mock)"); // Replace with actual API call if available
-        } catch (e) { console.error(e); }
+            await fitmateService.deleteDrill(drill.refId);
+            // Refresh routine data after successful deletion
+            const updatedRoutine = await fitmateService.getRoutine(routineId);
+            if (updatedRoutine?.data) {
+                setRoutine(updatedRoutine.data);
+            }
+            alert("Exercise removed successfully!");
+        } catch (e) {
+            console.error("Failed to delete drill:", e);
+            alert("Failed to remove exercise. Please try again.");
+        }
     };
 
 
@@ -337,8 +355,49 @@ const RoutineLogger = ({ initialData }) => {
                     </p>
                 </div>
 
-                {/* Main Action Button */}
-                <div className="flex-shrink-0">
+                {/* Main Action Buttons */}
+                <div className="flex-shrink-0 flex gap-3">
+                    {/* Export Menu */}
+                    <div className="relative export-menu-container">
+                        <button
+                            onClick={() => setShowExportMenu(!showExportMenu)}
+                            className="flex items-center gap-2 px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-2xl transition-all"
+                        >
+                            <Download size={18} /> Export
+                        </button>
+                        {showExportMenu && (
+                            <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-gray-100 py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                                <button
+                                    onClick={() => {
+                                        exportToExcel(routine);
+                                        setShowExportMenu(false);
+                                    }}
+                                    className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center gap-3 transition-colors"
+                                >
+                                    <FileSpreadsheet size={18} className="text-green-600" />
+                                    <div>
+                                        <p className="text-sm font-bold text-gray-800">Export as Excel</p>
+                                        <p className="text-xs text-gray-500">Spreadsheet format</p>
+                                    </div>
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        exportToPDF(routine);
+                                        setShowExportMenu(false);
+                                    }}
+                                    className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center gap-3 transition-colors"
+                                >
+                                    <FileText size={18} className="text-red-600" />
+                                    <div>
+                                        <p className="text-sm font-bold text-gray-800">Export as PDF</p>
+                                        <p className="text-xs text-gray-500">Fillable workout sheet</p>
+                                    </div>
+                                </button>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Session Control Buttons */}
                     {!isActive && !isCompleted && (
                         <button
                             onClick={handleStart}
@@ -436,8 +495,7 @@ const RoutineDetail = () => {
     useEffect(() => {
         if (routineId) {
             setLoading(true);
-            fetchWithAuth(`${API_FITMATE_BASE_URL}/routines/routine/${routineId}`)
-                .then(res => res.json())
+            fitmateService.getRoutine(routineId)
                 .then(data => {
                     setRoutine(data.data);
                     setLoading(false);

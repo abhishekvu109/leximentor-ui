@@ -2,8 +2,7 @@
 import Link from "next/link";
 import Layout from "@/components/layout/Layout";
 import { useEffect, useState, useMemo } from "react";
-import { API_FITMATE_BASE_URL } from "@/constants";
-import { fetchData, postDataAsJson, DeleteByObject, fetchWithAuth } from "@/dataService";
+import fitmateService from "../../../services/fitmate.service";
 import {
     Search, Plus, Filter, Trash2, Edit2, Dumbbell,
     MoreVertical, X, Check, AlertCircle, Loader2, Info, Camera,
@@ -19,15 +18,30 @@ const ExerciseCard = ({ exercise, onDelete, onEdit, onThumbnailUpload }) => {
 
     useEffect(() => {
         const fetchThumb = async () => {
+            setThumbUrl(null); // Reset when refId changes or fetch starts
+
             try {
-                const res = await fetchWithAuth(`${API_FITMATE_BASE_URL}/exercises/exercise/resources/resource?refId=${exercise.refId}&placeholder=THUMBNAIL&resourceId=`);
-                if (!res.ok) return;
-                const blob = await res.blob();
-                if (blob.size > 0 && blob.type.startsWith('image/')) {
+                let blob;
+                try {
+                    blob = await fitmateService.getThumbnail(exercise.refId);
+                } catch (err) {
+                    // Ignore THUMBNAIL error, will try GIF fallback
+                }
+
+                // If thumbnail is missing or invalid (or failed), try falling back to GIF
+                if (!blob || blob.size === 0 || !blob.type.startsWith('image/')) {
+                    try {
+                        blob = await fitmateService.getExerciseResource(exercise.refId, 'GIF');
+                    } catch (err) {
+                        // Both failed
+                    }
+                }
+
+                if (blob && blob.size > 0 && blob.type.startsWith('image/')) {
                     setThumbUrl(URL.createObjectURL(blob));
                 }
             } catch (e) {
-                console.error("Thumb fetch failed", e);
+                console.error("Image fetch failed", e);
             }
         };
         if (exercise.refId) fetchThumb();
@@ -176,7 +190,7 @@ const AddExerciseModal = ({ isOpen, onClose, onSuccess, onNotification, data: { 
                 unit: form.unit
             }];
 
-            await postDataAsJson(`${API_FITMATE_BASE_URL}/exercises`, payload);
+            await fitmateService.addExercise(payload);
             onNotification({ message: `Successfully added "${form.name}"`, type: 'success' });
             onSuccess();
             onClose();
@@ -388,10 +402,10 @@ const ExerciseLibrary = () => {
         setLoading(true);
         try {
             const [exRes, trRes, bpRes, mRes] = await Promise.all([
-                fetchData(`${API_FITMATE_BASE_URL}/exercises`),
-                fetchData(`${API_FITMATE_BASE_URL}/trainings`),
-                fetchData(`${API_FITMATE_BASE_URL}/bodyparts`),
-                fetchData(`${API_FITMATE_BASE_URL}/muscles`)
+                fitmateService.getExercises(),
+                fitmateService.getTrainings(),
+                fitmateService.getBodyParts(),
+                fitmateService.getMuscles()
             ]);
 
             setExercises(exRes.data || []);
@@ -413,7 +427,7 @@ const ExerciseLibrary = () => {
     const handleDelete = async (exercise) => {
         if (!confirm(`Permanently delete "${exercise.name}"?`)) return;
         try {
-            await DeleteByObject(`${API_FITMATE_BASE_URL}/exercises/exercise`, [{ refId: exercise.refId }]);
+            await fitmateService.deleteExercise(exercise.refId);
             showNotification({ message: `Exercise "${exercise.name}" deleted`, type: 'success' });
             loadData();
         } catch (e) {
@@ -426,18 +440,9 @@ const ExerciseLibrary = () => {
         formData.append('files', file);
 
         try {
-            const res = await fetchWithAuth(`${API_FITMATE_BASE_URL}/exercises/exercise/resources?refId=${refId}&placeholder=THUMBNAIL`, {
-                method: 'PUT',
-                body: formData,
-                headers: {} // fetchWithAuth handles Content-Type if needed, but for FormData it should be empty to let browser set boundary
-            });
-
-            if (res.ok) {
-                showNotification({ message: "Thumbnail uploaded successfully", type: 'success' });
-                loadData();
-            } else {
-                throw new Error("Upload failed");
-            }
+            await fitmateService.uploadThumbnail(refId, formData);
+            showNotification({ message: "Thumbnail uploaded successfully", type: 'success' });
+            loadData();
         } catch (error) {
             console.error(error);
             showNotification({ message: "Failed to upload thumbnail", type: 'error' });
@@ -546,9 +551,9 @@ const ExerciseLibrary = () => {
                 </div>
             ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                    {paginatedExercises.map((ex, i) => (
+                    {paginatedExercises.map((ex) => (
                         <ExerciseCard
-                            key={i}
+                            key={ex.refId || ex.id || Math.random()}
                             exercise={ex}
                             onDelete={handleDelete}
                             onEdit={() => { }}

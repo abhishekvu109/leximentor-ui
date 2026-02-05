@@ -27,7 +27,8 @@
     "react-dom": "^18",
     "react-query": "^3.39.3",
     "react-quill": "^2.0.0",
-    "recharts": "^2.15.3"
+    "recharts": "^2.15.3",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "autoprefixer": "^10.4.18",

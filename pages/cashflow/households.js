@@ -16,8 +16,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "../../context/AuthContext";
-import { postDataAsJson } from "../../dataService";
-import { API_CASHFLOW_BASE_URL } from "../../constants";
+import householdService from "../../services/household.service";
 
 const HouseholdCard = ({ household }) => {
     // derive spent and budget from budgets array if available, otherwise 0
@@ -139,7 +138,7 @@ const CreateHouseholdModal = ({ isOpen, onClose, onSuccess }) => {
         ];
 
         try {
-            await postDataAsJson(`${API_CASHFLOW_BASE_URL}/households/household`, payload);
+            await householdService.createHousehold(payload);
             alert("Household created successfully!");
             onSuccess();
             onClose();
@@ -195,8 +194,8 @@ const CreateHouseholdModal = ({ isOpen, onClose, onSuccess }) => {
                                     type="button"
                                     onClick={() => setCurrency(curr)}
                                     className={`py-3 rounded-2xl text-xs font-black transition-all ${currency === curr
-                                            ? "bg-indigo-600 text-white shadow-lg"
-                                            : "bg-white dark:bg-gray-800 text-gray-400"
+                                        ? "bg-indigo-600 text-white shadow-lg"
+                                        : "bg-white dark:bg-gray-800 text-gray-400"
                                         }`}
                                 >
                                     {curr}
@@ -233,7 +232,7 @@ const HouseholdsLogic = () => {
         setLoading(true);
         setError("");
         try {
-            const response = await postDataAsJson(`${API_CASHFLOW_BASE_URL}/households/household/search`, {
+            const response = await householdService.searchHouseholds({
                 user: user.username
             });
             if (response?.data) {

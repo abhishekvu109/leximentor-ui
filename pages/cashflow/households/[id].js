@@ -29,8 +29,9 @@ import {
     AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
     BarChart, Bar, Cell, PieChart, Pie
 } from "recharts";
-import { postDataAsJson, fetchData, updateData, DeleteByObject } from "../../../dataService";
-import { API_CASHFLOW_BASE_URL, API_AUTH_URL, API_CATEGORY_SEARCH_URL } from "../../../constants";
+import householdService from "../../../services/household.service";
+import userService from "../../../services/user.service";
+import categoryService from "../../../services/category.service";
 import { useAuth } from "../../../context/AuthContext";
 
 const COLORS = ['#4f46e5', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
@@ -54,7 +55,7 @@ const InviteMemberModal = ({ isOpen, onClose, onSuccess, householdRefId }) => {
             const getUsers = async () => {
                 setLoadingUsers(true);
                 try {
-                    const response = await fetchData(`${API_AUTH_URL}/user`);
+                    const response = await userService.getUsers();
                     if (response?.data) {
                         setUsers(response.data);
                     }
@@ -87,7 +88,7 @@ const InviteMemberModal = ({ isOpen, onClose, onSuccess, householdRefId }) => {
         ];
 
         try {
-            await postDataAsJson(`${API_CASHFLOW_BASE_URL}/households/household-members/household-member`, payload);
+            await householdService.inviteMember(payload);
             onSuccess();
             onClose();
             setSelectedUser("");
@@ -207,7 +208,7 @@ const AddBudgetModal = ({ isOpen, onClose, onSuccess, householdRefId }) => {
             const fetchCategories = async () => {
                 setLoadingCategories(true);
                 try {
-                    const response = await postDataAsJson(API_CATEGORY_SEARCH_URL, {});
+                    const response = await householdService.searchCategories({});
                     if (response?.data) {
                         setCategories(response.data);
                     }
@@ -259,7 +260,7 @@ const AddBudgetModal = ({ isOpen, onClose, onSuccess, householdRefId }) => {
         ];
 
         try {
-            await postDataAsJson(`${API_CASHFLOW_BASE_URL}/households/budgets/budget`, payload);
+            await householdService.addBudget(payload);
             onSuccess();
             onClose();
             setFormData({
@@ -429,7 +430,7 @@ const EditBudgetModal = ({ isOpen, onClose, onSuccess, budget, householdRefId })
             const fetchCategories = async () => {
                 setLoadingCategories(true);
                 try {
-                    const response = await postDataAsJson(API_CATEGORY_SEARCH_URL, {});
+                    const response = await householdService.searchCategories({});
                     if (response?.data) {
                         setCategories(response.data);
                     }
@@ -482,7 +483,7 @@ const EditBudgetModal = ({ isOpen, onClose, onSuccess, budget, householdRefId })
         ];
 
         try {
-            await updateData(`${API_CASHFLOW_BASE_URL}/households/budgets/budget`, payload);
+            await householdService.updateBudget(payload);
             onSuccess();
             onClose();
         } catch (err) {
@@ -646,7 +647,7 @@ const AddDepositModal = ({ isOpen, onClose, onSuccess, householdRefId }) => {
         ];
 
         try {
-            await postDataAsJson(`${API_CASHFLOW_BASE_URL}/households/deposits/deposit`, payload);
+            await householdService.addDeposit(payload);
             onSuccess();
             onClose();
             setFormData({
@@ -784,7 +785,7 @@ const AddExpenseModal = ({ isOpen, onClose, onSuccess, householdRefId }) => {
             const fetchCategories = async () => {
                 setLoadingCategories(true);
                 try {
-                    const response = await postDataAsJson(API_CATEGORY_SEARCH_URL, {});
+                    const response = await categoryService.searchCategories({});
                     if (response?.data) {
                         setCategories(response.data);
                     }
@@ -840,7 +841,7 @@ const AddExpenseModal = ({ isOpen, onClose, onSuccess, householdRefId }) => {
         ];
 
         try {
-            await postDataAsJson(`${API_CASHFLOW_BASE_URL}/expenses/expense`, payload);
+            await householdService.addExpense(payload);
             onSuccess();
             onClose();
             setFormData({
@@ -1064,7 +1065,7 @@ const EditExpenseModal = ({ isOpen, onClose, onSuccess, expense, householdRefId 
             const fetchCategories = async () => {
                 setLoadingCategories(true);
                 try {
-                    const response = await postDataAsJson(API_CATEGORY_SEARCH_URL, {});
+                    const response = await householdService.searchCategories({});
                     if (response?.data) {
                         setCategories(response.data);
                     }
@@ -1121,7 +1122,7 @@ const EditExpenseModal = ({ isOpen, onClose, onSuccess, expense, householdRefId 
         ];
 
         try {
-            await updateData(`${API_CASHFLOW_BASE_URL}/expenses/expense`, payload);
+            await householdService.updateExpense(payload);
             onSuccess();
             onClose();
         } catch (err) {
@@ -1310,7 +1311,7 @@ const DeleteExpenseModal = ({ isOpen, onClose, onSuccess, expense }) => {
         ];
 
         try {
-            await DeleteByObject(`${API_CASHFLOW_BASE_URL}/expenses/expense`, payload);
+            await householdService.deleteExpense(payload);
             onSuccess();
             onClose();
         } catch (err) {
@@ -1391,7 +1392,7 @@ const DeleteBudgetModal = ({ isOpen, onClose, onSuccess, budget }) => {
         ];
 
         try {
-            await DeleteByObject(`${API_CASHFLOW_BASE_URL}/households/budgets/budget`, payload);
+            await householdService.deleteBudget(payload);
             onSuccess();
             onClose();
         } catch (err) {
@@ -1458,74 +1459,71 @@ const DeleteBudgetModal = ({ isOpen, onClose, onSuccess, budget }) => {
 };
 
 const OverviewTab = ({ household }) => {
-    const currency = household.currency || 'INR';
+    const { user } = useAuth();
+    const [dashboardData, setDashboardData] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const currency = household?.currency || 'INR';
 
-    // Calculate Financial Metrics with real data
-    const { totalSpentThisMonth, totalMonthlyBudget, chartData, categoryPieData } = useMemo(() => {
-        const now = new Date();
-        const expenses = household.expenses || [];
-        const budgets = household.budgets || [];
-        const currentMonth = now.getMonth() + 1; // 1-12
-        const currentYear = now.getFullYear();
+    useEffect(() => {
+        const fetchDashboardData = async () => {
+            if (!household?.refId || !user?.username) return;
+            setLoading(true);
+            try {
+                const response = await householdService.getHouseholdDashboardData(household.refId, user.username);
+                if (response?.data) {
+                    setDashboardData(response.data);
+                }
+            } catch (error) {
+                console.error("Failed to fetch household dashboard data:", error);
+            } finally {
+                setLoading(false);
+            }
+        };
 
-        // 1. Filter expenses for the current month
-        const monthlyExpenses = expenses.filter(exp => {
-            if (!exp.expenseDate) return false;
-            const d = new Date(exp.expenseDate);
-            // Handle array format [yyyy, mm, dd] if present, otherwise assume string
-            const expMonth = Array.isArray(exp.expenseDate) ? exp.expenseDate[1] : (d.getMonth() + 1);
-            const expYear = Array.isArray(exp.expenseDate) ? exp.expenseDate[0] : d.getFullYear();
-            return expMonth === currentMonth && expYear === currentYear;
-        });
+        fetchDashboardData();
+    }, [household?.refId, user?.username]);
 
-        const totalSpent = monthlyExpenses.reduce((sum, exp) => sum + (Number(exp.amount) || 0), 0);
+    const { totalSpentThisMonth, budgetLeft, chartData, categoryPieData } = useMemo(() => {
+        if (!dashboardData) return {
+            totalSpentThisMonth: 0,
+            budgetLeft: 0,
+            chartData: [],
+            categoryPieData: [{ name: 'No Spending', value: 1, fill: '#f3f4f6' }]
+        };
 
-        // 2. Aggregate spending by category
-        const spendingByCategory = monthlyExpenses.reduce((acc, exp) => {
-            // Normalize key: prioritize refId, fallback to lowercase name
-            const key = exp.categoryRefId || (exp.category ? exp.category.toLowerCase() : 'uncategorized');
-            acc[key] = (acc[key] || 0) + (Number(exp.amount) || 0);
-            return acc;
-        }, {});
+        const budgetVsActual = dashboardData.budgetVsActual || {};
+        const spendingSplit = dashboardData.spendingSplit || {};
 
-        // 3. Prepare Budget vs Actual Logic
-        // We iterate through defined budgets and find their actual spending
-        const mergedBudgets = budgets.map(budget => {
-            const key = budget.categoryRefId || (budget.category ? budget.category.toLowerCase() : 'uncategorized');
-            const spent = spendingByCategory[key] || 0;
-            return {
-                ...budget,
-                spent: spent,
-                fill: spent > budget.amount ? '#ef4444' : '#4f46e5' // Red if over budget
-            };
-        });
+        const chart = Object.entries(budgetVsActual).map(([name, data]) => ({
+            category: name,
+            amount: data.budget || 0,
+            spent: data.actual || 0,
+            fill: (data.actual || 0) > (data.budget || 0) ? '#ef4444' : '#4f46e5'
+        }));
 
-        // 4. Calculate Total Monthly Budget
-        const totalBudget = budgets
-            .filter(b => b.period === 'MONTHLY') // Ensure we only sum monthly budgets
-            .reduce((sum, b) => sum + (Number(b.amount) || 0), 0);
-
-        // 5. Prepare Pie Chart Data (Spending Split)
-        // Group by Category Name for display
-        const categoryMapForPie = {};
-        monthlyExpenses.forEach(exp => {
-            const name = exp.category || 'Uncategorized';
-            categoryMapForPie[name] = (categoryMapForPie[name] || 0) + (Number(exp.amount) || 0);
-        });
-
-        const pieData = Object.entries(categoryMapForPie).map(([name, value]) => ({ name, value }));
+        const pie = Object.entries(spendingSplit).map(([name, value]) => ({
+            name,
+            value: value || 0
+        }));
 
         return {
-            totalSpentThisMonth: totalSpent,
-            totalMonthlyBudget: totalBudget,
-            chartData: mergedBudgets.length > 0 ? mergedBudgets : [],
-            categoryPieData: pieData.length > 0 ? pieData : [{ name: 'No Spending', value: 1, fill: '#f3f4f6' }]
+            totalSpentThisMonth: dashboardData.totalSpent || 0,
+            budgetLeft: dashboardData.budgetLeft || 0,
+            chartData: chart,
+            categoryPieData: pie.length > 0 ? pie : [{ name: 'No Spending', value: 1, fill: '#f3f4f6' }]
         };
-    }, [household.expenses, household.budgets]);
+    }, [dashboardData]);
 
-    const balance = household.balance || 0;
-    // If balance is 0, maybe calculate it? (Income - Expenses)? 
-    // For now trust the household object or assume 0 if not provided.
+    const balance = dashboardData?.availableBalance || 0;
+
+    if (loading) {
+        return (
+            <div className="flex flex-col items-center justify-center py-20">
+                <Loader2 className="animate-spin text-indigo-500 mb-4" size={48} />
+                <p className="text-sm font-black text-gray-400 uppercase tracking-widest">Loading Overview...</p>
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-8 animate-in fade-in duration-500">
@@ -1569,8 +1567,8 @@ const OverviewTab = ({ household }) => {
                     </div>
                     <div>
                         <p className="text-gray-400 dark:text-gray-500 text-sm font-bold uppercase tracking-wide">Budget Left</p>
-                        <h3 className={`text-3xl md:text-4xl font-black mt-1 tracking-tight ${totalMonthlyBudget - totalSpentThisMonth < 0 ? 'text-rose-600' : 'text-gray-800 dark:text-white'}`}>
-                            {currency} {(totalMonthlyBudget - totalSpentThisMonth).toLocaleString()}
+                        <h3 className={`text-3xl md:text-4xl font-black mt-1 tracking-tight ${budgetLeft < 0 ? 'text-rose-600' : 'text-gray-800 dark:text-white'}`}>
+                            {currency} {budgetLeft.toLocaleString()}
                         </h3>
                     </div>
                 </div>
@@ -2490,7 +2488,7 @@ const HouseholdDetailsLogic = () => {
         setError("");
         try {
             // Fetch all categories once for mapping names to IDs
-            const catResponse = await postDataAsJson(API_CATEGORY_SEARCH_URL, {});
+            const catResponse = await categoryService.searchCategories({});
             const categoryMap = {};
             if (catResponse?.data && Array.isArray(catResponse.data)) {
                 catResponse.data.forEach(cat => {
@@ -2505,12 +2503,20 @@ const HouseholdDetailsLogic = () => {
                 console.log(`[Diagnostic] Category Lookup Map Populated with ${Object.keys(categoryMap).length} keys`);
             }
 
-            const response = await postDataAsJson(`${API_CASHFLOW_BASE_URL}/households/household/search`, {
-                refId: id
-            });
+            const response = await householdService.getHousehold(id);
+            console.log("[Diagnostic] getHousehold response:", response);
 
-            if (response?.data && response.data.length > 0) {
-                const data = response.data[0];
+            // Handle both array and single object responses
+            let data = null;
+            if (response?.data) {
+                if (Array.isArray(response.data)) {
+                    data = response.data.length > 0 ? response.data[0] : null;
+                } else {
+                    data = response.data;
+                }
+            }
+
+            if (data) {
                 console.log("[Diagnostic] Raw Household Data:", data);
 
                 // Final Fallback: Resolve missing categories individually via GET API
@@ -2540,7 +2546,7 @@ const HouseholdDetailsLogic = () => {
                     console.log(`[Diagnostic] Triggering individual resolution for ${missingIds.size} missing categories:`, Array.from(missingIds));
                     await Promise.all(Array.from(missingIds).map(async (refId) => {
                         try {
-                            const res = await fetchData(`${API_CASHFLOW_BASE_URL}/categories/category/${refId}`);
+                            const res = await categoryService.getCategory(refId);
                             if (res?.data?.name) {
                                 categoryMap[refId] = res.data.name;
                                 if (res.data.uuid) categoryMap[res.data.uuid] = res.data.name;
@@ -2590,7 +2596,7 @@ const HouseholdDetailsLogic = () => {
 
                 // FETCH FULL BUDGETS FOR ACCURACY
                 try {
-                    const budgetResponse = await postDataAsJson(`${API_CASHFLOW_BASE_URL}/households/budgets/budget/search`, {
+                    const budgetResponse = await householdService.searchBudgets({
                         householdRefId: data.refId
                     });
                     if (budgetResponse?.data) {
@@ -2603,7 +2609,7 @@ const HouseholdDetailsLogic = () => {
 
                 // FETCH FULL EXPENSES FOR ANALYTICS
                 try {
-                    const expResponse = await postDataAsJson(`${API_CASHFLOW_BASE_URL}/expenses/expense/search`, {
+                    const expResponse = await householdService.searchExpenses({
                         householdRefId: data.refId
                     });
                     if (expResponse?.data) {
@@ -2616,7 +2622,7 @@ const HouseholdDetailsLogic = () => {
 
                 // FETCH DEPOSITS
                 try {
-                    const depositResponse = await postDataAsJson(`${API_CASHFLOW_BASE_URL}/households/deposits/deposit/search`, {
+                    const depositResponse = await householdService.searchDeposits({
                         householdRefId: data.refId
                     });
                     if (depositResponse?.data) {
@@ -2883,7 +2889,7 @@ const EditDepositModal = ({ isOpen, onClose, onSuccess, deposit }) => {
         ];
 
         try {
-            await updateData(`${API_CASHFLOW_BASE_URL}/households/deposits/deposit`, payload, 'PUT');
+            await householdService.updateDeposit(payload);
             onSuccess();
             onClose();
         } catch (err) {
@@ -3001,7 +3007,7 @@ const DeleteDepositModal = ({ isOpen, onClose, onSuccess, deposits }) => {
         const payload = deposits.map(d => ({ refId: d.refId }));
 
         try {
-            await DeleteByObject(`${API_CASHFLOW_BASE_URL}/households/deposits/deposit`, payload);
+            await householdService.deleteDeposit(payload);
             onSuccess();
             onClose();
         } catch (err) {
