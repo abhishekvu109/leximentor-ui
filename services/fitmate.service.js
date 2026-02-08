@@ -105,6 +105,30 @@ const fitmateService = {
     },
     getWorkoutLogs: (username) => {
         return apiClient.get(ENDPOINTS.FITMATE.LOGS, { params: { username } });
+    },
+    getWorkoutTrends: (username) => {
+        return apiClient.get(ENDPOINTS.FITMATE.ANALYTICS_WORKOUT_TRENDS, { params: { username } });
+    },
+    getBodyPartWorkoutVolume: (username) => {
+        return apiClient.get(ENDPOINTS.FITMATE.ANALYTICS_BODY_PART_VOLUME, { params: { username } });
+    },
+    getMostFrequentExercises: (username) => {
+        return apiClient.get(ENDPOINTS.FITMATE.ANALYTICS_MOST_FREQUENT_EXERCISES, { params: { username } });
+    },
+    getRoutineDistribution: (username) => {
+        return apiClient.get(ENDPOINTS.FITMATE.ANALYTICS_ROUTINE_DISTRIBUTION, { params: { username } });
+    },
+    getExerciseProgressions: (username) => {
+        return apiClient.get(ENDPOINTS.FITMATE.ANALYTICS_EXERCISE_PROGRESSIONS, { params: { username } });
+    },
+    getRoutineEfficiency: (username) => {
+        return apiClient.get(ENDPOINTS.FITMATE.ANALYTICS_ROUTINE_EFFICIENCY, { params: { username } });
+    },
+    getActivityConsistency: (username) => {
+        return apiClient.get(ENDPOINTS.FITMATE.ANALYTICS_ACTIVITY_CONSISTENCY, { params: { username } });
+    },
+    getCaloriesDuration: (username) => {
+        return apiClient.get(ENDPOINTS.FITMATE.ANALYTICS_CALORIES_DURATION, { params: { username } });
     }
 };
 

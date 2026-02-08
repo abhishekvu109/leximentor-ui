@@ -104,7 +104,8 @@ const NewSidebar = ({ isOpen }) => {
                 { label: 'Routine', href: '/fitmate/routine/routine', icon: ClipboardList },
                 { label: 'Exercise', href: '/fitmate/exercise/exercise', icon: Dumbbell },
                 { label: 'Log', href: '/fitmate/logs', icon: List },
-                { label: 'Analytics', href: '/fitmate/analytics/exercise', icon: BarChart3 }
+                { label: 'Analytics', href: '/fitmate/analytics/exercise', icon: BarChart3 },
+                { label: 'Advanced Analytics', href: '/fitmate/advanced-analytics', icon: BarChart3 }
             ]
         },
         {
