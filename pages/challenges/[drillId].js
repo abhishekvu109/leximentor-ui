@@ -3,6 +3,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import leximentorService from "../../services/leximentor.service";
+import { useAuth } from "../../context/AuthContext";
 import Layout from "@/components/layout/Layout";
 import { motion } from "framer-motion";
 import {
@@ -321,6 +322,7 @@ const EvaluatorModal = ({ isVisible, onClose, evaluators, onSubmit, challengeId 
 };
 
 const Challenges = () => {
+    const { user } = useAuth();
     const router = useRouter();
     const { drillId } = router.query;
 
@@ -339,9 +341,9 @@ const Challenges = () => {
     // View State
     const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'analytics'
 
-    const loadChallenges = useCallback(async (id) => {
+    const loadChallenges = useCallback(async (id, username) => {
         try {
-            const res = await leximentorService.getChallenges(id);
+            const res = await leximentorService.getChallenges(id, username);
             setChallengeData(res);
         } catch (error) {
             console.error("Failed to load challenges:", error);
@@ -349,16 +351,16 @@ const Challenges = () => {
     }, []);
 
     useEffect(() => {
-        if (drillId) {
+        if (drillId && user?.username) {
             setDrillRefId(drillId);
             const init = async () => {
                 setLoading(true);
-                await loadChallenges(drillId);
+                await loadChallenges(drillId, user.username);
                 setLoading(false);
             };
             init();
         }
-    }, [drillId, loadChallenges]);
+    }, [drillId, user?.username, loadChallenges]);
 
     useEffect(() => {
         if (typeof window !== "undefined" && window.initFlowbite) {
@@ -369,8 +371,8 @@ const Challenges = () => {
     const handleCreateChallenge = async (type) => {
         setCreatingType(type);
         try {
-            await leximentorService.createChallenge(drillRefId, type);
-            await loadChallenges(drillRefId);
+            await leximentorService.createChallenge(drillRefId, type, user?.username);
+            await loadChallenges(drillRefId, user?.username);
         } catch (error) {
             console.error(error);
             alert("Failed to create challenge");
@@ -459,7 +461,7 @@ const Challenges = () => {
                             </button>
                         </div>
                         <button
-                            onClick={loadChallenges}
+                            onClick={() => loadChallenges(drillRefId, user?.username)}
                             className="flex items-center gap-2 text-sm font-bold text-blue-600 hover:bg-blue-50 px-3 py-2 rounded-lg transition-colors"
                         >
                             <RefreshCw size={16} /> Refresh

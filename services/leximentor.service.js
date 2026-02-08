@@ -35,12 +35,14 @@ const leximentorService = {
     getChallengeMetadataAnalytics: () => {
         return apiClient.get(`${ENDPOINTS.LEXIMENTOR.BASE}/analytics/drill/challenge/metadata`);
     },
-    getChallenges: (drillId) => {
-        return apiClient.get(`${ENDPOINTS.LEXIMENTOR.BASE}/drill/metadata/challenges/${drillId}`);
+    getChallenges: (drillId, username) => {
+        return apiClient.get(`${ENDPOINTS.LEXIMENTOR.BASE}/drill/metadata/challenges/${drillId}`, {
+            params: { username }
+        });
     },
-    createChallenge: (drillId, drillType) => {
+    createChallenge: (drillId, drillType, username) => {
         return apiClient.post(`${ENDPOINTS.LEXIMENTOR.BASE}/drill/metadata/challenges/challenge`, null, {
-            params: { drillId, drillType }
+            params: { drillId, drillType, username }
         });
     },
     getChallenge: (id) => {
