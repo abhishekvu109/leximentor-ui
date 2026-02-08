@@ -102,6 +102,9 @@ const fitmateService = {
     },
     getExerciseAnalytics: (username) => {
         return apiClient.get(ENDPOINTS.FITMATE.ANALYTICS_EXERCISE, { params: { username } });
+    },
+    getWorkoutLogs: (username) => {
+        return apiClient.get(ENDPOINTS.FITMATE.LOGS, { params: { username } });
     }
 };
 

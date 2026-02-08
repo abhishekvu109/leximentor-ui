@@ -26,6 +26,7 @@ export const ENDPOINTS = {
         EXERCISE: (id) => `/fitmate/exercises/exercise/${id}`,
         ROUTINES: '/fitmate/routines',
         ROUTINE: (id) => `/fitmate/routines/routine/${id}`,
+        LOGS: '/fitmate/routines/routine/log',
         BODY_PARTS: '/fitmate/bodyparts',
         DRILLS: '/fitmate/drills',
         ANALYTICS_OVERALL: '/fitmate/analytics/overall',
