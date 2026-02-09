@@ -32,6 +32,9 @@ const fitmateService = {
     updateDrill: (payload) => {
         return apiClient.put(`${ENDPOINTS.FITMATE.DRILLS}/drill`, payload);
     },
+    addDrill: (payload) => {
+        return apiClient.post(`${ENDPOINTS.FITMATE.DRILLS}/drill`, payload);
+    },
     deleteDrill: (refId) => {
         return apiClient.delete(`${ENDPOINTS.FITMATE.DRILLS}/drill`, { data: { refId } });
     },

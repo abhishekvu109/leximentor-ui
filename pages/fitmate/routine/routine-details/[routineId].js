@@ -5,9 +5,10 @@ import { useRouter } from "next/router";
 import Link from "next/link";
 import {
     Pen, Trash2, Check, X, Play, Flag, Clock, Flame,
-    Dumbbell, Calendar, ArrowLeft, Save, AlertCircle, Info, Download, FileSpreadsheet, FileText
+    Dumbbell, Calendar, ArrowLeft, Save, AlertCircle, Info, Download, FileSpreadsheet, FileText, Plus, Search
 } from "lucide-react";
 import { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { exportToExcel, exportToPDF } from "../../../../utils/exportRoutine";
 
 // --- Components ---
@@ -181,6 +182,253 @@ const ExerciseGroupCard = ({ exerciseId, exerciseName, bodyPart, muscle, drills,
     );
 };
 
+const CompactCardSelector = ({ label, items, selected, onSelect }) => {
+    return (
+        <div className="space-y-2">
+            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider px-1">{label}</label>
+            <div className="flex flex-wrap gap-2">
+                {items.map((item, idx) => (
+                    <button
+                        key={idx}
+                        onClick={() => onSelect(item)}
+                        className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${selected === item ? 'bg-blue-600 text-white shadow-md shadow-blue-200' : 'bg-white text-gray-600 border border-gray-200 hover:border-blue-300 hover:text-blue-600'}`}
+                    >
+                        {item}
+                    </button>
+                ))}
+            </div>
+        </div>
+    );
+};
+
+const ExerciseGridItem = ({ name, refId, isSelected, onClick }) => {
+    const [thumbUrl, setThumbUrl] = useState(null);
+
+    useEffect(() => {
+        const fetchThumb = async () => {
+            setThumbUrl(null);
+            try {
+                let blob;
+                try {
+                    blob = await fitmateService.getThumbnail(refId);
+                } catch (err) { }
+
+                if (!blob || blob.size === 0 || !blob.type.startsWith('image/')) {
+                    try {
+                        blob = await fitmateService.getExerciseResource(refId, 'GIF');
+                    } catch (err) { }
+                }
+
+                if (blob && blob.size > 0 && blob.type.startsWith('image/')) {
+                    setThumbUrl(URL.createObjectURL(blob));
+                }
+            } catch (e) {
+                console.error("Grid item thumb fetch failed", e);
+            }
+        };
+        if (refId) fetchThumb();
+        return () => { if (thumbUrl) URL.revokeObjectURL(thumbUrl); };
+    }, [refId, thumbUrl]);
+
+    return (
+        <div
+            onClick={onClick}
+            className={`group cursor-pointer rounded-xl border transition-all duration-200 overflow-hidden bg-white ${isSelected ? 'ring-2 ring-blue-500 border-blue-500 shadow-md' : 'border-gray-100 hover:shadow-lg hover:-translate-y-1'}`}
+        >
+            <div className="aspect-[4/3] bg-gray-50 relative flex items-center justify-center">
+                {thumbUrl ? (
+                    <img src={thumbUrl} alt={name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                ) : (
+                    <div className="w-full h-full flex items-center justify-center bg-slate-50">
+                        <span className="text-xl font-bold text-slate-300">{name.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase()}</span>
+                    </div>
+                )}
+                {isSelected && (
+                    <div className="absolute inset-0 bg-blue-900/10 flex items-center justify-center">
+                        <div className="bg-blue-600 text-white p-1 rounded-full shadow-lg"><Plus size={16} /></div>
+                    </div>
+                )}
+            </div>
+            <div className="p-3">
+                <h4 className={`font-semibold text-sm leading-tight ${isSelected ? 'text-blue-700' : 'text-gray-700'}`}>{name}</h4>
+            </div>
+        </div>
+    );
+};
+
+const AddExerciseModal = ({ isOpen, onClose, onAdd, bodyParts, muscles, exercises, trainingName }) => {
+    const [selectedBodyPart, setSelectedBodyPart] = useState(null);
+    const [selectedMuscle, setSelectedMuscle] = useState(null);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [step, setStep] = useState(1); // 1: Select Exercise, 2: Select Sets
+    const [targetExercise, setTargetExercise] = useState(null);
+    const [numSets, setNumSets] = useState(3);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    useEffect(() => {
+        if (isOpen) {
+            setStep(1);
+            setTargetExercise(null);
+            setNumSets(3);
+        }
+    }, [isOpen]);
+
+    if (!isOpen) return null;
+
+    const visibleMuscles = selectedBodyPart ? muscles.filter(m => m.bodyPart?.name === selectedBodyPart).map(m => m.name) : [];
+    const bodyPartNames = bodyParts.map(b => b.name);
+
+    const filteredExercises = exercises.filter(e => {
+        if (searchQuery && !e.name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+        if (trainingName && e.training?.name !== trainingName) return false;
+        if (selectedBodyPart && e.bodyPart?.name !== selectedBodyPart) return false;
+        if (selectedMuscle && !e.targetMuscles?.some(m => m.name === selectedMuscle)) return false;
+        return true;
+    });
+
+    const handleConfirmAdd = async () => {
+        setIsSubmitting(true);
+        try {
+            await onAdd(targetExercise, numSets);
+            onClose();
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
+            <motion.div
+                initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                animate={{ scale: 1, opacity: 1, y: 0 }}
+                className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col"
+            >
+                <div className="p-6 border-b border-gray-100 flex items-center justify-between bg-slate-50/50">
+                    <div>
+                        <h2 className="text-2xl font-black text-gray-800 tracking-tight">
+                            {step === 1 ? 'Add Exercise' : 'Configure Sets'}
+                        </h2>
+                        <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mt-1">
+                            {step === 1 ? 'Select an exercise to add to your session' : `How many sets for ${targetExercise?.name}?`}
+                        </p>
+                    </div>
+                    <button onClick={onClose} className="p-2 hover:bg-white rounded-xl text-gray-400 transition-all hover:text-gray-600 shadow-sm border border-transparent hover:border-gray-100">
+                        <X size={24} />
+                    </button>
+                </div>
+
+                <div className="flex-1 overflow-hidden flex flex-col md:flex-row">
+                    {step === 1 ? (
+                        <>
+                            {/* Sidebar Filters */}
+                            <div className="w-full md:w-72 border-r border-gray-100 p-6 space-y-6 overflow-y-auto">
+                                <div className="relative">
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                                    <input
+                                        placeholder="Search..."
+                                        className="w-full pl-10 pr-4 py-2 bg-gray-50 border-transparent focus:bg-white focus:border-blue-500 rounded-xl text-sm transition-all border outline-none"
+                                        value={searchQuery}
+                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                    />
+                                </div>
+                                <CompactCardSelector
+                                    label="Target Area"
+                                    items={bodyPartNames}
+                                    selected={selectedBodyPart}
+                                    onSelect={(bp) => { setSelectedBodyPart(bp); setSelectedMuscle(null); }}
+                                />
+                                {visibleMuscles.length > 0 && (
+                                    <CompactCardSelector
+                                        label="Muscle Group"
+                                        items={visibleMuscles}
+                                        selected={selectedMuscle}
+                                        onSelect={setSelectedMuscle}
+                                    />
+                                )}
+                                <button
+                                    onClick={() => { setSelectedBodyPart(null); setSelectedMuscle(null); setSearchQuery(''); }}
+                                    className="w-full py-2 text-xs font-bold text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-blue-100"
+                                >
+                                    Reset Filters
+                                </button>
+                            </div>
+
+                            {/* Exercise Grid */}
+                            <div className="flex-1 overflow-y-auto p-6 bg-gray-50/30">
+                                {filteredExercises.length > 0 ? (
+                                    <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+                                        {filteredExercises.map((ex) => (
+                                            <ExerciseGridItem
+                                                key={ex.refId}
+                                                name={ex.name}
+                                                refId={ex.refId}
+                                                onClick={() => {
+                                                    setTargetExercise(ex);
+                                                    setStep(2);
+                                                }}
+                                            />
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="flex flex-col items-center justify-center h-full text-gray-400 space-y-4">
+                                        <Search size={48} className="opacity-20" />
+                                        <p className="font-bold">No exercises found</p>
+                                    </div>
+                                )}
+                            </div>
+                        </>
+                    ) : (
+                        <div className="flex-1 flex flex-col items-center justify-center p-12 bg-gray-50/50">
+                            <div className="w-full max-w-md space-y-8 animate-in zoom-in-95 duration-300">
+                                <div className="text-center space-y-2">
+                                    <div className="w-20 h-20 bg-blue-100 text-blue-600 rounded-3xl mx-auto flex items-center justify-center shadow-lg shadow-blue-100">
+                                        <Dumbbell size={32} />
+                                    </div>
+                                    <h3 className="text-xl font-black text-gray-800">{targetExercise.name}</h3>
+                                    <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">{targetExercise.bodyPart?.name} • {targetExercise.targetMuscles?.[0]?.name}</p>
+                                </div>
+
+                                <div className="bg-white p-8 rounded-3xl shadow-xl border border-gray-100 space-y-6">
+                                    <div className="space-y-4">
+                                        <label className="block text-center text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Select Number of Sets</label>
+                                        <div className="flex justify-center items-center gap-4">
+                                            {[1, 2, 3, 4, 5, 6].map(n => (
+                                                <button
+                                                    key={n}
+                                                    onClick={() => setNumSets(n)}
+                                                    className={`w-12 h-12 rounded-2xl font-black text-lg transition-all ${numSets === n ? 'bg-blue-600 text-white shadow-xl shadow-blue-200 scale-110' : 'bg-slate-50 text-slate-400 hover:bg-blue-50 hover:text-blue-500'}`}
+                                                >
+                                                    {n}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    <div className="pt-4 flex gap-4">
+                                        <button
+                                            onClick={() => setStep(1)}
+                                            className="flex-1 py-4 text-sm font-black text-slate-400 uppercase tracking-widest hover:bg-slate-50 rounded-2xl transition-all"
+                                        >
+                                            Back
+                                        </button>
+                                        <button
+                                            onClick={handleConfirmAdd}
+                                            disabled={isSubmitting}
+                                            className="flex-2 px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black text-sm uppercase tracking-widest transition-all shadow-xl shadow-blue-100 flex items-center justify-center gap-3 disabled:opacity-50"
+                                        >
+                                            {isSubmitting ? 'Adding...' : 'Add to Session'}
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </motion.div>
+        </div>
+    );
+};
+
 const CompletionModal = ({ isOpen, onClose, onComplete }) => {
     const [stats, setStats] = useState({ duration: '', calories: '' });
 
@@ -244,10 +492,11 @@ const CompletionModal = ({ isOpen, onClose, onComplete }) => {
 
 // --- Main Page ---
 
-const RoutineLogger = ({ initialData }) => {
+const RoutineLogger = ({ initialData, bodyParts, muscles, exercises, trainings }) => {
     const router = useRouter();
     const [routine, setRoutine] = useState(initialData);
     const [isCompleteModalOpen, setIsCompleteModalOpen] = useState(false);
+    const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [showExportMenu, setShowExportMenu] = useState(false);
 
     // Status Logic
@@ -312,18 +561,52 @@ const RoutineLogger = ({ initialData }) => {
     };
 
     const handleDrillDelete = async (drill) => {
-        if (!confirm("Remove this exercise from routine?")) return;
+        if (!confirm("Remove this set/exercise from routine?")) return;
         try {
             await fitmateService.deleteDrill(drill.refId);
             // Refresh routine data after successful deletion
-            const updatedRoutine = await fitmateService.getRoutine(routineId);
+            const updatedRoutine = await fitmateService.getRoutine(routine.refId);
             if (updatedRoutine?.data) {
                 setRoutine(updatedRoutine.data);
             }
-            alert("Exercise removed successfully!");
+            alert("Removed successfully!");
         } catch (e) {
             console.error("Failed to delete drill:", e);
-            alert("Failed to remove exercise. Please try again.");
+            alert("Failed to remove. Please try again.");
+        }
+    };
+
+    const handleAddExercise = async (exercise, numSets = 1) => {
+        const exerciseUnit = exercise.unit || 'reps';
+        let defaultUnit = 'REPS';
+        if (exerciseUnit === 'weight') defaultUnit = 'KG';
+        else if (exerciseUnit === 'time') defaultUnit = 'sec';
+
+        const payload = {
+            routine: routine.refId,
+            exercise: { refId: exercise.refId },
+            measurementUnit: exerciseUnit === 'weight' ? 'Weight' : (exerciseUnit === 'time' ? 'Time' : 'Reps'),
+            measurement: 0,
+            unit: defaultUnit,
+            repetition: 0,
+            notes: ''
+        };
+
+        try {
+            // Sequential additions to ensure server order (if relevant)
+            for (let i = 0; i < numSets; i++) {
+                await fitmateService.addDrill(payload);
+            }
+            setIsAddModalOpen(false);
+            // Refresh routine
+            const updatedRoutine = await fitmateService.getRoutine(routine.refId);
+            if (updatedRoutine?.data) {
+                setRoutine(updatedRoutine.data);
+            }
+            alert(`${numSets} sets added to routine!`);
+        } catch (e) {
+            console.error("Failed to add exercise sets:", e);
+            alert("Failed to add one or more sets.");
         }
     };
 
@@ -426,7 +709,20 @@ const RoutineLogger = ({ initialData }) => {
                 </div>
             </div>
 
-            {/* Drills Section */}
+            {/* Drills Section Header */}
+            <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-black text-gray-800 uppercase tracking-tight">Routine Drills</h2>
+                {isActive && (
+                    <button
+                        onClick={() => setIsAddModalOpen(true)}
+                        className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-blue-100 transition-all border border-blue-100/50"
+                    >
+                        <Plus size={16} /> Add Exercise
+                    </button>
+                )}
+            </div>
+
+            {/* Drills Section Content */}
             <div>
                 {!isActive && !isCompleted && (
                     <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 mb-6 flex gap-3 text-blue-800 text-sm">
@@ -482,6 +778,16 @@ const RoutineLogger = ({ initialData }) => {
                 onClose={() => setIsCompleteModalOpen(false)}
                 onComplete={handleFinish}
             />
+
+            <AddExerciseModal
+                isOpen={isAddModalOpen}
+                onClose={() => setIsAddModalOpen(false)}
+                onAdd={handleAddExercise}
+                bodyParts={bodyParts}
+                muscles={muscles}
+                exercises={exercises}
+                trainingName={routine.training?.name}
+            />
         </div>
     );
 };
@@ -491,8 +797,29 @@ const RoutineDetail = () => {
     const { routineId } = router.query;
     const [routine, setRoutine] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [dropdownData, setDropdownData] = useState({ bodyParts: [], muscles: [], exercises: [], trainings: [] });
 
     useEffect(() => {
+        const fetchDropdowns = async () => {
+            try {
+                const [bodyRes, muscleRes, exerciseRes, trainingRes] = await Promise.all([
+                    fitmateService.getBodyParts(),
+                    fitmateService.getMuscles(),
+                    fitmateService.getExercises(),
+                    fitmateService.getTrainings()
+                ]);
+                setDropdownData({
+                    bodyParts: bodyRes.data || [],
+                    muscles: muscleRes.data || [],
+                    exercises: exerciseRes.data || [],
+                    trainings: trainingRes.data || []
+                });
+            } catch (error) {
+                console.error("Error fetching dropdown data:", error);
+            }
+        };
+        fetchDropdowns();
+
         if (routineId) {
             setLoading(true);
             fitmateService.getRoutine(routineId)
@@ -510,7 +837,7 @@ const RoutineDetail = () => {
     if (loading) return <div className="p-10 text-center font-bold text-gray-400 animate-pulse">Loading Routine...</div>;
     if (!routine) return <div className="p-10 text-center text-red-500 font-bold">Routine not found.</div>;
 
-    return <Layout content={<RoutineLogger initialData={routine} />} />;
+    return <Layout content={<RoutineLogger initialData={routine} {...dropdownData} />} />;
 }
 
 export default RoutineDetail;
