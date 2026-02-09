@@ -446,7 +446,7 @@ const AdvancedAnalytics = () => {
                                 </div>
                                 <div className="pt-6 border-t border-slate-50">
                                     <p className="text-xs font-bold text-slate-500 leading-relaxed italic border-l-4 border-indigo-200 pl-4 bg-indigo-50/30 py-4 rounded-r-xl">
-                                        "{selectedExercise}" shows consistent improvement in muscular adaptive response over the tracked period.
+                                        &quot;{selectedExercise}&quot; shows consistent improvement in muscular adaptive response over the tracked period.
                                     </p>
                                 </div>
                             </div>

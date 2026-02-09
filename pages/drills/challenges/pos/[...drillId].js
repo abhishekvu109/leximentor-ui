@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import Layout from "@/components/layout/Layout";
@@ -83,9 +83,9 @@ const POSPractice = () => {
             };
             fetchDataAsync();
         }
-    }, [drillRefId, challengeId]);
+    }, [drillRefId, challengeId, initializeGame]);
 
-    const initializeGame = (wordData = drillSetWordData, scores = challengeScores, setData = drillSetData) => {
+    const initializeGame = useCallback((wordData = drillSetWordData, scores = challengeScores, setData = drillSetData) => {
         const generatedQuestions = scores.data.map(scoreItem => {
             const setItem = setData.data.find(d => d.refId === scoreItem.drillSetRefId);
             if (!setItem) return null;
@@ -107,7 +107,7 @@ const POSPractice = () => {
         setCurrentIndex(0);
         setAnswers([]);
         setIsCompleted(false);
-    };
+    }, [drillSetWordData, challengeScores, drillSetData]);
 
     const handlePosSelect = (selectedPos) => {
         const currentQuestion = questions[currentIndex];

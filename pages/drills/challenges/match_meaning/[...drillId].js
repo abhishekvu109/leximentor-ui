@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import Layout from "@/components/layout/Layout";
@@ -101,9 +101,9 @@ const MatchMeaningChallenge = () => {
             };
             fetchDataAsync();
         }
-    }, [drillRefId, challengeId]);
+    }, [drillRefId, challengeId, initializeGame]);
 
-    const initializeGame = (data, scores, setData) => {
+    const initializeGame = useCallback((data, scores, setData) => {
         // Map scores to words to get scoreRefId
         const mapped = scores.map(scoreItem => {
             // Find the join record in drillSetData
@@ -135,7 +135,7 @@ const MatchMeaningChallenge = () => {
         setIncorrectPairs(new Set());
         setSelectedWord(null);
         setIsCompleted(false);
-    };
+    }, [challengeId]);
 
     const closeNotification = () => setNotification({ ...notification, visible: false });
 
