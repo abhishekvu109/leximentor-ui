@@ -1714,16 +1714,17 @@ const AnalyticsTab = ({ household }) => {
                     types.map(type => householdService.getHouseholdAnalytics(payload, type))
                 );
 
-                const newData = { ...analyticsData };
-                results.forEach((result, index) => {
-                    if (result.status === 'fulfilled' && result.value?.data?.data) {
-                        newData[types[index]] = result.value.data.data;
-                    } else if (result.status === 'fulfilled' && result.value?.data) {
-                        newData[types[index]] = result.value.data;
-                    }
+                setAnalyticsData(prev => {
+                    const nextData = { ...prev };
+                    results.forEach((result, index) => {
+                        if (result.status === 'fulfilled' && result.value?.data?.data) {
+                            nextData[types[index]] = result.value.data.data;
+                        } else if (result.status === 'fulfilled' && result.value?.data) {
+                            nextData[types[index]] = result.value.data;
+                        }
+                    });
+                    return nextData;
                 });
-
-                setAnalyticsData(newData);
             } catch (error) {
                 console.error("Failed to fetch household analytics:", error);
             } finally {
@@ -1752,7 +1753,7 @@ const AnalyticsTab = ({ household }) => {
                     <BarChart3 size={40} />
                 </div>
                 <h2 className="text-xl font-black text-gray-800 dark:text-white uppercase tracking-tight">Analytics Unavailable</h2>
-                <p className="text-sm text-gray-400 font-bold mt-2 max-w-xs text-center">We couldn't retrieve enough historical data to generate insights for this household.</p>
+                <p className="text-sm text-gray-400 font-bold mt-2 max-w-xs text-center">We couldn&apos;t retrieve enough historical data to generate insights for this household.</p>
             </div>
         );
     }
