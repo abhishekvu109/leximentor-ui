@@ -61,6 +61,15 @@ const householdService = {
     },
     getHouseholdDashboardData: (householdRefId, username) => {
         return apiClient.get(ENDPOINTS.CASHFLOW.HOUSEHOLD_DASHBOARD, { params: { householdRefId, username } });
+    },
+    getHouseholdAnalytics: (payload, type = 'core') => {
+        const endpointMap = {
+            core: ENDPOINTS.CASHFLOW.HOUSEHOLD_ANALYTICS_CORE,
+            behavior: ENDPOINTS.CASHFLOW.HOUSEHOLD_ANALYTICS_BEHAVIOR,
+            diagnostic: ENDPOINTS.CASHFLOW.HOUSEHOLD_ANALYTICS_DIAGNOSTIC,
+            planning: ENDPOINTS.CASHFLOW.HOUSEHOLD_ANALYTICS_PLANNING,
+        };
+        return apiClient.post(endpointMap[type], payload);
     }
 };
 

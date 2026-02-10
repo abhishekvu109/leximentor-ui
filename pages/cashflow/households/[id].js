@@ -23,7 +23,9 @@ import {
     RefreshCcw,
     X,
     UserPlus,
-    Shield
+    Shield,
+    Zap,
+    Activity
 } from "lucide-react";
 import {
     AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -1672,6 +1674,279 @@ const OverviewTab = ({ household }) => {
     );
 };
 
+const AnalyticsTab = ({ household }) => {
+    const { user } = useAuth();
+    const [analyticsData, setAnalyticsData] = useState({
+        core: null,
+        behavior: null,
+        diagnostic: null,
+        planning: null
+    });
+    const [loading, setLoading] = useState(true);
+    const currency = household?.currency || 'INR';
+
+    useEffect(() => {
+        const fetchAllAnalytics = async () => {
+            if (!household?.refId) return;
+            setLoading(true);
+
+            // Calculate Date Ranges
+            const now = new Date();
+            const firstDayCurrent = new Date(now.getFullYear(), now.getMonth(), 1);
+            const lastDayCurrent = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
+            const firstDayLast = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+            const lastDayLast = new Date(now.getFullYear(), now.getMonth(), 0);
+
+            const formatDate = (date) => date.toISOString().split('T')[0];
+
+            const payload = {
+                householdRefId: household.refId,
+                from: formatDate(firstDayCurrent),
+                to: formatDate(lastDayCurrent),
+                compareFrom: formatDate(firstDayLast),
+                compareTo: formatDate(lastDayLast)
+            };
+
+            try {
+                const types = ['core', 'behavior', 'diagnostic', 'planning'];
+                const results = await Promise.allSettled(
+                    types.map(type => householdService.getHouseholdAnalytics(payload, type))
+                );
+
+                const newData = { ...analyticsData };
+                results.forEach((result, index) => {
+                    if (result.status === 'fulfilled' && result.value?.data?.data) {
+                        newData[types[index]] = result.value.data.data;
+                    } else if (result.status === 'fulfilled' && result.value?.data) {
+                        newData[types[index]] = result.value.data;
+                    }
+                });
+
+                setAnalyticsData(newData);
+            } catch (error) {
+                console.error("Failed to fetch household analytics:", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchAllAnalytics();
+    }, [household?.refId]);
+
+    if (loading) {
+        return (
+            <div className="flex flex-col items-center justify-center py-20">
+                <Loader2 className="animate-spin text-indigo-500 mb-4" size={48} />
+                <p className="text-sm font-black text-gray-400 uppercase tracking-widest">Generating Deep Insights...</p>
+            </div>
+        );
+    }
+
+    const { core, behavior, diagnostic, planning } = analyticsData;
+
+    if (!core && !behavior && !diagnostic && !planning) {
+        return (
+            <div className="flex flex-col items-center justify-center py-24 bg-gray-50 dark:bg-gray-900/40 rounded-[3rem] border-4 border-dashed border-gray-100 dark:border-gray-800 animate-in fade-in zoom-in duration-500">
+                <div className="w-20 h-20 bg-amber-50 dark:bg-amber-900/20 rounded-3xl flex items-center justify-center text-amber-500 mb-6">
+                    <BarChart3 size={40} />
+                </div>
+                <h2 className="text-xl font-black text-gray-800 dark:text-white uppercase tracking-tight">Analytics Unavailable</h2>
+                <p className="text-sm text-gray-400 font-bold mt-2 max-w-xs text-center">We couldn't retrieve enough historical data to generate insights for this household.</p>
+            </div>
+        );
+    }
+
+    const summary = core?.summary || behavior?.summary || diagnostic?.summary || planning?.summary;
+    const runwayForecast = planning?.planning?.runwayForecast;
+    const whatIfScenarios = planning?.planning?.whatIfScenarios;
+    const goalTracking = planning?.planning?.goalTracking;
+    const monthEndProjection = planning?.planning?.monthEndProjection;
+
+    return (
+        <div className="space-y-12 animate-in fade-in duration-500 pb-20">
+            {/* KPI Summary Strip */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="bg-white dark:bg-gray-800 p-6 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm group hover:scale-[1.02] transition-all">
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-1">Total Spent</p>
+                    <h3 className="text-2xl font-black text-gray-800 dark:text-white">{currency} {Math.round(summary?.total || 0).toLocaleString()}</h3>
+                    <p className="text-[10px] text-gray-400 font-bold mt-1 uppercase tracking-tighter">Current Period</p>
+                </div>
+                <div className="bg-white dark:bg-gray-800 p-6 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm group hover:scale-[1.02] transition-all">
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-1">Average Daily</p>
+                    <h3 className="text-2xl font-black text-indigo-600">{currency} {Math.round(summary?.averagePerDay || 0).toLocaleString()}</h3>
+                </div>
+                <div className="bg-white dark:bg-gray-800 p-6 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm group hover:scale-[1.02] transition-all">
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-1">Growth vs Prev</p>
+                    <h3 className={`text-2xl font-black ${core?.comparison?.percentage > 0 ? 'text-rose-500' : 'text-emerald-500'}`}>
+                        {core?.comparison?.percentage > 0 ? '+' : ''}{Math.round(core?.comparison?.percentage || 0)}%
+                    </h3>
+                </div>
+                <div className="bg-indigo-600 p-6 rounded-3xl text-white shadow-lg shadow-indigo-100 group hover:scale-[1.02] transition-all">
+                    <p className="text-[10px] font-black text-indigo-100 uppercase tracking-[0.2em] mb-1">Projected Total</p>
+                    <h3 className="text-2xl font-black">{currency} {Math.round(monthEndProjection?.projectedTotal || 0).toLocaleString()}</h3>
+                </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                {/* Behavioral Insights */}
+                <div className="lg:col-span-2 space-y-8">
+                    {/* Category Leakage */}
+                    <div className="bg-white dark:bg-gray-800 p-8 rounded-[2.5rem] border border-gray-100 dark:border-gray-700 shadow-sm">
+                        <h2 className="text-xl font-black text-gray-800 dark:text-white uppercase tracking-tight mb-8 flex items-center gap-3">
+                            <Zap size={24} className="text-amber-500" />
+                            Spending Leakage
+                        </h2>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {behavior?.behavior?.leakageCategories?.map((cat, i) => (
+                                <div key={i} className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-900/50 rounded-2xl border border-gray-50 dark:border-gray-800">
+                                    <div>
+                                        <p className="text-xs font-black text-gray-700 dark:text-white uppercase tracking-wider">{cat.category}</p>
+                                        <p className="text-[10px] text-gray-400 font-bold uppercase">{cat.count} Transactions</p>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="text-sm font-black text-rose-500">{currency} {Math.round(cat.total).toLocaleString()}</p>
+                                        <p className="text-[9px] text-gray-400 font-bold">AVG: {Math.round(cat.average)}</p>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Planning & Scenarios */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        {/* What-If */}
+                        <div className="bg-white dark:bg-gray-800 p-8 rounded-[2.5rem] border border-gray-100 dark:border-gray-700 shadow-sm">
+                            <h2 className="text-lg font-black text-gray-800 dark:text-white uppercase tracking-tight mb-6 flex items-center gap-3">
+                                <RefreshCcw size={20} className="text-indigo-500" />
+                                What-If
+                            </h2>
+                            <div className="space-y-4">
+                                {whatIfScenarios?.map((s, i) => (
+                                    <div key={i} className="group">
+                                        <div className="flex justify-between mb-1">
+                                            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{s.label}</span>
+                                            <span className="text-[10px] font-black text-emerald-500">{currency} {Math.abs(s.delta).toLocaleString()} Save</span>
+                                        </div>
+                                        <div className="h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                                            <div className="h-full bg-emerald-500 group-hover:bg-emerald-400 transition-all duration-700" style={{ width: `${(s.adjustedTotal / (summary?.total || 1)) * 100}%` }} />
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Forecast */}
+                        <div className="bg-indigo-900 p-8 rounded-[2.5rem] text-white shadow-xl">
+                            <h2 className="text-lg font-black uppercase tracking-tight mb-6">Confidence</h2>
+                            <div className="space-y-6">
+                                <div>
+                                    <div className="flex justify-between text-[10px] font-black text-indigo-300 uppercase mb-2">
+                                        <span>Current Range</span>
+                                        <span>± {Math.round((monthEndProjection?.upperBound - monthEndProjection?.lowerBound) / 2).toLocaleString()}</span>
+                                    </div>
+                                    <div className="relative h-6 bg-white/10 rounded-xl overflow-hidden flex items-center px-4">
+                                        <div className="absolute inset-0 bg-indigo-500/20" style={{ left: '20%', right: '20%' }} />
+                                        <span className="z-10 text-[10px] font-black">{currency} {Math.round(monthEndProjection?.projectedTotal || 0).toLocaleString()}</span>
+                                    </div>
+                                </div>
+                                <p className="text-[10px] text-indigo-300 font-bold leading-relaxed">
+                                    Projected total is based on <span className="text-white">{monthEndProjection?.basisDays}</span> days of data with <span className="text-white">AVG_DAILY</span> method.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Sidebar Diagnostics & Budget */}
+                <div className="space-y-8">
+                    {/* Diagnostic Summary */}
+                    <div className="bg-white dark:bg-gray-800 p-8 rounded-[2.5rem] border border-gray-100 dark:border-gray-700 shadow-sm">
+                        <h2 className="text-lg font-black text-gray-800 dark:text-white uppercase tracking-tight mb-6 flex items-center gap-3">
+                            <Activity size={20} className="text-rose-500" />
+                            Diagnostics
+                        </h2>
+                        <div className="space-y-4">
+                            <div className="p-4 bg-gray-50 dark:bg-gray-900/50 rounded-2xl">
+                                <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Peak Spending Day</p>
+                                <p className="text-sm font-black text-gray-800 dark:text-white uppercase">{diagnostic?.diagnostic?.peakSpendDay?.date}</p>
+                                <p className="text-xs font-bold text-rose-500">{currency} {Math.round(diagnostic?.diagnostic?.peakSpendDay?.total || 0).toLocaleString()}</p>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="p-4 bg-gray-50 dark:bg-gray-900/50 rounded-2xl text-center">
+                                    <p className="text-[9px] font-black text-gray-400 uppercase mb-1">UPI %</p>
+                                    <p className="text-sm font-black text-indigo-600">
+                                        {Math.round(diagnostic?.diagnostic?.cashVsCard?.find(m => m.mode === 'UPI')?.percentage || 0)}%
+                                    </p>
+                                </div>
+                                <div className="p-4 bg-gray-50 dark:bg-gray-900/50 rounded-2xl text-center">
+                                    <p className="text-[9px] font-black text-gray-400 uppercase mb-1">Cash %</p>
+                                    <p className="text-sm font-black text-amber-600">
+                                        {Math.round(diagnostic?.diagnostic?.cashVsCard?.find(m => m.mode === 'CASH')?.percentage || 0)}%
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Member Breakdown */}
+                    <div className="bg-white dark:bg-gray-800 p-8 rounded-[2.5rem] border border-gray-100 dark:border-gray-700 shadow-sm">
+                        <h2 className="text-lg font-black text-gray-800 dark:text-white uppercase tracking-tight mb-6 flex items-center gap-3">
+                            <Users size={20} className="text-indigo-500" />
+                            Member Stats
+                        </h2>
+                        <div className="space-y-4">
+                            {core?.members?.map((m, i) => (
+                                <div key={i} className="flex items-center gap-4">
+                                    <div className="w-10 h-10 bg-indigo-50 dark:bg-indigo-900/40 rounded-full flex items-center justify-center text-indigo-600 font-black text-xs">
+                                        {m.key.charAt(0).toUpperCase()}
+                                    </div>
+                                    <div className="flex-1">
+                                        <div className="flex justify-between items-center mb-1">
+                                            <span className="text-[10px] font-black text-gray-700 dark:text-white uppercase truncate max-w-[80px]">{m.key}</span>
+                                            <span className="text-[10px] font-black text-gray-400 uppercase tracking-tighter">{Math.round(m.percentage)}%</span>
+                                        </div>
+                                        <div className="h-1.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                                            <div className="h-full bg-indigo-500" style={{ width: `${m.percentage}%` }} />
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Trends Section */}
+            <div className="bg-white dark:bg-gray-800 p-8 rounded-[3rem] border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
+                <h2 className="text-xl font-black text-gray-800 dark:text-white uppercase tracking-tight mb-8 flex items-center gap-3">
+                    <TrendingUp size={24} className="text-indigo-500" />
+                    Daily Trend Analysis
+                </h2>
+                <div className="flex items-end gap-1 h-32 md:h-48 group">
+                    {core?.dailyTrend?.map((d, i) => {
+                        const max = Math.max(...core.dailyTrend.map(t => t.total));
+                        const height = (d.total / max) * 100;
+                        return (
+                            <div key={i} className="flex-1 flex flex-col items-center gap-2">
+                                <div
+                                    className="w-full bg-indigo-100 dark:bg-indigo-900/30 rounded-t-lg hover:bg-indigo-500 transition-all cursor-crosshair relative group/bar"
+                                    style={{ height: `${height}%` }}
+                                >
+                                    <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-[8px] font-black px-2 py-1 rounded opacity-0 group-hover/bar:opacity-100 pointer-events-none whitespace-nowrap z-20">
+                                        {currency} {Math.round(d.total)}
+                                    </div>
+                                </div>
+                                <span className="text-[6px] md:text-[8px] font-black text-gray-400 rotate-45 md:rotate-0">{d.period.split('-').slice(1).join('/')}</span>
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
+        </div>
+    );
+};
+
 const MembersTab = ({ members, household, onInviteClick }) => {
     const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
     const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
@@ -2670,6 +2945,7 @@ const HouseholdDetailsLogic = () => {
 
     const tabs = [
         { id: "overview", label: "Overview", icon: BarChart3 },
+        { id: "analytics", label: "Analytics", icon: TrendingUp },
         { id: "deposits", label: "Deposits", icon: TrendingUp },
         { id: "members", label: "Members", icon: Users },
         { id: "budgets", label: "Budgets", icon: TrendingUp },
@@ -2732,6 +3008,7 @@ const HouseholdDetailsLogic = () => {
             {/* Tab Content */}
             <div className="mt-4">
                 {activeTab === "overview" && <OverviewTab household={household} />}
+                {activeTab === "analytics" && <AnalyticsTab household={household} />}
                 {activeTab === "deposits" && (
                     <DepositsTab
                         deposits={household.deposits}

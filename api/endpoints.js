@@ -19,6 +19,10 @@ export const ENDPOINTS = {
         CATEGORIES: '/cashflow/categories/category/search',
         DASHBOARD: '/cashflow/dashboard',
         HOUSEHOLD_DASHBOARD: '/cashflow/dashboard/household',
+        HOUSEHOLD_ANALYTICS_CORE: '/cashflow/households/analytics/core',
+        HOUSEHOLD_ANALYTICS_BEHAVIOR: '/cashflow/households/analytics/behavior',
+        HOUSEHOLD_ANALYTICS_DIAGNOSTIC: '/cashflow/households/analytics/diagnostic',
+        HOUSEHOLD_ANALYTICS_PLANNING: '/cashflow/households/analytics/planning',
     },
     FITMATE: {
         BASE: '/fitmate',
