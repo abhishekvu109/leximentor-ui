@@ -3,9 +3,10 @@ import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
 import Layout from "@/components/layout/Layout";
 import Link from 'next/link';
-import { ArrowLeft, Dumbbell, Activity, Calendar, PlayCircle, Edit2, Camera, Save, Loader2, Check, AlertCircle, Info, X } from 'lucide-react';
+import { ArrowLeft, Dumbbell, Activity, Calendar, PlayCircle, Edit2, Camera, Save, Loader2, Check, AlertCircle, Info, X, History, Clock, TrendingUp } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import fitmateService from "@/services/fitmate.service";
+import { useAuth } from "@/context/AuthContext";
 
 
 const EditExerciseModal = ({ isOpen, onClose, exercise, onSuccess, onNotification, data: { trainings, bodyParts, musclesAll } }) => {
@@ -235,10 +236,13 @@ const EditExerciseModal = ({ isOpen, onClose, exercise, onSuccess, onNotificatio
 
 const ExerciseDetailContent = () => {
     const router = useRouter();
+    const { user } = useAuth();
     const { id } = router.query;
     const [exercise, setExercise] = useState(null);
     const [loading, setLoading] = useState(true);
     const [exerciseImage, setExerciseImage] = useState(null);
+    const [history, setHistory] = useState([]);
+    const [totalCompletion, setTotalCompletion] = useState(0);
     const [refData, setRefData] = useState({ trainings: [], bodyParts: [], musclesAll: [] });
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [notification, setNotification] = useState({ visible: false, message: "", type: "info" });
@@ -267,27 +271,63 @@ const ExerciseDetailContent = () => {
         }
     };
 
-    const loadExerciseData = () => {
+    const loadExerciseData = async () => {
         if (id) {
             setLoading(true);
-            fitmateService.getExercise(id)
-                .then((data) => {
-                    setExercise(data.data);
-                    if (data.data?.refId) {
-                        fetchExerciseImage(data.data.refId);
+            try {
+                const exRes = await fitmateService.getExercise(id);
+                const exData = exRes.data;
+                setExercise(exData);
+
+                if (exData?.refId) {
+                    fetchExerciseImage(exData.refId);
+                }
+
+                if (exData?.name) {
+                    // Fetch Analytics (Total count + History)
+                    if (user?.username) {
+                        try {
+                            const res = await fitmateService.getExerciseAnalytics(user.username);
+                            // apiClient returns { meta: ..., data: ... }
+                            const dataMap = res?.data || res;
+
+                            if (dataMap && typeof dataMap === 'object') {
+                                const normalizedName = exData.name.toLowerCase().trim();
+                                let matchedData = null;
+
+                                // Try exact match first
+                                if (dataMap[exData.name]) {
+                                    matchedData = dataMap[exData.name];
+                                } else {
+                                    // Fallback to fuzzy match
+                                    const key = Object.keys(dataMap).find(k => k.toLowerCase().trim() === normalizedName);
+                                    if (key) matchedData = dataMap[key];
+                                }
+
+                                if (matchedData) {
+                                    setTotalCompletion(matchedData.totalNumberOfTimesCompleted || 0);
+                                    setHistory(matchedData.lastFiveDrills || []);
+                                } else {
+                                    setTotalCompletion(0);
+                                    setHistory([]);
+                                }
+                            }
+                        } catch (err) {
+                            console.error("Failed to fetch analytics:", err);
+                        }
                     }
-                    setLoading(false);
-                })
-                .catch((err) => {
-                    console.error('Failed to fetch exercise:', err);
-                    setLoading(false);
-                });
+                }
+            } catch (err) {
+                console.error('Failed to fetch exercise:', err);
+            } finally {
+                setLoading(false);
+            }
         }
     };
 
     useEffect(() => {
         loadExerciseData();
-    }, [id]);
+    }, [id, user]);
 
     useEffect(() => {
         const fetchRefData = async () => {
@@ -460,20 +500,15 @@ const ExerciseDetailContent = () => {
                             <p className="font-semibold text-gray-800 capitalize">{exercise.unit || 'reps'}</p>
                         </div>
                         <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100 relative group">
-                            <div className="flex items-center justify-between mb-1 text-gray-400">
+                            <div className="flex items-center justify-between mb-1 text-blue-600">
                                 <div className="flex items-center gap-2">
-                                    <Camera size={16} />
-                                    <span className="text-xs font-bold uppercase">Thumbnail</span>
+                                    <TrendingUp size={16} />
+                                    <span className="text-xs font-black uppercase tracking-widest">Total Done</span>
                                 </div>
-                                <label className="cursor-pointer text-blue-600 hover:text-blue-700 transition-colors">
-                                    <input type="file" className="hidden" accept="image/*" onChange={handleThumbnailUpload} disabled={uploading} />
-                                    {uploading ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-                                </label>
                             </div>
-                            <p className="font-semibold text-gray-800">
-                                {exercise.resources?.some(r => r.placeholder === 'THUMBNAIL') ? 'Uploaded' : 'Not Set'}
+                            <p className="text-2xl font-black text-slate-900 tracking-tight">
+                                {totalCompletion} <span className="text-xs text-slate-400 font-bold uppercase">{totalCompletion === 1 ? 'Time' : 'Times'}</span>
                             </p>
-                            <span className="absolute right-0 -top-8 px-2 py-1 bg-black text-white text-[10px] font-bold rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">Upload Thumbnail</span>
                         </div>
                     </div>
 
@@ -495,6 +530,61 @@ const ExerciseDetailContent = () => {
                         </div>
                     </div>
                 </div>
+            </div>
+
+            {/* History Section */}
+            <div className="pt-8 border-t border-gray-100">
+                <div className="flex items-center justify-between mb-6">
+                    <h2 className="text-lg font-black text-slate-900 uppercase tracking-tight flex items-center gap-3">
+                        <div className="p-2 bg-indigo-50 text-indigo-600 rounded-xl">
+                            <History size={20} />
+                        </div>
+                        History Telemetry
+                    </h2>
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-50 px-3 py-1 rounded-lg border border-slate-100">
+                        Last 5 Records
+                    </span>
+                </div>
+
+                {history.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                        {history.slice(0, 5).map((log, i) => (
+                            <div key={i} className="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm hover:border-indigo-100 transition-all group relative overflow-hidden">
+                                <div className="absolute top-0 right-0 w-16 h-16 bg-indigo-50/30 rounded-full -mr-8 -mt-8 group-hover:scale-150 transition-transform duration-500" />
+                                <div className="relative z-10 flex flex-col h-full justify-between gap-4">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-1.5 text-slate-400 font-bold text-[10px] uppercase tracking-wider">
+                                            <Calendar size={12} />
+                                            {new Date(log.creationDate).toLocaleDateString([], { month: 'short', day: 'numeric' })}
+                                        </div>
+                                        <span className="px-2 py-0.5 bg-slate-900 text-white text-[8px] font-black uppercase rounded-md tracking-tighter">
+                                            {log.unit}
+                                        </span>
+                                    </div>
+                                    <div className="flex items-baseline gap-1">
+                                        <span className="text-3xl font-black text-slate-900 tracking-tighter">{log.measurement}</span>
+                                        <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">x</span>
+                                        <span className="text-xl font-black text-indigo-600">{log.repetition}</span>
+                                    </div>
+                                    {log.notes && (
+                                        <div className="flex items-start gap-1.5">
+                                            <Info size={10} className="text-slate-300 shrink-0 mt-0.5" />
+                                            <p className="text-[9px] text-slate-400 leading-tight italic line-clamp-2">{log.notes}</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <div className="bg-slate-50 border-2 border-dashed border-slate-200 rounded-[2.5rem] p-12 text-center">
+                        <div className="w-16 h-16 bg-white rounded-2xl shadow-sm border border-slate-100 flex items-center justify-center mx-auto mb-4 text-slate-300">
+                            <Clock size={32} />
+                        </div>
+                        <p className="text-slate-500 font-bold uppercase tracking-widest text-sm">No biometric history found</p>
+                        <p className="text-slate-400 text-xs mt-1 font-medium">Complete this exercise in a routine to begin telemetry.</p>
+                    </div>
+                )}
             </div>
 
             {/* Resources Section (if available) */}
@@ -523,6 +613,7 @@ const ExerciseDetailContent = () => {
                     </div>
                 </div>
             )}
+
             {/* Notifications */}
             <AnimatePresence>
                 {notification.visible && (

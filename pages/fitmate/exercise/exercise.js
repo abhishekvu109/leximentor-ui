@@ -6,13 +6,14 @@ import fitmateService from "../../../services/fitmate.service";
 import {
     Search, Plus, Filter, Trash2, Edit2, Dumbbell,
     MoreVertical, X, Check, AlertCircle, Loader2, Info, Camera,
-    ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight
+    ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, History
 } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
 import { motion, AnimatePresence } from "framer-motion";
 
 // --- Components ---
 
-const ExerciseCard = ({ exercise, onDelete, onEdit, onThumbnailUpload }) => {
+const ExerciseCard = ({ exercise, analytics, onDelete, onEdit, onThumbnailUpload }) => {
     const [uploading, setUploading] = useState(false);
     const [thumbUrl, setThumbUrl] = useState(null);
 
@@ -78,8 +79,19 @@ const ExerciseCard = ({ exercise, onDelete, onEdit, onThumbnailUpload }) => {
                             </h2>
                         </div>
                     )}
-                    <div className="absolute bottom-2 left-2">
-                        <span className="px-2 py-1 bg-black/60 backdrop-blur-sm text-white text-[10px] font-bold uppercase tracking-wider rounded-md">
+                    {analytics?.totalNumberOfTimesCompleted > 0 && (
+                        <div className="absolute top-2 left-2 z-10">
+                            <div className="w-9 h-9 rounded-full bg-blue-600/90 backdrop-blur-sm text-white flex flex-col items-center justify-center shadow-lg shadow-blue-500/30 border border-white/20 animate-in zoom-in duration-300">
+                                <History size={12} strokeWidth={3.5} />
+                                <span className="text-[10px] font-black leading-none mt-0.5">
+                                    {analytics.totalNumberOfTimesCompleted}
+                                </span>
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="absolute bottom-2 left-2 flex flex-col gap-1">
+                        <span className="px-2 py-1 bg-black/60 backdrop-blur-sm text-white text-[10px] font-bold uppercase tracking-wider rounded-md w-fit">
                             {exercise.bodyPart?.name || 'General'}
                         </span>
                     </div>
@@ -379,8 +391,10 @@ const SaveIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="non
 // --- Main Page Component ---
 
 const ExerciseLibrary = () => {
+    const { user } = useAuth();
     // State
     const [exercises, setExercises] = useState([]);
+    const [exerciseAnalytics, setExerciseAnalytics] = useState({});
     const [refData, setRefData] = useState({ trainings: [], bodyParts: [], musclesAll: [] });
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState("");
@@ -414,6 +428,26 @@ const ExerciseLibrary = () => {
                 bodyParts: bpRes.data || [],
                 musclesAll: mRes.data || []
             });
+
+            if (user?.username) {
+                try {
+                    const res = await fitmateService.getExerciseAnalytics(user.username);
+                    // apiClient returns response.data, so res is { meta: ..., data: { ... } }
+                    const dataMap = res?.data || res;
+
+                    if (dataMap && typeof dataMap === 'object') {
+                        const normalizedData = {};
+                        Object.keys(dataMap).forEach(key => {
+                            if (key !== 'meta' && typeof dataMap[key] === 'object') {
+                                normalizedData[key.toLowerCase().trim()] = dataMap[key];
+                            }
+                        });
+                        setExerciseAnalytics(normalizedData);
+                    }
+                } catch (err) {
+                    console.error("Failed to fetch exercise analytics", err);
+                }
+            }
         } catch (e) {
             console.error(e);
         } finally {
@@ -421,7 +455,9 @@ const ExerciseLibrary = () => {
         }
     };
 
-    useEffect(() => { loadData(); }, []);
+    useEffect(() => {
+        loadData();
+    }, [user?.username]);
 
     // Handlers
     const handleDelete = async (exercise) => {
@@ -555,6 +591,7 @@ const ExerciseLibrary = () => {
                         <ExerciseCard
                             key={ex.refId || ex.id || Math.random()}
                             exercise={ex}
+                            analytics={exerciseAnalytics[ex.name?.toLowerCase()?.trim()]}
                             onDelete={handleDelete}
                             onEdit={() => { }}
                             onThumbnailUpload={handleThumbnailUpload}
