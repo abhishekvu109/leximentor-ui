@@ -43,6 +43,12 @@ export const ENDPOINTS = {
         ANALYTICS_ROUTINE_EFFICIENCY: '/fitmate/analytics/routine-efficiency',
         ANALYTICS_ACTIVITY_CONSISTENCY: '/fitmate/analytics/activity-consistency',
         ANALYTICS_CALORIES_DURATION: '/fitmate/analytics/calories-duration',
+        NUTRITION_BASE: '/fitmate/nutrition',
+        NUTRITION_GOALS: '/fitmate/nutrition/goals',
+        NUTRITION_ENTRIES: '/fitmate/nutrition/entries',
+        NUTRITION_DAILY_SUMMARY: '/fitmate/nutrition/summary/daily',
+        NUTRITION_TRENDS_SUMMARY: '/fitmate/nutrition/summary/trends',
+        EXPORT_NUTRITION: (format) => `/fitmate/v1/export/nutrition/${format}`,
     },
     LEXIMENTOR: {
         BASE: '/leximentor',
