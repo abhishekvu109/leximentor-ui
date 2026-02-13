@@ -2,8 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import Layout from "@/components/layout/Layout";
-import { API_LEXIMENTOR_BASE_URL } from "@/constants";
-import { fetchData, fetchWithAuth } from "@/dataService";
+import leximentorService from "../../../../services/leximentor.service";
 import {
     ArrowLeftIcon,
     HeartIcon,
@@ -106,8 +105,8 @@ const SpeedTyperChallenge = () => {
             const fetchDataAsync = async () => {
                 try {
                     const [setData, wordData] = await Promise.all([
-                        fetchWithAuth(`${API_LEXIMENTOR_BASE_URL}/drill/metadata/sets/${drillRefId}`).then(res => res.json()),
-                        fetchWithAuth(`${API_LEXIMENTOR_BASE_URL}/drill/metadata/sets/words/data/${drillRefId}`).then(res => res.json())
+                        leximentorService.getDrillSet(drillRefId),
+                        leximentorService.getDrillSetWords(drillRefId)
                     ]);
 
                     setDrillSetData(setData || { data: [] });
@@ -149,7 +148,7 @@ const SpeedTyperChallenge = () => {
         setTimeout(() => inputRef.current?.focus(), 100);
     };
 
-    const spawnItem = () => {
+    const spawnItem = useCallback(() => {
         if (wordQueue.length === 0 || fallingItems.length >= 5) return;
 
         const randomIndex = Math.floor(Math.random() * wordQueue.length);
@@ -166,7 +165,7 @@ const SpeedTyperChallenge = () => {
 
         setFallingItems(prev => [...prev, newItem]);
         setWordQueue(prev => prev.filter((_, idx) => idx !== randomIndex));
-    };
+    }, [wordQueue, fallingItems.length, level]);
 
     useEffect(() => {
         if (!isPlaying || isGameOver) {
@@ -251,11 +250,7 @@ const SpeedTyperChallenge = () => {
                 response: score.toString()
             }));
 
-            const URL = `${API_LEXIMENTOR_BASE_URL}/drill/metadata/challenges/challenge/${challengeId}/scores`;
-            await fetchWithAuth(URL, {
-                method: 'PUT',
-                body: JSON.stringify(submissionData),
-            });
+            await leximentorService.updateChallengeScores(challengeId, submissionData);
             setNotification({ visible: true, message: `Final Score: ${score}! Progress saved.`, type: 'success' });
         } catch (error) {
             console.error(error);

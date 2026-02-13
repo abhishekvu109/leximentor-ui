@@ -1,5 +1,4 @@
-import { fetchWithAuth } from "@/dataService";
-import { API_WRITEWISE_BASE_URL } from "@/constants";
+import writewiseService from "../../../../../services/writewise.service";
 import Layout from "@/components/layout/Layout";
 import { useEffect, useState, useMemo, useCallback } from "react";
 import dynamic from "next/dynamic";
@@ -52,8 +51,8 @@ const WritingPad = () => {
         setLoading(true);
         try {
             const [topicsRes, versionsRes] = await Promise.all([
-                fetchWithAuth(`${API_WRITEWISE_BASE_URL}/v1/topics/topic/${topicRefId}`).then(res => res.json()),
-                fetchWithAuth(`${API_WRITEWISE_BASE_URL}/v1/response/response-version/${topicRefId}`).then(res => res.json())
+                writewiseService.getTopic(topicRefId),
+                writewiseService.getResponseVersions(topicRefId)
             ]);
 
             setTopic(topicsRes?.data || {});
@@ -104,17 +103,12 @@ const WritingPad = () => {
         };
 
         try {
-            const res = await fetchWithAuth(`${API_WRITEWISE_BASE_URL}/v1/response`, {
-                method: "POST",
-                body: JSON.stringify(payload),
-            });
-
-            if (!res.ok) throw new Error("Failed to save.");
+            await writewiseService.saveResponse(payload);
 
             alert(`Essay ${type === 'Submit' ? 'submitted' : 'saved'} successfully!`);
 
             // Refresh versions after save
-            const newVersionsRes = await fetchWithAuth(`${API_WRITEWISE_BASE_URL}/v1/response/response-version/${topicRefId}`).then(res => res.json());
+            const newVersionsRes = await writewiseService.getResponseVersions(topicRefId);
             setResponseVersions(newVersionsRes || { data: { responseVersionDTOs: [] } });
 
             if (type === 'Submit') {

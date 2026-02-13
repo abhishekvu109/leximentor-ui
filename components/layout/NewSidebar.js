@@ -22,7 +22,9 @@ import {
     Activity,
     ClipboardList,
     Settings,
-    Grid
+    Grid,
+    Plus,
+    Activity as ActivityIcon
 } from 'lucide-react';
 
 const NewSidebar = ({ isOpen }) => {
@@ -87,8 +89,8 @@ const NewSidebar = ({ isOpen }) => {
             id: 'writewise',
             subItems: [
                 { label: 'Dashboard', href: '/writewise/topics/generate-topics', icon: Activity },
-                { label: 'Drills', href: '#', icon: List },
-                { label: 'Challenges', href: '#', icon: Trophy },
+                { label: 'Topics', href: '/writewise/topics/list-topics', icon: List },
+                { label: 'Challenges', href: '/writewise/topics/topic/evaluation-view', icon: Trophy },
                 { label: 'Analytics', href: '#', icon: BarChart3 }
             ]
         },
@@ -101,8 +103,9 @@ const NewSidebar = ({ isOpen }) => {
                 { label: 'Dashboard', href: '/fitmate/dashboard/dashboard', icon: Activity },
                 { label: 'Routine', href: '/fitmate/routine/routine', icon: ClipboardList },
                 { label: 'Exercise', href: '/fitmate/exercise/exercise', icon: Dumbbell },
-                { label: 'Challenges', href: '#', icon: Trophy },
-                { label: 'Analytics', href: '#', icon: BarChart3 }
+                { label: 'Log', href: '/fitmate/logs', icon: List },
+                { label: 'Analytics', href: '/fitmate/analytics/exercise', icon: BarChart3 },
+                { label: 'Advanced Analytics', href: '/fitmate/advanced-analytics', icon: BarChart3 }
             ]
         },
         {
@@ -120,35 +123,17 @@ const NewSidebar = ({ isOpen }) => {
         {
             type: 'divider'
         },
-        /*
         {
-            type: 'link',
+            type: 'category',
             label: 'Synapster',
             icon: Zap,
-            href: '#'
+            id: 'synapster',
+            subItems: [
+                { label: 'Dashboard', href: '/synapster/subject/list-subjects', icon: ActivityIcon },
+                { label: 'Subjects', href: '/synapster/subject/list-subjects', icon: List },
+                { label: 'Create', href: '/synapster/subject/subject', icon: Plus }
+            ]
         },
-        {
-            type: 'link',
-            label: 'Products',
-            icon: ShoppingBag,
-            href: '#'
-        },
-        {
-            type: 'divider'
-        },
-        {
-            type: 'link',
-            label: 'Sign In',
-            icon: LogIn,
-            href: '#'
-        },
-        {
-            type: 'link',
-            label: 'Sign Up',
-            icon: UserPlus,
-            href: '#'
-        }
-        */
     ];
 
     return (

@@ -1,9 +1,8 @@
 
 import Layout from "@/components/layout/Layout";
 import Link from "next/link";
-import { API_FITMATE_BASE_URL } from "@/constants";
 import { useEffect, useState, useMemo } from "react";
-import { fetchData, DeleteByObject } from "@/dataService";
+import fitmateService from "../../../services/fitmate.service";
 import {
     Calendar, CheckCircle, Clock, PlayCircle, Plus,
     MoreHorizontal, Trash2, ChevronRight, Dumbbell, Filter
@@ -87,7 +86,7 @@ const RoutineTimeline = () => {
             // For now, let's try to fetch all if the API supports it, or multiple calls.
             // Based on previous code, it used query params. Let's assume we can fetch listing or stick to status-based logic if needed.
             // Let's try fetching the main endpoint without params or just the list.
-            const res = await fetchData(`${API_FITMATE_BASE_URL}/routines/routine`);
+            const res = await fitmateService.getRoutines();
             setRoutines(res.data || []);
         } catch (e) {
             console.error(e);
@@ -103,7 +102,7 @@ const RoutineTimeline = () => {
         if (!confirm("Are you sure you want to delete this routine?")) return;
         try {
             // Assuming this endpoint works as seen in old code
-            await DeleteByObject(`${API_FITMATE_BASE_URL}/routines/routine`, [{ refId: routine.refId }]);
+            await fitmateService.deleteRoutine(routine.refId);
             loadRoutines(); // Reload
         } catch (e) {
             console.error(e);

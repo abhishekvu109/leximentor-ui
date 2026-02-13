@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
-import { API_LEXIMENTOR_BASE_URL } from "@/constants";
-import { fetchData, fetchWithAuth } from "@/dataService";
+import leximentorService from "../../../../services/leximentor.service";
 import Link from "next/link";
 import Layout from "@/components/layout/Layout";
 import {
@@ -78,8 +77,7 @@ const LoadMeaningDrillChallenge = () => {
     useEffect(() => {
         if (drillRefId && challengeId) {
             setLoading(true);
-            fetchWithAuth(`${API_LEXIMENTOR_BASE_URL}/drill/metadata/sets/${drillRefId}`)
-                .then(res => res.json())
+            leximentorService.getDrillSet(drillRefId)
                 .then(data => {
                     const actualData = data || { data: [] };
                     setDrillSetData(actualData);
@@ -121,11 +119,7 @@ const LoadMeaningDrillChallenge = () => {
         e.preventDefault();
         setIsSubmitting(true);
         try {
-            const URL = `${API_LEXIMENTOR_BASE_URL}/drill/metadata/challenges/challenge/${challengeId}/scores`;
-            const response = await fetchWithAuth(URL, {
-                method: 'PUT',
-                body: JSON.stringify(formData),
-            });
+            await leximentorService.updateChallengeScores(challengeId, formData);
 
             if (!response.ok) throw new Error("Submission failed");
 

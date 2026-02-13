@@ -1,9 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import Layout from "@/components/layout/Layout";
-import { API_LEXIMENTOR_BASE_URL } from "@/constants";
-import { fetchData, fetchWithAuth } from "@/dataService";
+import leximentorService from "../../../../services/leximentor.service";
 import {
     ArrowLeftIcon,
     CheckCircleIcon,
@@ -75,9 +74,9 @@ const WordScrambleChallenge = () => {
             const fetchDataAsync = async () => {
                 try {
                     const [drillSetData, drillSetWordData, challengeScores] = await Promise.all([
-                        fetchWithAuth(`${API_LEXIMENTOR_BASE_URL}/drill/metadata/sets/${drillRefId}`).then(res => res.json()),
-                        fetchWithAuth(`${API_LEXIMENTOR_BASE_URL}/drill/metadata/sets/words/data/${drillRefId}`).then(res => res.json()),
-                        fetchWithAuth(`${API_LEXIMENTOR_BASE_URL}/drill/metadata/challenges/challenge/${challengeId}/scores`).then(res => res.json())
+                        leximentorService.getDrillSet(drillRefId),
+                        leximentorService.getDrillSetWords(drillRefId),
+                        leximentorService.getChallengeScores(challengeId)
                     ]);
 
                     if (drillSetWordData?.data && challengeScores?.data && drillSetData?.data) {
@@ -91,9 +90,9 @@ const WordScrambleChallenge = () => {
             };
             fetchDataAsync();
         }
-    }, [drillRefId, challengeId]);
+    }, [drillRefId, challengeId, initializeGame]);
 
-    const initializeGame = (data, scores, setData) => {
+    const initializeGame = useCallback((data, scores, setData) => {
         // Map scores to words using drillSetData join table
         const mapped = scores.map(scoreItem => {
             const setItem = setData.find(d => d.refId === scoreItem.drillSetRefId);
@@ -117,9 +116,9 @@ const WordScrambleChallenge = () => {
         }
         setResponses([]);
         setIsCompleted(false);
-    };
+    }, [challengeId, initializeWord]);
 
-    const initializeWord = (wordData) => {
+    const initializeWord = useCallback((wordData) => {
         const letters = wordData.word.split('').map((letter, idx) => ({
             id: idx,
             letter: letter,
@@ -130,7 +129,7 @@ const WordScrambleChallenge = () => {
         setIsCorrect(null);
         setShowHint(false);
         setAttempts(0);
-    };
+    }, []);
 
     const closeNotification = () => setNotification({ ...notification, visible: false });
 
@@ -233,11 +232,7 @@ const WordScrambleChallenge = () => {
 
     const submitResults = async (submissionData) => {
         try {
-            const URL = `${API_LEXIMENTOR_BASE_URL}/drill/metadata/challenges/challenge/${challengeId}/scores`;
-            await fetchWithAuth(URL, {
-                method: 'PUT',
-                body: JSON.stringify(submissionData),
-            });
+            await leximentorService.updateChallengeScores(challengeId, submissionData);
             setNotification({ visible: true, message: "Challenge Completed! Progress saved.", type: 'success' });
         } catch (error) {
             console.error(error);

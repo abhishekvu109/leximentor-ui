@@ -2,8 +2,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Link from "next/link";
 import Layout from "@/components/layout/Layout";
-import { API_LEXIMENTOR_BASE_URL, API_TEXT_TO_SPEECH } from "@/constants";
-import { fetchData, fetchWithAuth } from "@/dataService";
+import leximentorService from "../../../../services/leximentor.service";
 import {
     ArrowLeftIcon,
     CheckCircleIcon,
@@ -111,9 +110,9 @@ const LoadIdentifyWordDrillChallenge = () => {
             const fetchDataAsync = async () => {
                 try {
                     const [setData, wordData, scores] = await Promise.all([
-                        fetchWithAuth(`${API_LEXIMENTOR_BASE_URL}/drill/metadata/sets/${drillRefId}`).then(res => res.json()),
-                        fetchWithAuth(`${API_LEXIMENTOR_BASE_URL}/drill/metadata/sets/words/data/${drillRefId}`).then(res => res.json()),
-                        fetchWithAuth(`${API_LEXIMENTOR_BASE_URL}/drill/metadata/challenges/challenge/${challengeId}/scores`).then(res => res.json())
+                        leximentorService.getDrillSet(drillRefId),
+                        leximentorService.getDrillSetWords(drillRefId),
+                        leximentorService.getChallengeScores(challengeId)
                     ]);
 
                     setDrillSetData(setData || { data: [] });
@@ -179,12 +178,7 @@ const LoadIdentifyWordDrillChallenge = () => {
 
     const handleConvertToSpeech = async (text) => {
         try {
-            const response = await fetchWithAuth(API_TEXT_TO_SPEECH, {
-                method: 'POST',
-                body: JSON.stringify({ text }),
-            });
-            if (!response.ok) throw new Error("TTS failed");
-            const data = await response.arrayBuffer();
+            const data = await leximentorService.textToSpeech(text);
             const audioUrl = URL.createObjectURL(new Blob([data]));
             const audio = new Audio(audioUrl);
             await audio.play();
@@ -199,14 +193,7 @@ const LoadIdentifyWordDrillChallenge = () => {
         e.preventDefault();
         setIsSubmitting(true);
         try {
-            const URL = `${API_LEXIMENTOR_BASE_URL}/drill/metadata/challenges/challenge/${challengeId}/scores`;
-            const response = await fetchWithAuth(URL, {
-                method: 'PUT',
-                body: JSON.stringify(formData),
-            });
-
-            if (!response.ok) throw new Error("Network response was not ok");
-
+            await leximentorService.updateChallengeScores(challengeId, formData);
             setNotification({ visible: true, message: "Drill submitted successfully!", type: 'success' });
         } catch (error) {
             console.error('Error:', error);
