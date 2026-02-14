@@ -3,7 +3,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import fitmateService from "@/services/fitmate.service";
-import { CalendarDays, Download, Flame, Plus, Target, UtensilsCrossed } from "lucide-react";
+import { CalendarDays, Download, Flame, Sparkles, Plus, Target } from "lucide-react";
 
 const MEAL_TYPES = ["BREAKFAST", "LUNCH", "DINNER", "SNACK", "OTHER"];
 
@@ -35,8 +35,11 @@ const NutritionDashboardPage = () => {
     const [goal, setGoal] = useState(null);
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
+    const [generating, setGenerating] = useState(false);
     const [error, setError] = useState("");
     const [success, setSuccess] = useState("");
+    const [aiAssumptions, setAiAssumptions] = useState([]);
+    const [aiConfidence, setAiConfidence] = useState(null);
     const [form, setForm] = useState({
         entryDate: todayIso(),
         entryTime: "",
@@ -92,6 +95,79 @@ const NutritionDashboardPage = () => {
 
     const onFormChange = (field, value) => {
         setForm((prev) => ({ ...prev, [field]: value }));
+    };
+
+    const parseAiJson = (payload) => {
+        const candidates = [
+            payload?.response,
+            payload?.data,
+            payload?.result,
+            payload
+        ];
+
+        for (const candidate of candidates) {
+            if (!candidate) continue;
+            if (typeof candidate === "object") return candidate;
+            if (typeof candidate === "string") {
+                try {
+                    return JSON.parse(candidate);
+                } catch (_) {
+                    const match = candidate.match(/\{[\s\S]*\}/);
+                    if (match) {
+                        try {
+                            return JSON.parse(match[0]);
+                        } catch (_) {
+                            // continue
+                        }
+                    }
+                }
+            }
+        }
+        throw new Error("Unable to parse AI response JSON.");
+    };
+
+    const handleGenerateWithAI = async () => {
+        if (!form.foodName?.trim()) {
+            setError("Enter food name before AI generation.");
+            return;
+        }
+        setGenerating(true);
+        setError("");
+        setSuccess("");
+        setAiAssumptions([]);
+        setAiConfidence(null);
+        try {
+            const raw = await fitmateService.estimateNutritionWithAI({
+                foodName: form.foodName,
+                servingQty: form.servingQty,
+                servingUnit: form.servingUnit,
+                notes: form.notes
+            });
+            const parsed = parseAiJson(raw);
+            const estimated = parsed?.estimatedNutrition || {};
+
+            setForm((prev) => ({
+                ...prev,
+                calories: Number(estimated.calories || 0),
+                protein: Number(estimated.protein || 0),
+                carbs: Number(estimated.carbs || 0),
+                fat: Number(estimated.fat || 0),
+                fiber: Number(estimated.fiber || 0),
+                sugar: Number(estimated.sugar || 0),
+                sodium: Number(estimated.sodium || 0),
+                sourceType: "MANUAL"
+            }));
+
+            setAiAssumptions(Array.isArray(parsed?.assumptions) ? parsed.assumptions : []);
+            setAiConfidence(
+                Number.isFinite(Number(parsed?.confidence)) ? Number(parsed.confidence) : null
+            );
+            setSuccess("AI estimates applied. Review and adjust if needed.");
+        } catch (e) {
+            setError(e?.response?.data?.message || e?.message || "Failed to generate nutrition values with AI.");
+        } finally {
+            setGenerating(false);
+        }
     };
 
     const handleAddEntry = async (e) => {
@@ -168,6 +244,7 @@ const NutritionDashboardPage = () => {
                     <p className="text-slate-500 font-semibold">Track food intake, calories, and macro balance every day.</p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
+                    <Link href="/fitmate/nutrition/batch-log" className="px-4 py-2 rounded-xl bg-white border border-slate-200 text-sm font-bold text-slate-700 hover:bg-slate-50">Batch Log</Link>
                     <Link href="/fitmate/nutrition/history" className="px-4 py-2 rounded-xl bg-white border border-slate-200 text-sm font-bold text-slate-700 hover:bg-slate-50">History</Link>
                     <Link href="/fitmate/nutrition/trends" className="px-4 py-2 rounded-xl bg-white border border-slate-200 text-sm font-bold text-slate-700 hover:bg-slate-50">Trends</Link>
                     <Link href="/fitmate/nutrition/settings" className="px-4 py-2 rounded-xl bg-white border border-slate-200 text-sm font-bold text-slate-700 hover:bg-slate-50">Settings</Link>
@@ -284,6 +361,29 @@ const NutritionDashboardPage = () => {
                             <input type="number" step="0.1" placeholder="Fat" value={form.fat} onChange={(e) => onFormChange("fat", e.target.value)} className="px-3 py-2 rounded-xl border border-slate-300 text-sm font-semibold" />
                         </div>
                         <textarea placeholder="Notes" value={form.notes} onChange={(e) => onFormChange("notes", e.target.value)} className="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm font-semibold min-h-20" />
+                        <button
+                            type="button"
+                            onClick={handleGenerateWithAI}
+                            disabled={generating}
+                            className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-black hover:bg-indigo-700 disabled:opacity-50"
+                        >
+                            <Sparkles size={16} />
+                            {generating ? "Generating..." : "Generate with AI"}
+                        </button>
+                        {(aiConfidence !== null || aiAssumptions.length > 0) && (
+                            <div className="rounded-xl border border-indigo-200 bg-indigo-50 p-3 space-y-2">
+                                {aiConfidence !== null && (
+                                    <p className="text-xs font-bold text-indigo-800">AI Confidence: {aiConfidence}%</p>
+                                )}
+                                {aiAssumptions.length > 0 && (
+                                    <ul className="list-disc ml-5 space-y-1 text-xs font-semibold text-indigo-800">
+                                        {aiAssumptions.slice(0, 4).map((item, idx) => (
+                                            <li key={`${item}-${idx}`}>{item}</li>
+                                        ))}
+                                    </ul>
+                                )}
+                            </div>
+                        )}
                         <button type="submit" disabled={submitting} className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 text-white text-sm font-black hover:bg-black disabled:opacity-50">
                             <Plus size={16} />
                             {submitting ? "Saving..." : "Add Entry"}

@@ -112,6 +112,7 @@ const NewSidebar = ({ isOpen }) => {
                     id: 'fitmate-nutrition',
                     subItems: [
                         { label: 'Dashboard', href: '/fitmate/nutrition', icon: Activity },
+                        { label: 'Batch Log', href: '/fitmate/nutrition/batch-log', icon: Plus },
                         { label: 'History', href: '/fitmate/nutrition/history', icon: List },
                         { label: 'Trends', href: '/fitmate/nutrition/trends', icon: BarChart3 },
                         { label: 'Settings', href: '/fitmate/nutrition/settings', icon: Settings },
