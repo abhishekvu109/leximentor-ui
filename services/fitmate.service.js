@@ -1,5 +1,8 @@
 import apiClient from '../api/apiClient';
 import { ENDPOINTS } from '../api/endpoints';
+import axios from 'axios';
+
+const FITMATE_SERVICE_BASE_URL = process.env.NEXT_PUBLIC_FITMATE_SERVICE_BASE_URL || 'http://192.168.1.90:31372/api';
 
 const fitmateService = {
     getExercises: () => {
@@ -132,6 +135,110 @@ const fitmateService = {
     },
     getCaloriesDuration: (username) => {
         return apiClient.get(ENDPOINTS.FITMATE.ANALYTICS_CALORIES_DURATION, { params: { username } });
+    },
+    upsertNutritionGoal: (payload) => {
+        return apiClient.post(`${FITMATE_SERVICE_BASE_URL}${ENDPOINTS.FITMATE.NUTRITION_GOALS}`, payload);
+    },
+    getNutritionGoal: (username) => {
+        return apiClient.get(`${FITMATE_SERVICE_BASE_URL}${ENDPOINTS.FITMATE.NUTRITION_GOALS}`, { params: { username } });
+    },
+    addFoodEntry: (payload) => {
+        return apiClient.post(`${FITMATE_SERVICE_BASE_URL}${ENDPOINTS.FITMATE.NUTRITION_ENTRIES}`, payload);
+    },
+    addFoodEntriesBatch: (payload) => {
+        return apiClient.post(`${FITMATE_SERVICE_BASE_URL}${ENDPOINTS.FITMATE.NUTRITION_ENTRIES_BATCH}`, payload);
+    },
+    updateFoodEntry: (refId, username, payload) => {
+        return apiClient.put(`${FITMATE_SERVICE_BASE_URL}${ENDPOINTS.FITMATE.NUTRITION_ENTRIES}/${refId}`, payload, { params: { username } });
+    },
+    deleteFoodEntry: (refId, username) => {
+        return apiClient.delete(`${FITMATE_SERVICE_BASE_URL}${ENDPOINTS.FITMATE.NUTRITION_ENTRIES}/${refId}`, { params: { username } });
+    },
+    getFoodEntries: (username, fromDate, toDate, mealType) => {
+        const params = { username, fromDate, toDate };
+        if (mealType) params.mealType = mealType;
+        return apiClient.get(`${FITMATE_SERVICE_BASE_URL}${ENDPOINTS.FITMATE.NUTRITION_ENTRIES}`, { params });
+    },
+    getNutritionDailySummary: (username, date) => {
+        return apiClient.get(`${FITMATE_SERVICE_BASE_URL}${ENDPOINTS.FITMATE.NUTRITION_DAILY_SUMMARY}`, { params: { username, date } });
+    },
+    getNutritionTrends: (username, fromDate, toDate) => {
+        return apiClient.get(`${FITMATE_SERVICE_BASE_URL}${ENDPOINTS.FITMATE.NUTRITION_TRENDS_SUMMARY}`, { params: { username, fromDate, toDate } });
+    },
+    submitNutritionAiBatchEstimate: (payload) => {
+        return apiClient.post(`${FITMATE_SERVICE_BASE_URL}${ENDPOINTS.FITMATE.NUTRITION_AI_BATCH_ESTIMATE}`, payload);
+    },
+    getNutritionAiBatchEstimateStatus: (requestId, username) => {
+        return apiClient.get(`${FITMATE_SERVICE_BASE_URL}${ENDPOINTS.FITMATE.NUTRITION_AI_BATCH_ESTIMATE_STATUS(requestId)}`, { params: { username } });
+    },
+    exportNutrition: (format, username, fromDate, toDate) => {
+        return apiClient.get(`${FITMATE_SERVICE_BASE_URL}${ENDPOINTS.FITMATE.EXPORT_NUTRITION(format)}`, {
+            params: { username, fromDate, toDate },
+            responseType: 'blob'
+        });
+    },
+    estimateNutritionWithAI: async ({ foodName, servingQty, servingUnit, notes }) => {
+        const endpoint = 'http://192.168.1.90:11434/api/generate';
+        const format = {
+            type: "object",
+            properties: {
+                foodName: { type: "string" },
+                servingDescription: { type: "string" },
+                estimatedNutrition: {
+                    type: "object",
+                    properties: {
+                        calories: { type: "number", minimum: 0 },
+                        protein: { type: "number", minimum: 0 },
+                        carbs: { type: "number", minimum: 0 },
+                        fat: { type: "number", minimum: 0 },
+                        fiber: { type: "number", minimum: 0 },
+                        sugar: { type: "number", minimum: 0 },
+                        sodium: { type: "number", minimum: 0 }
+                    },
+                    required: ["calories", "protein", "carbs", "fat", "fiber", "sugar", "sodium"]
+                },
+                assumptions: {
+                    type: "array",
+                    items: { type: "string" }
+                },
+                confidence: {
+                    type: "integer",
+                    minimum: 0,
+                    maximum: 100
+                }
+            },
+            required: ["foodName", "servingDescription", "estimatedNutrition", "assumptions", "confidence"]
+        };
+
+        const prompt = [
+            "You are a certified sports nutrition assistant.",
+            "Return ONLY valid JSON matching the provided format schema.",
+            "No markdown, no code fences, no extra text.",
+            "Estimate nutrition values from the user input. Use realistic values per serving and quantity.",
+            "If details are ambiguous, make conservative assumptions and list them clearly.",
+            "All nutrition values must be non-negative numbers.",
+            "",
+            "Input:",
+            "<Request>",
+            JSON.stringify({
+                foodName: foodName || "",
+                servingQty: Number(servingQty || 0),
+                servingUnit: servingUnit || "",
+                notes: notes || ""
+            }),
+            "</Request>"
+        ].join("\n");
+
+        const response = await axios.post(endpoint, {
+            model: "ministral-3:3b",
+            stream: false,
+            format,
+            prompt
+        }, {
+            headers: { "Content-Type": "application/json" }
+        });
+
+        return response.data;
     }
 };
 

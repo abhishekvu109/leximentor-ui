@@ -24,7 +24,8 @@ import {
     Settings,
     Grid,
     Plus,
-    Activity as ActivityIcon
+    Activity as ActivityIcon,
+    UtensilsCrossed
 } from 'lucide-react';
 
 const NewSidebar = ({ isOpen }) => {
@@ -104,6 +105,19 @@ const NewSidebar = ({ isOpen }) => {
                 { label: 'Routine', href: '/fitmate/routine/routine', icon: ClipboardList },
                 { label: 'Exercise', href: '/fitmate/exercise/exercise', icon: Dumbbell },
                 { label: 'Log', href: '/fitmate/logs', icon: List },
+                {
+                    type: 'nested',
+                    label: 'Nutrition',
+                    icon: UtensilsCrossed,
+                    id: 'fitmate-nutrition',
+                    subItems: [
+                        { label: 'Dashboard', href: '/fitmate/nutrition', icon: Activity },
+                        { label: 'Batch Log', href: '/fitmate/nutrition/batch-log', icon: Plus },
+                        { label: 'History', href: '/fitmate/nutrition/history', icon: List },
+                        { label: 'Trends', href: '/fitmate/nutrition/trends', icon: BarChart3 },
+                        { label: 'Settings', href: '/fitmate/nutrition/settings', icon: Settings },
+                    ]
+                },
                 { label: 'Analytics', href: '/fitmate/analytics/exercise', icon: BarChart3 },
                 { label: 'Advanced Analytics', href: '/fitmate/advanced-analytics', icon: BarChart3 }
             ]
@@ -164,9 +178,48 @@ const NewSidebar = ({ isOpen }) => {
                                         {isSectionOpen ? <ChevronDown size={16} className="text-slate-400" /> : <ChevronRight size={16} className="text-slate-400" />}
                                     </button>
 
-                                    <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isSectionOpen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}>
+                                    <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isSectionOpen ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'}`}>
                                         <ul className="py-2 space-y-1">
                                             {item.subItems.map((sub, subIdx) => {
+                                                if (sub.type === 'nested') {
+                                                    const isNestedOpen = openSections[sub.id];
+                                                    const SubIcon = sub.icon;
+                                                    return (
+                                                        <li key={subIdx}>
+                                                            <button
+                                                                type="button"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    toggleSection(sub.id);
+                                                                }}
+                                                                className="flex items-center w-full p-2 text-sm text-slate-600 transition duration-75 rounded-lg pl-11 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800 group/sub"
+                                                            >
+                                                                {SubIcon && <SubIcon className="w-3.5 h-3.5 me-2.5 text-slate-400 group-hover/sub:text-slate-600 transition-colors" />}
+                                                                <span className="flex-1 text-left">{sub.label}</span>
+                                                                {isNestedOpen ? <ChevronDown size={14} className="text-slate-400" /> : <ChevronRight size={14} className="text-slate-400" />}
+                                                            </button>
+                                                            <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isNestedOpen ? 'max-h-64 opacity-100' : 'max-h-0 opacity-0'}`}>
+                                                                <ul className="py-1 space-y-1 pl-4">
+                                                                    {sub.subItems.map((nestedSub, nestedIdx) => {
+                                                                        const NestedIcon = nestedSub.icon;
+                                                                        return (
+                                                                            <li key={nestedIdx}>
+                                                                                <Link
+                                                                                    href={nestedSub.href}
+                                                                                    className="flex items-center w-full p-1.5 text-xs text-slate-500 transition duration-75 rounded-lg pl-11 hover:bg-slate-100 dark:text-slate-500 dark:hover:bg-slate-800 group/nested"
+                                                                                >
+                                                                                    {NestedIcon && <NestedIcon className="w-3 h-3 me-2 text-slate-400 group-hover/nested:text-slate-500 transition-colors" />}
+                                                                                    <span>{nestedSub.label}</span>
+                                                                                </Link>
+                                                                            </li>
+                                                                        );
+                                                                    })}
+                                                                </ul>
+                                                            </div>
+                                                        </li>
+                                                    );
+                                                }
+
                                                 const SubIcon = sub.icon;
                                                 return (
                                                     <li key={subIdx}>
