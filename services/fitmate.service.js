@@ -137,33 +137,33 @@ const fitmateService = {
         return apiClient.get(ENDPOINTS.FITMATE.ANALYTICS_CALORIES_DURATION, { params: { username } });
     },
     upsertNutritionGoal: (payload) => {
-        return apiClient.post(ENDPOINTS.FITMATE.NUTRITION_GOALS, payload);
+        return apiClient.post(`${FITMATE_SERVICE_BASE_URL}${ENDPOINTS.FITMATE.NUTRITION_GOALS}`, payload);
     },
     getNutritionGoal: (username) => {
-        return apiClient.get(ENDPOINTS.FITMATE.NUTRITION_GOALS, { params: { username } });
+        return apiClient.get(`${FITMATE_SERVICE_BASE_URL}${ENDPOINTS.FITMATE.NUTRITION_GOALS}`, { params: { username } });
     },
     addFoodEntry: (payload) => {
-        return apiClient.post(ENDPOINTS.FITMATE.NUTRITION_ENTRIES, payload);
+        return apiClient.post(`${FITMATE_SERVICE_BASE_URL}${ENDPOINTS.FITMATE.NUTRITION_ENTRIES}`, payload);
     },
     addFoodEntriesBatch: (payload) => {
-        return apiClient.post(ENDPOINTS.FITMATE.NUTRITION_ENTRIES_BATCH, payload);
+        return apiClient.post(`${FITMATE_SERVICE_BASE_URL}${ENDPOINTS.FITMATE.NUTRITION_ENTRIES_BATCH}`, payload);
     },
     updateFoodEntry: (refId, username, payload) => {
-        return apiClient.put(`${ENDPOINTS.FITMATE.NUTRITION_ENTRIES}/${refId}`, payload, { params: { username } });
+        return apiClient.put(`${FITMATE_SERVICE_BASE_URL}${ENDPOINTS.FITMATE.NUTRITION_ENTRIES}/${refId}`, payload, { params: { username } });
     },
     deleteFoodEntry: (refId, username) => {
-        return apiClient.delete(`${ENDPOINTS.FITMATE.NUTRITION_ENTRIES}/${refId}`, { params: { username } });
+        return apiClient.delete(`${FITMATE_SERVICE_BASE_URL}${ENDPOINTS.FITMATE.NUTRITION_ENTRIES}/${refId}`, { params: { username } });
     },
     getFoodEntries: (username, fromDate, toDate, mealType) => {
         const params = { username, fromDate, toDate };
         if (mealType) params.mealType = mealType;
-        return apiClient.get(ENDPOINTS.FITMATE.NUTRITION_ENTRIES, { params });
+        return apiClient.get(`${FITMATE_SERVICE_BASE_URL}${ENDPOINTS.FITMATE.NUTRITION_ENTRIES}`, { params });
     },
     getNutritionDailySummary: (username, date) => {
-        return apiClient.get(ENDPOINTS.FITMATE.NUTRITION_DAILY_SUMMARY, { params: { username, date } });
+        return apiClient.get(`${FITMATE_SERVICE_BASE_URL}${ENDPOINTS.FITMATE.NUTRITION_DAILY_SUMMARY}`, { params: { username, date } });
     },
     getNutritionTrends: (username, fromDate, toDate) => {
-        return apiClient.get(ENDPOINTS.FITMATE.NUTRITION_TRENDS_SUMMARY, { params: { username, fromDate, toDate } });
+        return apiClient.get(`${FITMATE_SERVICE_BASE_URL}${ENDPOINTS.FITMATE.NUTRITION_TRENDS_SUMMARY}`, { params: { username, fromDate, toDate } });
     },
     submitNutritionAiBatchEstimate: (payload) => {
         return apiClient.post(`${FITMATE_SERVICE_BASE_URL}${ENDPOINTS.FITMATE.NUTRITION_AI_BATCH_ESTIMATE}`, payload);
@@ -172,7 +172,7 @@ const fitmateService = {
         return apiClient.get(`${FITMATE_SERVICE_BASE_URL}${ENDPOINTS.FITMATE.NUTRITION_AI_BATCH_ESTIMATE_STATUS(requestId)}`, { params: { username } });
     },
     exportNutrition: (format, username, fromDate, toDate) => {
-        return apiClient.get(ENDPOINTS.FITMATE.EXPORT_NUTRITION(format), {
+        return apiClient.get(`${FITMATE_SERVICE_BASE_URL}${ENDPOINTS.FITMATE.EXPORT_NUTRITION(format)}`, {
             params: { username, fromDate, toDate },
             responseType: 'blob'
         });

@@ -235,6 +235,26 @@ const NutritionDashboardPage = () => {
     const targetCalories = Number(dailySummary?.caloriesTarget || 0);
     const consumedCalories = Number(dailySummary?.consumedCalories || 0);
     const remainingCalories = Number(dailySummary?.remainingCalories || 0);
+    const consumedProtein = Number(dailySummary?.consumedProtein || 0);
+    const consumedCarbs = Number(dailySummary?.consumedCarbs || 0);
+    const consumedFat = Number(dailySummary?.consumedFat || 0);
+
+    const calorieTarget = Number(goal?.dailyCaloriesTarget || 0);
+    const proteinTarget = Number(goal?.proteinTarget || 0);
+    const carbTarget = Number(goal?.carbTarget || 0);
+    const fatTarget = Number(goal?.fatTarget || 0);
+    const hasGoal = calorieTarget > 0;
+
+    const calorieMet = hasGoal ? consumedCalories >= calorieTarget * 0.9 && consumedCalories <= calorieTarget * 1.1 : null;
+    const proteinMet = proteinTarget > 0 ? consumedProtein >= proteinTarget : null;
+    const carbsMet = carbTarget > 0 ? consumedCarbs <= carbTarget * 1.1 : null;
+    const fatMet = fatTarget > 0 ? consumedFat <= fatTarget * 1.1 : null;
+
+    const statusBadge = (met) => {
+        if (met === null) return <span className="px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest bg-slate-100 text-slate-500">N/A</span>;
+        if (met) return <span className="px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest bg-emerald-100 text-emerald-700">On Track</span>;
+        return <span className="px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest bg-amber-100 text-amber-700">Off Track</span>;
+    };
 
     return (
         <div className="max-w-7xl mx-auto space-y-8 pb-16">
@@ -294,6 +314,57 @@ const NutritionDashboardPage = () => {
                     <p className={`text-3xl font-black mt-3 ${remainingCalories < 0 ? "text-red-600" : "text-slate-900"}`}>{remainingCalories.toFixed(0)}</p>
                     <p className="text-xs text-slate-500 font-semibold mt-1">kcal</p>
                 </div>
+            </div>
+
+            <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-4">
+                <div className="flex items-center justify-between gap-3">
+                    <div>
+                        <h2 className="text-lg font-black text-slate-900">Goal Status (Today)</h2>
+                        <p className="text-xs font-semibold text-slate-500">Active nutrition goal and whether you are meeting it.</p>
+                    </div>
+                    <Link href="/fitmate/nutrition/settings" className="px-3 py-2 rounded-xl bg-slate-100 border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-200">
+                        Edit Goals
+                    </Link>
+                </div>
+
+                {!hasGoal && (
+                    <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm font-semibold text-amber-800">
+                        No active goal set. Add your calorie/macro targets in Nutrition Settings.
+                    </div>
+                )}
+
+                {hasGoal && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
+                        <div className="rounded-2xl border border-slate-200 p-4 bg-slate-50">
+                            <div className="flex justify-between items-center mb-2">
+                                <p className="text-xs font-black uppercase tracking-widest text-slate-500">Calories</p>
+                                {statusBadge(calorieMet)}
+                            </div>
+                            <p className="text-lg font-black text-slate-900">{consumedCalories.toFixed(0)} / {calorieTarget.toFixed(0)} kcal</p>
+                        </div>
+                        <div className="rounded-2xl border border-slate-200 p-4 bg-slate-50">
+                            <div className="flex justify-between items-center mb-2">
+                                <p className="text-xs font-black uppercase tracking-widest text-slate-500">Protein</p>
+                                {statusBadge(proteinMet)}
+                            </div>
+                            <p className="text-lg font-black text-slate-900">{consumedProtein.toFixed(1)} / {proteinTarget.toFixed(1)} g</p>
+                        </div>
+                        <div className="rounded-2xl border border-slate-200 p-4 bg-slate-50">
+                            <div className="flex justify-between items-center mb-2">
+                                <p className="text-xs font-black uppercase tracking-widest text-slate-500">Carbs</p>
+                                {statusBadge(carbsMet)}
+                            </div>
+                            <p className="text-lg font-black text-slate-900">{consumedCarbs.toFixed(1)} / {carbTarget.toFixed(1)} g</p>
+                        </div>
+                        <div className="rounded-2xl border border-slate-200 p-4 bg-slate-50">
+                            <div className="flex justify-between items-center mb-2">
+                                <p className="text-xs font-black uppercase tracking-widest text-slate-500">Fat</p>
+                                {statusBadge(fatMet)}
+                            </div>
+                            <p className="text-lg font-black text-slate-900">{consumedFat.toFixed(1)} / {fatTarget.toFixed(1)} g</p>
+                        </div>
+                    </div>
+                )}
             </div>
 
             <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-4">
