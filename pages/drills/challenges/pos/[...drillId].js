@@ -57,40 +57,18 @@ const POSPractice = () => {
     const challengeId = drillId?.[0];
     const drillRefId = drillId?.[1];
 
-    useEffect(() => {
-        if (drillRefId && challengeId) {
-            setLoading(true);
-            const fetchDataAsync = async () => {
-                try {
-                    const [setData, wordData, scores] = await Promise.all([
-                        leximentorService.getDrillSet(drillRefId),
-                        leximentorService.getDrillSetWords(drillRefId),
-                        leximentorService.getChallengeScores(challengeId)
-                    ]);
+    const initializeGame = useCallback((wordData, scores, setData) => {
+        const wData = wordData || drillSetWordData;
+        const sData = scores || challengeScores;
+        const dData = setData || drillSetData;
 
-                    setDrillSetData(setData || { data: [] });
-                    setDrillSetWordData(wordData || { data: [] });
-                    setChallengeScores(scores || { data: [] });
+        if (!wData?.data || !sData?.data || !dData?.data) return;
 
-                    if (wordData?.data && scores?.data && setData?.data) {
-                        initializeGame(wordData, scores, setData);
-                    }
-                } catch (error) {
-                    console.error("Failed to fetch challenge data:", error);
-                } finally {
-                    setLoading(false);
-                }
-            };
-            fetchDataAsync();
-        }
-    }, [drillRefId, challengeId, initializeGame]);
-
-    const initializeGame = useCallback((wordData = drillSetWordData, scores = challengeScores, setData = drillSetData) => {
-        const generatedQuestions = scores.data.map(scoreItem => {
-            const setItem = setData.data.find(d => d.refId === scoreItem.drillSetRefId);
+        const generatedQuestions = sData.data.map(scoreItem => {
+            const setItem = dData.data.find(d => d.refId === scoreItem.drillSetRefId);
             if (!setItem) return null;
 
-            const wordItem = wordData.data.find(w => w.refId === setItem.wordRefId);
+            const wordItem = wData.data.find(w => w.refId === setItem.wordRefId);
             if (!wordItem) return null;
 
             return {
@@ -108,6 +86,39 @@ const POSPractice = () => {
         setAnswers([]);
         setIsCompleted(false);
     }, [drillSetWordData, challengeScores, drillSetData]);
+
+    useEffect(() => {
+        if (drillRefId && challengeId) {
+            setLoading(true);
+            const fetchDataAsync = async () => {
+                try {
+                    const [setData, wordData, scores] = await Promise.all([
+                        leximentorService.getDrillSet(drillRefId),
+                        leximentorService.getDrillSetWords(drillRefId),
+                        leximentorService.getChallengeScores(challengeId)
+                    ]);
+
+                    const finalSetData = setData || { data: [] };
+                    const finalWordData = wordData || { data: [] };
+                    const finalScores = scores || { data: [] };
+
+                    setDrillSetData(finalSetData);
+                    setDrillSetWordData(finalWordData);
+                    setChallengeScores(finalScores);
+
+                    if (finalWordData?.data && finalScores?.data && finalSetData?.data) {
+                        initializeGame(finalWordData, finalScores, finalSetData);
+                    }
+                } catch (error) {
+                    console.error("Failed to fetch challenge data:", error);
+                } finally {
+                    setLoading(false);
+                }
+            };
+            fetchDataAsync();
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [drillRefId, challengeId]);
 
     const handlePosSelect = (selectedPos) => {
         const currentQuestion = questions[currentIndex];
@@ -223,36 +234,46 @@ const POSPractice = () => {
                                 </Link>
                             </div>
                         </div>
+                    ) : questions.length === 0 ? (
+                        <div className="text-center py-20 bg-white rounded-3xl shadow-sm border border-slate-100 p-10">
+                            <h2 className="text-2xl font-bold text-slate-800 mb-4">No Questions Found</h2>
+                            <p className="text-slate-500 mb-8">We couldn&apos;t generate any questions for this challenge.</p>
+                            <Link href={`/challenges/${drillRefId}`} className="px-6 py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700">
+                                Back to Drills
+                            </Link>
+                        </div>
                     ) : (
                         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
                             {/* Card */}
-                            <div className="bg-white rounded-3xl shadow-xl border border-slate-100 overflow-hidden">
-                                <div className="bg-indigo-600 px-8 py-6 text-white">
-                                    <span className="text-indigo-100 text-xs font-bold uppercase tracking-widest mb-2 block">The Word</span>
-                                    <h2 className="text-5xl font-black">{currentQuestion.word}</h2>
-                                </div>
-                                <div className="p-8 space-y-6">
-                                    <div className="flex gap-4">
-                                        <div className="shrink-0 w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center">
-                                            <BookOpenIcon className="w-5 h-5" />
-                                        </div>
-                                        <div>
-                                            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Meaning</h3>
-                                            <p className="text-slate-700 font-medium leading-relaxed">{currentQuestion.meaning}</p>
-                                        </div>
+                            {currentQuestion && (
+                                <div className="bg-white rounded-3xl shadow-xl border border-slate-100 overflow-hidden">
+                                    <div className="bg-indigo-600 px-8 py-6 text-white">
+                                        <span className="text-indigo-100 text-xs font-bold uppercase tracking-widest mb-2 block">The Word</span>
+                                        <h2 className="text-5xl font-black">{currentQuestion.word}</h2>
                                     </div>
+                                    <div className="p-8 space-y-6">
+                                        <div className="flex gap-4">
+                                            <div className="shrink-0 w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center">
+                                                <BookOpenIcon className="w-5 h-5" />
+                                            </div>
+                                            <div>
+                                                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Meaning</h3>
+                                                <p className="text-slate-700 font-medium leading-relaxed">{currentQuestion.meaning}</p>
+                                            </div>
+                                        </div>
 
-                                    <div className="flex gap-4">
-                                        <div className="shrink-0 w-10 h-10 bg-orange-50 text-orange-600 rounded-xl flex items-center justify-center">
-                                            <ChatBubbleBottomCenterTextIcon className="w-5 h-5" />
-                                        </div>
-                                        <div>
-                                            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Example</h3>
-                                            <p className="text-slate-700 italic leading-relaxed">&quot;{currentQuestion.example}&quot;</p>
+                                        <div className="flex gap-4">
+                                            <div className="shrink-0 w-10 h-10 bg-orange-50 text-orange-600 rounded-xl flex items-center justify-center">
+                                                <ChatBubbleBottomCenterTextIcon className="w-5 h-5" />
+                                            </div>
+                                            <div>
+                                                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Example</h3>
+                                                <p className="text-slate-700 italic leading-relaxed">&quot;{currentQuestion.example}&quot;</p>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
+                            )}
 
                             {/* Options */}
                             <div className="space-y-4">

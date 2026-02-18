@@ -58,6 +58,7 @@ export const ENDPOINTS = {
         DRILLS: '/leximentor/drill/metadata',
         CHALLENGES: '/leximentor/drill/metadata/challenges',
         CHALLENGE: (id) => `/leximentor/drill/metadata/challenges/challenge/${id}`,
+        EVALUATION_STATUS: (id) => `/leximentor/drill/metadata/challenges/challenge/${id}/evaluation-status`,
         TTS: '/tts/text2speech',
     },
     SYNAPSTER: {
