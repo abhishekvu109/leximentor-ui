@@ -113,12 +113,11 @@ const ChallengeCard = ({ challenge, drillRefId, onDelete, onTry, onEvaluate, onV
                         </button>
                     </Link>
                 ) : !isEvaluated ? (
-                    <button
-                        onClick={() => onEvaluate(challenge)}
-                        className="flex-1 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-colors"
-                    >
-                        <BarChart2 size={16} /> Evaluate
-                    </button>
+                    <Link href={`/drill_challenges/${challenge.refId}`} className="flex-1">
+                        <button className="w-full py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-colors">
+                            <BarChart2 size={16} /> Evaluate
+                        </button>
+                    </Link>
                 ) : (
                     <Link
                         href={`/evaluation_report/${challenge.drillType === 'CM' ? 'context-master' : 'meaning_report'}/${challenge.refId}`}

@@ -57,9 +57,12 @@ const leximentorService = {
         });
     },
     submitEvaluation: (challengeId, evaluator) => {
-        return apiClient.post(`${ENDPOINTS.LEXIMENTOR.BASE}/drill/metadata/challenges/challenge/${challengeId}/evaluate`, null, {
-            params: { challengeId, evaluator }
+        return apiClient.post(`${ENDPOINTS.LEXIMENTOR.CHALLENGE(challengeId)}/evaluate`, null, {
+            params: { evaluator }
         });
+    },
+    getEvaluationStatus: (challengeId) => {
+        return apiClient.get(ENDPOINTS.LEXIMENTOR.EVALUATION_STATUS(challengeId));
     },
     getDrillSetWords: (drillRefId) => {
         return apiClient.get(`${ENDPOINTS.LEXIMENTOR.BASE}/drill/metadata/sets/words/data/${drillRefId}`);
