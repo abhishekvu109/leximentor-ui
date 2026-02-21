@@ -74,35 +74,6 @@ const MatchMeaningChallenge = () => {
     const challengeId = drillId?.[0];
     const drillRefId = drillId?.[1];
 
-    // --- Init ---
-    useEffect(() => {
-        if (drillRefId && challengeId) {
-            setLoading(true);
-            const fetchDataAsync = async () => {
-                try {
-                    const [setData, wordData, scores] = await Promise.all([
-                        leximentorService.getDrillSet(drillRefId),
-                        leximentorService.getDrillSetWords(drillRefId),
-                        leximentorService.getChallengeScores(challengeId)
-                    ]);
-
-                    setDrillSetData(setData || { data: [] });
-                    setDrillSetWordData(wordData || { data: [] });
-                    setChallengeScores(scores || { data: [] });
-
-                    if (wordData?.data && scores?.data && setData?.data) {
-                        initializeGame(wordData.data, scores.data, setData.data);
-                    }
-                } catch (error) {
-                    console.error("Failed to fetch challenge data:", error);
-                } finally {
-                    setLoading(false);
-                }
-            };
-            fetchDataAsync();
-        }
-    }, [drillRefId, challengeId, initializeGame]);
-
     const initializeGame = useCallback((data, scores, setData) => {
         // Map scores to words to get scoreRefId
         const mapped = scores.map(scoreItem => {
@@ -136,6 +107,35 @@ const MatchMeaningChallenge = () => {
         setSelectedWord(null);
         setIsCompleted(false);
     }, [challengeId]);
+
+    // --- Init ---
+    useEffect(() => {
+        if (drillRefId && challengeId) {
+            setLoading(true);
+            const fetchDataAsync = async () => {
+                try {
+                    const [setData, wordData, scores] = await Promise.all([
+                        leximentorService.getDrillSet(drillRefId),
+                        leximentorService.getDrillSetWords(drillRefId),
+                        leximentorService.getChallengeScores(challengeId)
+                    ]);
+
+                    setDrillSetData(setData || { data: [] });
+                    setDrillSetWordData(wordData || { data: [] });
+                    setChallengeScores(scores || { data: [] });
+
+                    if (wordData?.data && scores?.data && setData?.data) {
+                        initializeGame(wordData.data, scores.data, setData.data);
+                    }
+                } catch (error) {
+                    console.error("Failed to fetch challenge data:", error);
+                } finally {
+                    setLoading(false);
+                }
+            };
+            fetchDataAsync();
+        }
+    }, [drillRefId, challengeId, initializeGame]);
 
     const closeNotification = () => setNotification({ ...notification, visible: false });
 

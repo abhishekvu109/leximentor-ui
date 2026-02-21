@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import Layout from "@/components/layout/Layout";
@@ -95,8 +95,8 @@ const SpeedTyperChallenge = () => {
     const nextIdRef = useRef(0);
     const spawnIntervalRef = useRef(null);
 
-    const drillRefId = drillId?.[0];
-    const challengeId = drillId?.[1];
+    const challengeId = drillId?.[0];
+    const drillRefId = drillId?.[1];
 
     // --- Init ---
     useEffect(() => {

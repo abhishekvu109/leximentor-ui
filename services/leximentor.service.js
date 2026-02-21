@@ -67,6 +67,9 @@ const leximentorService = {
     getChallengeScores: (challengeId) => {
         return apiClient.get(`${ENDPOINTS.LEXIMENTOR.CHALLENGE(challengeId)}/scores`);
     },
+    getEvaluationStatus: (challengeId) => {
+        return apiClient.get(`${ENDPOINTS.LEXIMENTOR.CHALLENGE(challengeId)}/evaluation-status`);
+    },
     getDrillSet: (drillId) => {
         return apiClient.get(`${ENDPOINTS.LEXIMENTOR.BASE}/drill/metadata/sets/${drillId}`);
     },
