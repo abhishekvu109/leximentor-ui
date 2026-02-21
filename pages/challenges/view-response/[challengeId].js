@@ -105,7 +105,7 @@ const ViewResponse = () => {
         }
     }, []);
 
-    const checkEvaluationStatus = async () => {
+    const checkEvaluationStatus = useCallback(async () => {
         if (!challengeId) return;
         setCheckingStatus(true);
         try {
@@ -128,7 +128,7 @@ const ViewResponse = () => {
         } finally {
             setCheckingStatus(false);
         }
-    };
+    }, [challengeId, loadScores]);
 
     useEffect(() => {
         if (challengeId) {
@@ -137,7 +137,7 @@ const ViewResponse = () => {
             // Check status once on load to see if it's already evaluated or in progress
             checkEvaluationStatus();
         }
-    }, [challengeId, loadScores, fetchEvaluators]);
+    }, [challengeId, loadScores, fetchEvaluators, checkEvaluationStatus]);
 
     const handleOpenEvaluator = () => setIsEvaluatorVisible(true);
 
@@ -292,7 +292,7 @@ const ViewResponse = () => {
                                 <AlertCircle size={32} />
                             </div>
                             <h3 className="text-lg font-bold text-gray-800">No responses found</h3>
-                            <p className="text-gray-500 max-w-xs mx-auto text-sm mt-1">We couldn't find any score data for this challenge ID.</p>
+                            <p className="text-gray-500 max-w-xs mx-auto text-sm mt-1">We couldn&apos;t find any score data for this challenge ID.</p>
                         </div>
                     )}
                 </div>
