@@ -153,8 +153,6 @@ const POSPractice = () => {
         setIsSubmitting(true);
         try {
             await leximentorService.updateChallengeScores(challengeId, submissionData);
-
-            await leximentorService.updateChallengeScores(challengeId, submissionData);
             setNotification({ visible: true, message: "Progress saved successfully!", type: 'success' });
         } catch (error) {
             console.error(error);
