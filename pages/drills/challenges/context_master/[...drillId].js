@@ -192,12 +192,7 @@ const ContextMasterChallenge = () => {
         setIsSubmitting(true);
         try {
             await leximentorService.updateChallengeScores(challengeId, submissionData);
-
-            if (response.ok) {
-                setNotification({ visible: true, message: "Challenge Completed! Progress saved.", type: 'success' });
-            } else {
-                throw new Error("Failed to save progress.");
-            }
+            setNotification({ visible: true, message: "Challenge Completed! Progress saved.", type: 'success' });
         } catch (error) {
             console.error(error);
             setNotification({ visible: true, message: "Failed to save progress.", type: 'error' });

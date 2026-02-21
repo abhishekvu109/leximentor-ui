@@ -120,11 +120,7 @@ const LoadMeaningDrillChallenge = () => {
         setIsSubmitting(true);
         try {
             await leximentorService.updateChallengeScores(challengeId, formData);
-
-            if (!response.ok) throw new Error("Submission failed");
-
             setNotification({ visible: true, message: "Drill submitted successfully!", type: 'success' });
-
         } catch (error) {
             console.error(error);
             setNotification({ visible: true, message: "Failed to submit drill. Please try again.", type: 'error' });
