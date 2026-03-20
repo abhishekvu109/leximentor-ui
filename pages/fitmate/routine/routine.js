@@ -5,7 +5,7 @@ import { useEffect, useState, useMemo } from "react";
 import fitmateService from "../../../services/fitmate.service";
 import {
     Calendar, CheckCircle, Clock, PlayCircle, Plus,
-    MoreHorizontal, Trash2, ChevronRight, Dumbbell, Filter
+    MoreHorizontal, Trash2, ChevronRight, ChevronLeft, ChevronsLeft, ChevronsRight, Dumbbell, Filter
 } from "lucide-react";
 
 const RoutineCard = ({ routine, onDelete }) => {
@@ -79,29 +79,55 @@ const RoutineTimeline = () => {
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState('all'); // all, completed, pending
 
+    // Pagination State
+    const [currentPage, setCurrentPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(0);
+    const [totalElements, setTotalElements] = useState(0);
+    const itemsPerPage = 10;
+
     const loadRoutines = async () => {
         setLoading(true);
         try {
-            // Ideally we fetch all, or we could fetch by status and merge. 
-            // For now, let's try to fetch all if the API supports it, or multiple calls.
-            // Based on previous code, it used query params. Let's assume we can fetch listing or stick to status-based logic if needed.
-            // Let's try fetching the main endpoint without params or just the list.
-            const res = await fitmateService.getRoutines();
-            setRoutines(res.data || []);
+            const res = await fitmateService.getRoutines(currentPage - 1, itemsPerPage);
+            const dataObj = res.data;
+            if (dataObj && typeof dataObj === 'object' && 'content' in dataObj) {
+                setRoutines(dataObj.content);
+                setTotalPages(dataObj.totalPages || 0);
+                setTotalElements(dataObj.totalElements || 0);
+            } else if (Array.isArray(dataObj)) {
+                setRoutines(dataObj);
+                setTotalPages(Math.ceil(dataObj.length / itemsPerPage));
+                setTotalElements(dataObj.length);
+            } else {
+                setRoutines([]);
+                setTotalPages(0);
+                setTotalElements(0);
+            }
         } catch (e) {
             console.error(e);
-            // Fallback: try fetching separately if main list fails (mocking logic or assuming user's api works as expected)
         } finally {
             setLoading(false);
         }
     };
 
-    useEffect(() => { loadRoutines(); }, []);
+    useEffect(() => {
+        loadRoutines();
+    }, [currentPage]);
+
+    // Reset pagination to page 1 if local filter logic changes to avoid getting stuck on an empty filtered page
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [filter]);
+
+    const handlePageChange = (newPage) => {
+        if (newPage >= 1 && newPage <= totalPages) {
+            setCurrentPage(newPage);
+        }
+    };
 
     const handleDelete = async (routine) => {
         if (!confirm("Are you sure you want to delete this routine?")) return;
         try {
-            // Assuming this endpoint works as seen in old code
             await fitmateService.deleteRoutine(routine.refId);
             loadRoutines(); // Reload
         } catch (e) {
@@ -116,14 +142,11 @@ const RoutineTimeline = () => {
         return routines.filter(r => {
             const s = (r.status || 'not_started').toLowerCase();
             if (filter === 'completed') return s === 'completed';
-            // Pending includes everything that is NOT completed (scheduled, in_progress, not_started)
             if (filter === 'pending') return s !== 'completed';
             return true;
         });
     }, [routines, filter]);
 
-    // Grouping logic (Future enhancement: Today, Previous, Upcoming)
-    // For now simple list sorted by date
     const sortedRoutines = [...filteredRoutines].sort((a, b) => new Date(b.workoutDate) - new Date(a.workoutDate));
 
     return (
@@ -173,9 +196,84 @@ const RoutineTimeline = () => {
                         </Link>
                     </div>
                 ) : (
-                    sortedRoutines.map((routine, i) => (
-                        <RoutineCard key={i} routine={routine} onDelete={handleDelete} />
-                    ))
+                    <>
+                        {sortedRoutines.map((routine, i) => (
+                            <RoutineCard key={i} routine={routine} onDelete={handleDelete} />
+                        ))}
+
+                        {/* Pagination Controls */}
+                        {totalPages > 1 && (
+                            <div className="flex items-center justify-center pt-8 pb-4">
+                                <div className="flex items-center gap-2 bg-white px-2 py-2 rounded-2xl border border-gray-100 shadow-sm">
+                                    <button
+                                        onClick={() => handlePageChange(1)}
+                                        disabled={currentPage === 1}
+                                        className="p-2 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                                        title="First Page"
+                                    >
+                                        <ChevronsLeft size={18} />
+                                    </button>
+                                    <button
+                                        onClick={() => handlePageChange(currentPage - 1)}
+                                        disabled={currentPage === 1}
+                                        className="p-2 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                                        title="Previous Page"
+                                    >
+                                        <ChevronLeft size={18} />
+                                    </button>
+
+                                    <div className="flex items-center gap-1 mx-2">
+                                        {(() => {
+                                            let startPage = 1;
+                                            if (totalPages > 5) {
+                                                if (currentPage <= 3) {
+                                                    startPage = 1;
+                                                } else if (currentPage >= totalPages - 2) {
+                                                    startPage = totalPages - 4;
+                                                } else {
+                                                    startPage = currentPage - 2;
+                                                }
+                                            }
+
+                                            return Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                                                let pageNum = startPage + i;
+                                                return (
+                                                    <button
+                                                        key={pageNum}
+                                                        onClick={() => handlePageChange(pageNum)}
+                                                        className={`w-10 h-10 rounded-lg text-sm font-bold transition-all
+                                                            ${currentPage === pageNum
+                                                                ? 'bg-blue-600 text-white shadow-lg shadow-blue-200 scale-105'
+                                                                : 'text-gray-600 hover:bg-gray-100'
+                                                            }`}
+                                                    >
+                                                        {pageNum}
+                                                    </button>
+                                                );
+                                            });
+                                        })()}
+                                    </div>
+
+                                    <button
+                                        onClick={() => handlePageChange(currentPage + 1)}
+                                        disabled={currentPage === Math.max(1, totalPages)}
+                                        className="p-2 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                                        title="Next Page"
+                                    >
+                                        <ChevronRight size={18} />
+                                    </button>
+                                    <button
+                                        onClick={() => handlePageChange(totalPages)}
+                                        disabled={currentPage === Math.max(1, totalPages)}
+                                        className="p-2 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                                        title="Last Page"
+                                    >
+                                        <ChevronsRight size={18} />
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                    </>
                 )}
             </div>
         </div>
