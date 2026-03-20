@@ -5,17 +5,17 @@ import axios from 'axios';
 const FITMATE_SERVICE_BASE_URL = process.env.NEXT_PUBLIC_FITMATE_SERVICE_BASE_URL || 'http://192.168.1.90:31372/api';
 
 const fitmateService = {
-    getExercises: () => {
-        return apiClient.get(ENDPOINTS.FITMATE.EXERCISES);
+    getExercises: (page = 0, size = 20) => {
+        return apiClient.get(ENDPOINTS.FITMATE.EXERCISES, { params: { page, size } });
     },
-    searchExercises: (payload) => {
-        return apiClient.post(`${ENDPOINTS.FITMATE.EXERCISES}/search`, payload);
+    searchExercises: (payload, page = 0, size = 20) => {
+        return apiClient.post(`${ENDPOINTS.FITMATE.EXERCISES}/exercise/search`, payload, { params: { page, size } });
     },
     getExercise: (id) => {
         return apiClient.get(ENDPOINTS.FITMATE.EXERCISE(id));
     },
-    getRoutines: () => {
-        return apiClient.get(`${ENDPOINTS.FITMATE.ROUTINES}/routine`);
+    getRoutines: (page = 0, size = 100) => {
+        return apiClient.get(`${ENDPOINTS.FITMATE.ROUTINES}/routine`, { params: { page, size } });
     },
     getRoutinesList: () => {
         return apiClient.get(`${ENDPOINTS.FITMATE.ROUTINES}/routines`);
@@ -101,7 +101,7 @@ const fitmateService = {
         return apiClient.post(`${ENDPOINTS.FITMATE.ROUTINES}/routine/generate`, payload);
     },
     getExerciseHistory: (exerciseName) => {
-        return apiClient.get(`${ENDPOINTS.FITMATE.BASE}/drill/${encodeURIComponent(exerciseName)}`);
+        return apiClient.get(`${ENDPOINTS.FITMATE.DRILLS}/drill/${encodeURIComponent(exerciseName)}`);
     },
     getOverallAnalytics: (username) => {
         return apiClient.get(ENDPOINTS.FITMATE.ANALYTICS_OVERALL, { params: { username } });

@@ -405,6 +405,8 @@ const ExerciseLibrary = () => {
     // Pagination State
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 12; // 3 rows of 4 (lg) or 6 rows of 2 (sm)
+    const [totalServerElements, setTotalServerElements] = useState(0);
+    const [totalServerPages, setTotalServerPages] = useState(0);
 
     const showNotification = ({ message, type = "info" }) => {
         setNotification({ visible: true, message, type });
@@ -412,27 +414,23 @@ const ExerciseLibrary = () => {
     };
 
     // Fetch Data
-    const loadData = async () => {
-        setLoading(true);
+    const loadRefsAndAnalytics = async () => {
         try {
-            const [exRes, trRes, bpRes, mRes] = await Promise.all([
-                fitmateService.getExercises(),
+            const [trRes, bpRes, mRes] = await Promise.all([
                 fitmateService.getTrainings(),
                 fitmateService.getBodyParts(),
                 fitmateService.getMuscles()
             ]);
 
-            setExercises(exRes.data || []);
             setRefData({
-                trainings: trRes.data || [],
-                bodyParts: bpRes.data || [],
-                musclesAll: mRes.data || []
+                trainings: trRes.data?.content || (Array.isArray(trRes.data) ? trRes.data : []),
+                bodyParts: bpRes.data?.content || (Array.isArray(bpRes.data) ? bpRes.data : []),
+                musclesAll: mRes.data?.content || (Array.isArray(mRes.data) ? mRes.data : [])
             });
 
             if (user?.username) {
                 try {
                     const res = await fitmateService.getExerciseAnalytics(user.username);
-                    // apiClient returns response.data, so res is { meta: ..., data: { ... } }
                     const dataMap = res?.data || res;
 
                     if (dataMap && typeof dataMap === 'object') {
@@ -450,14 +448,66 @@ const ExerciseLibrary = () => {
             }
         } catch (e) {
             console.error(e);
+        }
+    };
+
+    const loadExercises = async () => {
+        setLoading(true);
+        try {
+            const hasFilters = search || filters.bodyPart || filters.training;
+            let exRes;
+
+            if (hasFilters) {
+                const payload = {};
+                if (search) payload.name = search;
+                if (filters.bodyPart) {
+                    const bp = refData.bodyParts?.find(b => b.name === filters.bodyPart);
+                    if (bp) payload.targetBodyPartRefId = bp.refId?.toString();
+                }
+                if (filters.training) {
+                    const tr = refData.trainings?.find(t => t.name === filters.training);
+                    if (tr) payload.trainingRefId = tr.refId?.toString();
+                }
+                exRes = await fitmateService.searchExercises(payload, currentPage - 1, itemsPerPage);
+            } else {
+                exRes = await fitmateService.getExercises(currentPage - 1, itemsPerPage);
+            }
+
+            const dataObj = exRes.data;
+            if (dataObj && typeof dataObj === 'object' && 'content' in dataObj) {
+                setExercises(dataObj.content);
+                setTotalServerPages(dataObj.totalPages);
+                setTotalServerElements(dataObj.totalElements);
+            } else if (Array.isArray(dataObj)) {
+                setExercises(dataObj);
+                setTotalServerPages(Math.ceil(dataObj.length / itemsPerPage));
+                setTotalServerElements(dataObj.length);
+            } else {
+                setExercises([]);
+                setTotalServerPages(0);
+                setTotalServerElements(0);
+            }
+        } catch (e) {
+            console.error(e);
         } finally {
             setLoading(false);
         }
     };
 
+    const loadData = () => {
+        loadExercises();
+    };
+
     useEffect(() => {
-        loadData();
+        loadRefsAndAnalytics();
     }, [user?.username]);
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            loadExercises();
+        }, 400);
+        return () => clearTimeout(timer);
+    }, [currentPage, search, filters]);
 
     // Handlers
     const handleDelete = async (exercise) => {
@@ -502,11 +552,13 @@ const ExerciseLibrary = () => {
     }, [exercises, search, filters]);
 
     // Pagination Logic
-    const totalPages = Math.ceil(filteredExercises.length / itemsPerPage);
-    const paginatedExercises = filteredExercises.slice(
-        (currentPage - 1) * itemsPerPage,
-        currentPage * itemsPerPage
-    );
+    const totalPages = totalServerPages > 0 ? totalServerPages : Math.ceil(filteredExercises.length / itemsPerPage);
+    
+    // We already sliced from the backend via 'page' and 'size', so we don't need to slice locally 
+    // UNLESS totalServerPages is 0 (meaning we received unpaginated data)
+    const paginatedExercises = totalServerPages > 0 
+        ? filteredExercises 
+        : filteredExercises.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
     // Reset pagination when filters change
     useEffect(() => {
@@ -604,7 +656,7 @@ const ExerciseLibrary = () => {
             {totalPages > 1 && (
                 <div className="flex flex-col md:flex-row items-center justify-between gap-4 py-4 border-t border-gray-100">
                     <p className="text-sm text-gray-500">
-                        Showing <span className="font-bold text-gray-900">{(currentPage - 1) * itemsPerPage + 1}</span> to <span className="font-bold text-gray-900">{Math.min(currentPage * itemsPerPage, filteredExercises.length)}</span> of <span className="font-bold text-gray-900">{filteredExercises.length}</span> results
+                        Showing <span className="font-bold text-gray-900">{totalServerElements > 0 && paginatedExercises.length === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1}</span> to <span className="font-bold text-gray-900">{totalServerElements > 0 ? (currentPage - 1) * itemsPerPage + paginatedExercises.length : Math.min(currentPage * itemsPerPage, filteredExercises.length)}</span> of <span className="font-bold text-gray-900">{totalServerElements > 0 ? totalServerElements : filteredExercises.length}</span> results
                     </p>
 
                     <div className="flex items-center gap-2">
@@ -626,24 +678,23 @@ const ExerciseLibrary = () => {
                         </button>
 
                         <div className="flex items-center gap-1 mx-2">
-                            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                                // Logic to show window of pages around current
-                                let pageNum = i + 1;
+                            {(() => {
+                                let startPage = 1;
                                 if (totalPages > 5) {
-                                    if (currentPage > 3) {
-                                        pageNum = currentPage - 2 + i;
-                                    }
-                                    if (pageNum > totalPages) {
-                                        pageNum = totalPages - 4 + i; // Stick to end
+                                    if (currentPage <= 3) {
+                                        startPage = 1;
+                                    } else if (currentPage >= totalPages - 2) {
+                                        startPage = totalPages - 4;
+                                    } else {
+                                        startPage = currentPage - 2;
                                     }
                                 }
 
-                                // Boundary check specifically for start window
-                                if (currentPage < 3) pageNum = i + 1;
-
-                                return (
-                                    <button
-                                        key={pageNum}
+                                return Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                                    let pageNum = startPage + i;
+                                    return (
+                                        <button
+                                            key={pageNum}
                                         onClick={() => handlePageChange(pageNum)}
                                         className={`w-10 h-10 rounded-lg text-sm font-bold transition-all
                                             ${currentPage === pageNum
@@ -654,7 +705,8 @@ const ExerciseLibrary = () => {
                                         {pageNum}
                                     </button>
                                 );
-                            })}
+                            });
+                        })()}
                         </div>
 
                         <button
