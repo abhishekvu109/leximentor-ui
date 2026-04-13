@@ -113,9 +113,9 @@ const ChallengeCard = ({ challenge, drillRefId, onDelete, onTry, onEvaluate, onV
                         </button>
                     </Link>
                 ) : !isEvaluated ? (
-                    <Link href={`/challenges/view-response/${challenge.refId}`} className="flex-1">
+                    <Link href={`/drill_challenges/${challenge.refId}`} className="flex-1">
                         <button className="w-full py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-colors">
-                            <BarChart2 size={16} /> View Response
+                            <BarChart2 size={16} /> Evaluate
                         </button>
                     </Link>
                 ) : (
