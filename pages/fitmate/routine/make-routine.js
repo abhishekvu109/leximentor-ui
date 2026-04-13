@@ -3,8 +3,8 @@ import Layout from "@/components/layout/Layout";
 import { ChevronDown, Option, CheckCircle2, MoreVertical, Plus, Trash2, Timer, Check, X, Dumbbell, Calendar, Save, Filter, Search, ArrowRight, Download, FileText, History, Info, Clock, Sparkles } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState } from "react";
-import { API_FITMATE_BASE_URL } from "@/constants";
-import { fetchData, POST, postData, fetchWithAuth } from "@/dataService";
+import fitmateService from "../../../services/fitmate.service";
+import { useAuth } from "../../../context/AuthContext";
 import { useRouter } from "next/router";
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -146,11 +146,25 @@ const CartExerciseThumb = ({ refId, name }) => {
 
     useEffect(() => {
         const fetchThumb = async () => {
+            setThumbUrl(null); // Reset when refId changes or fetch starts
             try {
-                const res = await fetchWithAuth(`${API_FITMATE_BASE_URL}/exercises/exercise/resources/resource?refId=${refId}&placeholder=THUMBNAIL&resourceId=`);
-                if (!res.ok) return;
-                const blob = await res.blob();
-                if (blob.size > 0 && blob.type.startsWith('image/')) {
+                let blob;
+                try {
+                    blob = await fitmateService.getThumbnail(refId);
+                } catch (err) {
+                    // Ignore THUMBNAIL error, will try GIF fallback
+                }
+
+                // If thumbnail is missing or invalid, try falling back to GIF
+                if (!blob || blob.size === 0 || !blob.type.startsWith('image/')) {
+                    try {
+                        blob = await fitmateService.getExerciseResource(refId, 'GIF');
+                    } catch (err) {
+                        // Both failed
+                    }
+                }
+
+                if (blob && blob.size > 0 && blob.type.startsWith('image/')) {
                     setThumbUrl(URL.createObjectURL(blob));
                 }
             } catch (e) {
@@ -285,11 +299,25 @@ const ExerciseGridItem = ({ name, refId, isSelected, onClick }) => {
 
     useEffect(() => {
         const fetchThumb = async () => {
+            setThumbUrl(null); // Reset when refId changes or fetch starts
             try {
-                const res = await fetchWithAuth(`${API_FITMATE_BASE_URL}/exercises/exercise/resources/resource?refId=${refId}&placeholder=THUMBNAIL&resourceId=`);
-                if (!res.ok) return;
-                const blob = await res.blob();
-                if (blob.size > 0 && blob.type.startsWith('image/')) {
+                let blob;
+                try {
+                    blob = await fitmateService.getThumbnail(refId);
+                } catch (err) {
+                    // Ignore THUMBNAIL error, will try GIF fallback
+                }
+
+                // If thumbnail is missing or invalid, try falling back to GIF
+                if (!blob || blob.size === 0 || !blob.type.startsWith('image/')) {
+                    try {
+                        blob = await fitmateService.getExerciseResource(refId, 'GIF');
+                    } catch (err) {
+                        // Both failed
+                    }
+                }
+
+                if (blob && blob.size > 0 && blob.type.startsWith('image/')) {
                     setThumbUrl(URL.createObjectURL(blob));
                 }
             } catch (e) {
@@ -340,7 +368,8 @@ const UnifiedRoutineBuilder = ({
     successMessage,
     setShowSuccess
 }) => {
-    const [selectedBodyPart, setSelectedBodyPart] = useState('Chest');
+    const { user } = useAuth();
+    const [selectedBodyPart, setSelectedBodyPart] = useState(null);
     const [selectedMuscle, setSelectedMuscle] = useState(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [isGeneratorOpen, setIsGeneratorOpen] = useState(false);
@@ -349,8 +378,8 @@ const UnifiedRoutineBuilder = ({
     const openHistory = async (exerciseName) => {
         setHistoryPanel({ open: true, exercise: exerciseName, data: [], loading: true });
         try {
-            const res = await fetchData(`${API_FITMATE_BASE_URL}/drill/${encodeURIComponent(exerciseName)}`);
-            setHistoryPanel(prev => ({ ...prev, data: res.data || [], loading: false }));
+            const res = await fitmateService.getExerciseHistory(exerciseName);
+            setHistoryPanel(prev => ({ ...prev, data: res.data?.content || res.data || [], loading: false }));
         } catch (e) {
             console.error("Failed to fetch history:", e);
             setHistoryPanel(prev => ({ ...prev, loading: false }));
@@ -358,12 +387,18 @@ const UnifiedRoutineBuilder = ({
     };
 
     const addToCart = (exercise) => {
+        const exerciseUnit = exercise.unit || 'reps';
+        let defaultSetUnit = 'REPS';
+        if (exerciseUnit === 'weight') defaultSetUnit = 'KG';
+        else if (exerciseUnit === 'time') defaultSetUnit = 'sec';
+
         setExerciseCart(prev => [...prev, {
             exercise: exercise.name,
             refId: exercise.refId,
             bodyPart: exercise.bodyPart?.name || selectedBodyPart,
             muscle: selectedMuscle || exercise.targetMuscles?.[0]?.name,
-            sets: [{ id: Date.now(), weight: '', reps: '', unit: 'kg', completed: false }],
+            exerciseUnit: exerciseUnit,
+            sets: [{ id: Date.now(), weight: '', reps: '', unit: defaultSetUnit, completed: false }],
             notes: ''
         }]);
     };
@@ -376,7 +411,7 @@ const UnifiedRoutineBuilder = ({
         setExerciseCart(prev => {
             const newCart = [...prev];
             const exercise = newCart[exerciseIndex];
-            const lastSet = exercise.sets[exercise.sets.length - 1] || { weight: '', reps: '', unit: 'kg' };
+            const lastSet = exercise.sets[exercise.sets.length - 1] || { weight: '', reps: '', unit: 'REPS' };
             exercise.sets.push({ id: Date.now() + Math.random(), weight: lastSet.weight, reps: lastSet.reps, unit: lastSet.unit, completed: false });
             return newCart;
         });
@@ -408,7 +443,7 @@ const UnifiedRoutineBuilder = ({
 
     const handleGenerateWorkout = async (params) => {
         try {
-            const res = await postData(`${API_FITMATE_BASE_URL}/routines/routine/generate`, params);
+            const res = await fitmateService.generateRoutine({ ...params, username: user?.username });
             if (res.meta?.code === "000" && res.data?.drills) {
                 const newDrills = res.data.drills.map(drill => ({
                     exercise: drill.exercise.name,
@@ -450,7 +485,11 @@ const UnifiedRoutineBuilder = ({
                             <select
                                 className="bg-transparent border-none p-0 font-bold text-gray-800 focus:ring-0 cursor-pointer hover:text-blue-600 text-lg w-40"
                                 value={routine.training?.name || ''}
-                                onChange={(e) => setRoutine(prev => ({ ...prev, training: { name: e.target.value } }))}
+                                onChange={(e) => {
+                                    setRoutine(prev => ({ ...prev, training: { name: e.target.value } }));
+                                    setSelectedBodyPart(null);
+                                    setSelectedMuscle(null);
+                                }}
                             >
                                 <option value="" disabled>Select Type</option>
                                 {trainings.map((t, i) => <option key={i} value={t.name}>{t.name}</option>)}
@@ -501,11 +540,21 @@ const UnifiedRoutineBuilder = ({
                         <div className="grid grid-cols-2 gap-3">
                             {exercises
                                 .filter(e => {
-                                    if (searchQuery) return e.name.toLowerCase().includes(searchQuery.toLowerCase());
-                                    if (selectedMuscle) return e.targetMuscles?.some(m => m.name === selectedMuscle);
+                                    // 1. Search Query
+                                    if (searchQuery && !e.name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+
+                                    // 2. Training Type (Always filter by this if selected)
+                                    if (routine.training?.name && e.training?.name !== routine.training.name) return false;
+
+                                    // 3. Body Part (Incremental)
+                                    if (selectedBodyPart && e.bodyPart?.name !== selectedBodyPart) return false;
+
+                                    // 4. Muscle (Incremental)
+                                    if (selectedMuscle && !e.targetMuscles?.some(m => m.name === selectedMuscle)) return false;
+
                                     return true;
                                 })
-                                .map((ex, i) => <ExerciseGridItem key={i} name={ex.name} refId={ex.refId} onClick={() => addToCart(ex)} />)}
+                                .map((ex) => <ExerciseGridItem key={ex.refId || Math.random()} name={ex.name} refId={ex.refId} onClick={() => addToCart(ex)} />)}
                         </div>
                     </div>
                 </div>
@@ -521,7 +570,7 @@ const UnifiedRoutineBuilder = ({
                     ) : (
                         <div className="flex-1 overflow-y-auto p-8 space-y-6">
                             {exerciseCart.map((item, exIdx) => (
-                                <div key={exIdx} className="bg-white rounded-2xl shadow-sm border border-gray-100/50 overflow-hidden animate-in slide-in-from-right-4 duration-300">
+                                <div key={item.refId ? `${item.refId}-${exIdx}` : exIdx} className="bg-white rounded-2xl shadow-sm border border-gray-100/50 overflow-hidden animate-in slide-in-from-right-4 duration-300">
                                     <div className="p-4 flex gap-5 items-start bg-gradient-to-r from-white to-gray-50/30">
                                         <div className="w-16 h-16 bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden shrink-0 flex items-center justify-center p-1">
                                             <CartExerciseThumb refId={item.refId} name={item.exercise} />
@@ -554,21 +603,37 @@ const UnifiedRoutineBuilder = ({
                                     <div className="border-t border-gray-100">
                                         <div className="grid grid-cols-12 gap-2 px-4 py-2 bg-gray-50/50 text-[10px] font-bold text-gray-400 uppercase tracking-widest text-center">
                                             <div className="col-span-1">Set</div>
-                                            <div className="col-span-3">Weight</div>
-                                            <div className="col-span-2">Reps</div>
+                                            <div className={item.exerciseUnit === 'reps' ? 'col-span-5' : 'col-span-3'}>
+                                                {item.exerciseUnit === 'weight' ? 'Weight' : item.exerciseUnit === 'time' ? 'Time' : 'Reps'}
+                                            </div>
+                                            {item.exerciseUnit !== 'reps' && <div className="col-span-2">Reps</div>}
                                             <div className="col-span-6">Actions</div>
                                         </div>
                                         <div className="divide-y divide-gray-50">
                                             {item.sets.map((set, setIdx) => (
                                                 <div key={set.id} className={`grid grid-cols-12 gap-2 px-4 py-2 items-center text-center ${set.completed ? 'bg-green-50/50' : 'bg-white'}`}>
                                                     <div className="col-span-1 font-bold text-blue-600 text-sm">{setIdx + 1}</div>
-                                                    <div className="col-span-3 flex items-center justify-center gap-1">
+                                                    <div className={`${item.exerciseUnit === 'reps' ? 'col-span-5' : 'col-span-3'} flex items-center justify-center gap-1`}>
                                                         <input type="number" className="w-16 bg-gray-100 border-none rounded-md py-1 text-center font-bold text-gray-700 text-sm" value={set.weight} onChange={(e) => handleUpdateSet(exIdx, setIdx, 'weight', e.target.value)} placeholder="0" />
-                                                        <button onClick={() => handleUpdateSet(exIdx, setIdx, 'unit', set.unit === 'kg' ? 'lb' : 'kg')} className="text-[10px] font-bold text-gray-400 hover:text-blue-600 uppercase">{set.unit}</button>
+                                                        <button
+                                                            onClick={() => {
+                                                                const units = item.exerciseUnit === 'weight' ? ['KG', 'LB'] :
+                                                                    item.exerciseUnit === 'time' ? ['min', 'HR', 'sec'] :
+                                                                        ['REPS'];
+                                                                const currentIndex = units.indexOf(set.unit);
+                                                                const nextIndex = (currentIndex + 1) % units.length;
+                                                                handleUpdateSet(exIdx, setIdx, 'unit', units[nextIndex]);
+                                                            }}
+                                                            className="text-[10px] font-bold text-gray-400 hover:text-blue-600 uppercase"
+                                                        >
+                                                            {set.unit}
+                                                        </button>
                                                     </div>
-                                                    <div className="col-span-2">
-                                                        <input type="number" className="w-full bg-gray-100 border-none rounded-md py-1 text-center font-bold text-gray-700 text-sm" value={set.reps} onChange={(e) => handleUpdateSet(exIdx, setIdx, 'reps', e.target.value)} placeholder="0" />
-                                                    </div>
+                                                    {item.exerciseUnit !== 'reps' && (
+                                                        <div className="col-span-2">
+                                                            <input type="number" className="w-full bg-gray-100 border-none rounded-md py-1 text-center font-bold text-gray-700 text-sm" value={set.reps} onChange={(e) => handleUpdateSet(exIdx, setIdx, 'reps', e.target.value)} placeholder="0" />
+                                                        </div>
+                                                    )}
                                                     <div className="col-span-6 flex justify-center gap-2">
                                                         <button onClick={() => handleToggleSet(exIdx, setIdx)} className={`w-7 h-7 rounded-md flex items-center justify-center transition-all ${set.completed ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-400 hover:bg-green-100 hover:text-green-600'}`}><Check size={14} strokeWidth={3} /></button>
                                                         <button onClick={() => removeSet(exIdx, setIdx)} className="w-7 h-7 rounded-md flex items-center justify-center bg-gray-100 text-gray-400 hover:bg-red-100 hover:text-red-500"><Trash2 size={12} /></button>
@@ -594,6 +659,7 @@ const UnifiedRoutineBuilder = ({
 };
 
 const FitmateMakeRoutine = () => {
+    const { user } = useAuth();
     const [routine, setRoutine] = useState({ training: { name: '' }, description: '', workoutDate: new Date().toISOString().split('T')[0], drills: [] });
     const [workoutDate, setWorkoutDate] = useState(new Date().toISOString().split('T')[0]);
     const [description, setDescription] = useState('');
@@ -609,16 +675,15 @@ const FitmateMakeRoutine = () => {
         const fetchInitialData = async () => {
             try {
                 const [bodyRes, muscleRes, exerciseRes, trainingRes] = await Promise.all([
-                    fetchWithAuth(`${API_FITMATE_BASE_URL}/bodyparts`),
-                    fetchWithAuth(`${API_FITMATE_BASE_URL}/muscles`),
-                    fetchWithAuth(`${API_FITMATE_BASE_URL}/exercises`),
-                    fetchWithAuth(`${API_FITMATE_BASE_URL}/trainings`)
+                    fitmateService.getBodyParts(),
+                    fitmateService.getMuscles(),
+                    fitmateService.getExercises(0, 500), // Fetch a larger batch for the local builder grid
+                    fitmateService.getTrainings()
                 ]);
-                const [bodyData, muscleData, exerciseData, trainingData] = await Promise.all([bodyRes.json(), muscleRes.json(), exerciseRes.json(), trainingRes.json()]);
-                setBodyParts(bodyData.data || []);
-                setMuscles(muscleData.data || []);
-                setExercises(exerciseData.data || []);
-                setTrainings(trainingData.data || []);
+                setBodyParts(bodyRes.data?.content || bodyRes.data || []);
+                setMuscles(muscleRes.data?.content || muscleRes.data || []);
+                setExercises(exerciseRes.data?.content || exerciseRes.data || []);
+                setTrainings(trainingRes.data?.content || trainingRes.data || []);
             } catch (error) { console.error("Error fetching dropdown data:", error); }
         };
         fetchInitialData();
@@ -670,7 +735,7 @@ const FitmateMakeRoutine = () => {
             });
         });
         try {
-            await postData(`${API_FITMATE_BASE_URL}/routines/routine`, { ...routine, workoutDate, description, drills });
+            await fitmateService.createRoutine({ ...routine, workoutDate, description, drills, username: user?.username });
             setSuccessMessage("Routine created successfully!");
             setShowSuccess(true);
             setTimeout(() => setShowSuccess(false), 5000);

@@ -27,9 +27,10 @@ import {
     ArrowUp,
     Trash2
 } from "lucide-react";
+export const API_CATEGORY_SEARCH_URL = null; // To be removed
 import { useAuth } from "../../context/AuthContext";
-import { postDataAsJson, fetchData, DeleteByObject } from "../../dataService";
-import { API_CASHFLOW_BASE_URL, API_CATEGORY_SEARCH_URL } from "../../constants";
+import householdService from "../../services/household.service";
+import categoryService from "../../services/category.service";
 
 const formatDateArray = (dateArray) => {
     if (!dateArray || !Array.isArray(dateArray)) return "N/A";
@@ -59,7 +60,9 @@ const ExpenseLogsLogic = () => {
         categoryRefId: "",
         householdRefId: "",
         expenseDate: new Date().toISOString().split('T')[0],
-        type: "ONE_TIME"
+        type: "ONE_TIME",
+        expenseFor: "FAMILY",
+        paymentMode: "UPI"
     });
     const [filteredCategories, setFilteredCategories] = useState([]);
     const [showCategoryList, setShowCategoryList] = useState(false);
@@ -94,7 +97,7 @@ const ExpenseLogsLogic = () => {
         try {
             // Fetch Households (Keep these cached or only fetch if empty)
             if (households.length === 0) {
-                const houseRes = await postDataAsJson(`${API_CASHFLOW_BASE_URL}/households/household/search`, {
+                const houseRes = await householdService.searchHouseholds({
                     owner: user.username
                 });
                 if (houseRes?.data) setHouseholds(houseRes.data);
@@ -102,7 +105,7 @@ const ExpenseLogsLogic = () => {
 
             // Fetch Categories (Cache if possible)
             if (categories.length === 0) {
-                const catRes = await postDataAsJson(API_CATEGORY_SEARCH_URL, {});
+                const catRes = await categoryService.searchCategories({});
                 if (catRes?.data) setCategories(catRes.data);
             }
 
@@ -115,7 +118,7 @@ const ExpenseLogsLogic = () => {
             };
 
             // Fetch Transactions with Filters
-            const transRes = await postDataAsJson(`${API_CASHFLOW_BASE_URL}/expenses/expense/search`, searchPayload);
+            const transRes = await householdService.searchExpenses(searchPayload);
             if (transRes?.data) {
                 setTransactions(transRes.data);
                 setCurrentPage(1); // Reset to first page on new search
@@ -172,12 +175,14 @@ const ExpenseLogsLogic = () => {
                 expenseDate: formData.expenseDate,
                 description: formData.description,
                 categoryRefId: formData.categoryRefId,
-                type: formData.type
+                type: formData.type,
+                expenseFor: formData.expenseFor,
+                paymentMode: formData.paymentMode
             }
         ];
 
         try {
-            await postDataAsJson(`${API_CASHFLOW_BASE_URL}/expenses/expense`, payload);
+            await householdService.addExpense(payload);
             setFormData({
                 description: "",
                 amount: "",
@@ -185,7 +190,9 @@ const ExpenseLogsLogic = () => {
                 categoryRefId: "",
                 householdRefId: "",
                 expenseDate: new Date().toISOString().split('T')[0],
-                type: "ONE_TIME"
+                type: "ONE_TIME",
+                expenseFor: "FAMILY",
+                paymentMode: "UPI"
             });
             setShowLogForm(false);
             refreshData();
@@ -283,7 +290,7 @@ const ExpenseLogsLogic = () => {
 
         try {
             const payload = selectedRefIds.map(refId => ({ refId }));
-            await DeleteByObject(`${API_CASHFLOW_BASE_URL}/expenses/expense`, payload);
+            await householdService.deleteExpense(payload);
             setSelectedRefIds([]);
             refreshData();
         } catch (err) {
@@ -525,6 +532,35 @@ const ExpenseLogsLogic = () => {
                             </select>
                         </div>
                         <div className="space-y-2">
+                            <label className="text-[10px] font-black text-indigo-400 uppercase tracking-widest ml-1">Expense For</label>
+                            <select
+                                name="expenseFor"
+                                value={formData.expenseFor}
+                                onChange={handleFormChange}
+                                className="w-full bg-white dark:bg-gray-800 border-none rounded-xl px-4 py-3 text-sm font-bold focus:ring-2 focus:ring-indigo-500/20 shadow-sm appearance-none dark:text-white cursor-pointer"
+                            >
+                                <option value="FAMILY">Family</option>
+                                <option value="PERSONAL">Personal</option>
+                                <option value="OTHERS">Others</option>
+                            </select>
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black text-indigo-400 uppercase tracking-widest ml-1">Payment Mode</label>
+                            <select
+                                name="paymentMode"
+                                value={formData.paymentMode}
+                                onChange={handleFormChange}
+                                className="w-full bg-white dark:bg-gray-800 border-none rounded-xl px-4 py-3 text-sm font-bold focus:ring-2 focus:ring-indigo-500/20 shadow-sm appearance-none dark:text-white cursor-pointer"
+                            >
+                                <option value="UPI">UPI</option>
+                                <option value="INTERNET BANKING">Internet Banking</option>
+                                <option value="DEBIT CARD">Debit Card</option>
+                                <option value="CREDIT CARD">Credit Card</option>
+                                <option value="CASH">Cash</option>
+                                <option value="OTHERS">Others</option>
+                            </select>
+                        </div>
+                        <div className="space-y-2">
                             <label className="text-[10px] font-black text-indigo-400 uppercase tracking-widest ml-1">Household</label>
                             <select
                                 required
@@ -716,6 +752,7 @@ const ExpenseLogsLogic = () => {
                                     </div>
                                 </th>
                                 <th className="px-8 py-6 text-[11px] font-black text-gray-400 uppercase tracking-[0.2em]">Payer</th>
+                                <th className="px-8 py-6 text-[11px] font-black text-gray-400 uppercase tracking-[0.2em]">Payment Mode</th>
                                 <th className="px-8 py-6 text-[11px] font-black text-gray-400 uppercase tracking-[0.2em]">Status</th>
                                 <th
                                     className="px-8 py-6 text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] text-right cursor-pointer hover:text-indigo-600 transition-colors"
@@ -793,6 +830,17 @@ const ExpenseLogsLogic = () => {
                                                 </div>
                                             </div>
                                         </td>
+                                        <td className="px-8 py-7">
+                                            <div className="flex items-center gap-3">
+                                                <div className="p-2 bg-gray-50 dark:bg-gray-700 rounded-lg text-gray-400 shrink-0">
+                                                    <User size={14} />
+                                                </div>
+                                                <div className="min-w-0">
+                                                    <p className="text-xs font-bold text-gray-700 dark:text-gray-300 truncate uppercase tracking-tight">{expense.paymentMode}</p>
+                                                </div>
+                                            </div>
+                                        </td>
+
                                         <td className="px-8 py-7">
                                             <div className="flex items-center gap-2">
                                                 <CheckCircle2 size={14} className="text-green-500" />

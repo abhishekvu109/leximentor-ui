@@ -17,8 +17,7 @@ import {
     Download
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
-import { postDataAsJson, fetchData } from "../../dataService";
-import { API_CASHFLOW_BASE_URL } from "../../constants";
+import cashflowService from "../../services/cashflow.service";
 
 const EarningsLogic = () => {
     const { user } = useAuth();
@@ -42,7 +41,7 @@ const EarningsLogic = () => {
         setLoading(true);
         try {
             // Fetch Earnings (Assuming there's a search endpoint similar to expenses)
-            const res = await postDataAsJson(`${API_CASHFLOW_BASE_URL}/earnings/earning/search`, {
+            const res = await cashflowService.searchEarnings({
                 username: user.username
             });
             if (res?.data) {
@@ -88,7 +87,7 @@ const EarningsLogic = () => {
                 }
             ];
 
-            const response = await postDataAsJson(`${API_CASHFLOW_BASE_URL}/earnings/earning`, payload);
+            const response = await cashflowService.createEarning(payload);
 
             if (response) {
                 setSuccess("Earning logged successfully!");

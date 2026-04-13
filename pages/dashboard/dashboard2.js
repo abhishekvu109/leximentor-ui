@@ -1,8 +1,7 @@
 import { useState, useEffect } from "react";
 import Layout from "@/components/layout/Layout";
 import DashboardStyleOne from "@/components/widgets/DashboardStyleOne";
-import { API_LEXIMENTOR_BASE_URL } from "@/constants";
-import { fetchWithAuth } from "@/dataService";
+import leximentorService from "../../services/leximentor.service";
 
 const Dashboard2 = () => {
     const [data, setData] = useState({ data: [] });
@@ -12,14 +11,12 @@ const Dashboard2 = () => {
     useEffect(() => {
         const loadDashboardData = async () => {
             try {
-                const res = await fetchWithAuth(`${API_LEXIMENTOR_BASE_URL}/drill/metadata`);
-                const result = await res.json();
+                const result = await leximentorService.getDrillsMetadata();
                 setData(result);
 
                 if (result?.data && result.data.length > 0) {
                     const firstDrillId = result.data[0].refId;
-                    const wordsRes = await fetchWithAuth(`${API_LEXIMENTOR_BASE_URL}/drill/metadata/sets/words/data/${firstDrillId}`);
-                    const wData = await wordsRes.json();
+                    const wData = await leximentorService.getDrillSetWords(firstDrillId);
                     setWordsData(wData);
                 }
             } catch (error) {

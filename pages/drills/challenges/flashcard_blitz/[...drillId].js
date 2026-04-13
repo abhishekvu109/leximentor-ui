@@ -2,8 +2,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import Layout from "@/components/layout/Layout";
-import { API_LEXIMENTOR_BASE_URL } from "@/constants";
-import { fetchData, fetchWithAuth } from "@/dataService";
+import leximentorService from "../../../../services/leximentor.service";
 import {
     ArrowLeftIcon,
     EyeIcon,
@@ -53,8 +52,8 @@ const FlashcardBlitzChallenge = () => {
 
     const [notification, setNotification] = useState({ visible: false, message: '', type: '' });
 
-    const drillRefId = drillId?.[0];
-    const challengeId = drillId?.[1];
+    const drillRefId = drillId?.[1];
+    const challengeId = drillId?.[0];
 
     // --- Init ---
     useEffect(() => {
@@ -63,8 +62,8 @@ const FlashcardBlitzChallenge = () => {
             const fetchDataAsync = async () => {
                 try {
                     const [setData, wordData] = await Promise.all([
-                        fetchWithAuth(`${API_LEXIMENTOR_BASE_URL}/drill/metadata/sets/${drillRefId}`).then(res => res.json()),
-                        fetchWithAuth(`${API_LEXIMENTOR_BASE_URL}/drill/metadata/sets/words/data/${drillRefId}`).then(res => res.json())
+                        leximentorService.getDrillSet(drillRefId),
+                        leximentorService.getDrillSetWords(drillRefId)
                     ]);
 
                     setDrillSetData(setData || { data: [] });
@@ -120,11 +119,7 @@ const FlashcardBlitzChallenge = () => {
 
     const submitResults = async (submissionData) => {
         try {
-            const URL = `${API_LEXIMENTOR_BASE_URL}/drill/metadata/challenges/challenge/${challengeId}/scores`;
-            await fetchWithAuth(URL, {
-                method: 'PUT',
-                body: JSON.stringify(submissionData),
-            });
+            await leximentorService.updateChallengeScores(challengeId, submissionData);
             setNotification({ visible: true, message: "Challenge Completed! Progress saved.", type: 'success' });
         } catch (error) {
             console.error(error);

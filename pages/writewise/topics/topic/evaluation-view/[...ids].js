@@ -1,10 +1,10 @@
+import writewiseService from "../../../../../services/writewise.service";
 import Layout from "@/components/layout/Layout";
-import { API_WRITEWISE_BASE_URL } from "@/constants";
-import { fetchWithAuth, ModelData } from "@/dataService";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import Dropdown from "@/components/form/DropDown";
 import { ChevronDownIcon, PlayIcon, CheckBadgeIcon, PaperAirplaneIcon, BeakerIcon } from "@heroicons/react/24/solid";
+import { MODEL_DATA } from "@/constants";
 
 // --- Reusable Components ---
 
@@ -92,8 +92,8 @@ const EvaluationControlPanel = ({ title, type, topicRefId, versionRefId, model, 
 
         const fetchStatus = async () => {
             try {
-                const res = await fetchWithAuth(`${API_WRITEWISE_BASE_URL}/v1/topics/topic/${topicRefId}/versions/version/${versionRefId}`);
-                const data = await res.json();
+                const res = await writewiseService.getResponseVersion(topicRefId, versionRefId);
+                const data = res;
 
                 // Fields depend on type
                 const textKey = type === 'High' ? 'llmEvaluationText' : 'lowLevelEvaluationText';
@@ -131,29 +131,21 @@ const EvaluationControlPanel = ({ title, type, topicRefId, versionRefId, model, 
             return;
         }
 
-        switch (action) {
-            case 'generate':
-                endpoint = "/v1/topics/topic/versions/version/evaluate-response";
-                break;
-            case 'validate':
-                endpoint = "/v1/topics/topic/versions/version/evaluate-response/validate";
-                setIsValidating(true);
-                break;
-            case 'submit':
-                endpoint = "/v1/topics/topic/versions/version/submit-results";
-                break;
-        }
-
         try {
-            const res = await fetchWithAuth(`${API_WRITEWISE_BASE_URL}${endpoint}`, {
-                method: "POST",
-                body: JSON.stringify(body),
-            });
+            let res;
+            if (action === 'generate') {
+                res = await writewiseService.evaluateResponse(body);
+            } else if (action === 'validate') {
+                res = await writewiseService.validateEvaluation(body);
+                setIsValidating(true);
+            } else if (action === 'submit') {
+                res = await writewiseService.submitEvaluationResults(body);
+            }
 
             if (!res.ok) throw new Error("Request failed");
 
             if (action === 'validate') {
-                const data = await res.json();
+                const data = res;
                 setValidationStatus(Boolean(data.data));
                 setTimeout(() => setValidationStatus(null), 3000); // Clears validation highlight
             } else {
@@ -246,7 +238,7 @@ const EvaluationView = () => {
                         <div className="w-full md:w-64">
                             <Dropdown
                                 label={selectedModel || "Select AI Model"}
-                                items={ModelData}
+                                items={MODEL_DATA}
                                 onSelect={handleModelSelect}
                                 ButtonClassName="w-full justify-between bg-white border border-slate-300 text-slate-700 hover:border-indigo-300 focus:ring-4 focus:ring-indigo-100 font-medium rounded-xl px-4 py-2.5 shadow-sm"
                             />

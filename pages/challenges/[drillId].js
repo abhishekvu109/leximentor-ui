@@ -2,8 +2,8 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
-import { API_LEXIMENTOR_BASE_URL } from "@/constants";
-import { deleteData, fetchData, postData, fetchWithAuth } from "@/dataService";
+import leximentorService from "../../services/leximentor.service";
+import { useAuth } from "../../context/AuthContext";
 import Layout from "@/components/layout/Layout";
 import { motion } from "framer-motion";
 import {
@@ -113,12 +113,11 @@ const ChallengeCard = ({ challenge, drillRefId, onDelete, onTry, onEvaluate, onV
                         </button>
                     </Link>
                 ) : !isEvaluated ? (
-                    <button
-                        onClick={() => onEvaluate(challenge)}
-                        className="flex-1 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-colors"
-                    >
-                        <BarChart2 size={16} /> Evaluate
-                    </button>
+                    <Link href={`/drill_challenges/${challenge.refId}`} className="flex-1">
+                        <button className="w-full py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-colors">
+                            <BarChart2 size={16} /> Evaluate
+                        </button>
+                    </Link>
                 ) : (
                     <Link
                         href={`/evaluation_report/${challenge.drillType === 'CM' ? 'context-master' : 'meaning_report'}/${challenge.refId}`}
@@ -322,6 +321,7 @@ const EvaluatorModal = ({ isVisible, onClose, evaluators, onSubmit, challengeId 
 };
 
 const Challenges = () => {
+    const { user } = useAuth();
     const router = useRouter();
     const { drillId } = router.query;
 
@@ -340,28 +340,26 @@ const Challenges = () => {
     // View State
     const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'analytics'
 
-    const loadChallenges = useCallback(async (id) => {
-        const URL = `${API_LEXIMENTOR_BASE_URL}/drill/metadata/challenges/${id}`;
+    const loadChallenges = useCallback(async (id, username) => {
         try {
-            const res = await fetchWithAuth(URL);
-            const data = await res.json();
-            setChallengeData(data);
+            const res = await leximentorService.getChallenges(id, username);
+            setChallengeData(res);
         } catch (error) {
             console.error("Failed to load challenges:", error);
         }
     }, []);
 
     useEffect(() => {
-        if (drillId) {
+        if (drillId && user?.username) {
             setDrillRefId(drillId);
             const init = async () => {
                 setLoading(true);
-                await loadChallenges(drillId);
+                await loadChallenges(drillId, user.username);
                 setLoading(false);
             };
             init();
         }
-    }, [drillId, loadChallenges]);
+    }, [drillId, user?.username, loadChallenges]);
 
     useEffect(() => {
         if (typeof window !== "undefined" && window.initFlowbite) {
@@ -372,9 +370,8 @@ const Challenges = () => {
     const handleCreateChallenge = async (type) => {
         setCreatingType(type);
         try {
-            const URL = `${API_LEXIMENTOR_BASE_URL}/drill/metadata/challenges/challenge?drillId=${drillRefId}&drillType=${type}`;
-            await fetchWithAuth(URL, { method: 'POST' });
-            await loadChallenges(drillRefId);
+            await leximentorService.createChallenge(drillRefId, type, user?.username);
+            await loadChallenges(drillRefId, user?.username);
         } catch (error) {
             console.error(error);
             alert("Failed to create challenge");
@@ -385,9 +382,8 @@ const Challenges = () => {
 
     const handleDelete = async (refId) => {
         if (!confirm("Are you sure you want to delete this challenge?")) return;
-        const URL = `${API_LEXIMENTOR_BASE_URL}/drill/metadata/challenges/${refId}`;
         try {
-            await fetchWithAuth(URL, { method: 'DELETE' });
+            await leximentorService.deleteChallenge(refId);
             await loadChallenges(drillRefId);
         } catch (error) {
             console.error("Failed to delete challenge:", error);
@@ -397,20 +393,17 @@ const Challenges = () => {
     const handleOpenEvaluator = async (challengeId) => {
         setActiveChallengeId(challengeId);
         setIsEvaluatorVisible(true);
-        const URL = `${API_LEXIMENTOR_BASE_URL}/drill/metadata/challenges/challenge/evaluators?challengeRefId=${challengeId}`;
         try {
-            const res = await fetchWithAuth(URL);
-            const data = await res.json();
-            setChallengeEvaluators(data);
+            const res = await leximentorService.getEvaluators(challengeId);
+            setChallengeEvaluators(res);
         } catch (error) {
             console.error("Failed to fetch evaluators:", error);
         }
     };
 
     const handleSubmitEvaluation = async (challengeId, evaluator) => {
-        const URL = `${API_LEXIMENTOR_BASE_URL}/drill/metadata/challenges/challenge/${challengeId}/evaluate?challengeId=${challengeId}&evaluator=${evaluator}`;
         try {
-            await fetchWithAuth(URL, { method: 'POST' });
+            await leximentorService.submitEvaluation(challengeId, evaluator);
             setIsEvaluatorVisible(false);
             setActiveChallengeId(null);
             alert("Evaluation submitted!"); // Replace with toast
@@ -467,7 +460,7 @@ const Challenges = () => {
                             </button>
                         </div>
                         <button
-                            onClick={loadChallenges}
+                            onClick={() => loadChallenges(drillRefId, user?.username)}
                             className="flex items-center gap-2 text-sm font-bold text-blue-600 hover:bg-blue-50 px-3 py-2 rounded-lg transition-colors"
                         >
                             <RefreshCw size={16} /> Refresh

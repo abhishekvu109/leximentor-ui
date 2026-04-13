@@ -1,7 +1,6 @@
 import { useRef, useState, useMemo, useEffect } from 'react';
+import writewiseService from "../../../../../services/writewise.service";
 import Layout from "@/components/layout/Layout";
-import { fetchWithAuth } from "@/dataService";
-import { API_WRITEWISE_BASE_URL } from "@/constants";
 import { useRouter } from "next/router";
 
 // --- Components ---
@@ -177,8 +176,7 @@ const EvaluationResult = () => {
             const loadData = async () => {
                 setLoading(true);
                 try {
-                    const res = await fetchWithAuth(`${API_WRITEWISE_BASE_URL}/v1/responses/response/${responseRefId}/versions/version/${versionRefId}`);
-                    const result = await res.json();
+                    const result = await writewiseService.getEvaluationResult(responseRefId, versionRefId);
                     setData(result?.data || null);
                 } catch (error) {
                     console.error("Error fetching evaluation result:", error);

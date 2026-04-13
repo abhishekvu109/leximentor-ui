@@ -2,8 +2,7 @@ import Head from "next/head";
 import Script from "next/script";
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
-import { API_LEXIMENTOR_BASE_URL } from "@/constants";
-import { fetchWithAuth } from "@/dataService";
+import leximentorService from "../../services/leximentor.service";
 
 const WordRenderer = () => {
     const router = useRouter();
@@ -17,11 +16,8 @@ const WordRenderer = () => {
         const loadWordData = async () => {
             setLoading(true);
             try {
-                const response = await fetchWithAuth(`${API_LEXIMENTOR_BASE_URL}/inventory/words/${wordRefId}`);
-                if (response.ok) {
-                    const data = await response.json();
-                    setWordData(data);
-                }
+                const data = await leximentorService.getWordDetails(wordRefId);
+                setWordData(data);
             } catch (error) {
                 console.error("Error fetching word data:", error);
             } finally {

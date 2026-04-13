@@ -1,8 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Layout from "@/components/layout/Layout";
 import Link from "next/link";
-import { API_WRITEWISE_BASE_URL } from "@/constants";
-import { fetchWithAuth } from "@/dataService";
+import writewiseService from "../../../services/writewise.service";
 import ModalConfirmation from "@/components/modal_notifications/ModalConfirmation";
 
 // --- Components ---
@@ -149,10 +148,10 @@ export default function GenerateTopics() {
     const loadAllData = useCallback(async () => {
         try {
             const [generations, topics, submitted, evaluated] = await Promise.all([
-                fetchWithAuth(`${API_WRITEWISE_BASE_URL}/v1/topic-generations`).then(res => res.json()),
-                fetchWithAuth(`${API_WRITEWISE_BASE_URL}/v1/topics`).then(res => res.json()),
-                fetchWithAuth(`${API_WRITEWISE_BASE_URL}/v1/response/submitted-responses`).then(res => res.json()),
-                fetchWithAuth(`${API_WRITEWISE_BASE_URL}/v1/response/evaluated-responses`).then(res => res.json())
+                writewiseService.getTopicGenerations(),
+                writewiseService.getTopics(),
+                writewiseService.getSubmittedResponses(),
+                writewiseService.getEvaluatedResponses()
             ]);
 
             setTopicsState(generations || { data: [] });
@@ -192,16 +191,11 @@ export default function GenerateTopics() {
 
         setIsSubmitting(true);
         try {
-            const URL = `${API_WRITEWISE_BASE_URL}/v1/topics`;
-            await fetchWithAuth(URL, {
-                method: 'POST',
-                body: JSON.stringify(formData),
-            });
+            await writewiseService.createTopics(formData);
 
             // Refresh Data
-            const newRes = await fetchWithAuth(`${API_WRITEWISE_BASE_URL}/v1/topic-generations`);
-            const newTopics = await newRes.json();
-            setTopicsState(newTopics);
+            const newRes = await writewiseService.getTopicGenerations();
+            setTopicsState(newRes);
 
             alert("Topics Generated Successfully!");
             setFormData({ ...formData, subject: "" });
@@ -217,18 +211,14 @@ export default function GenerateTopics() {
         if (!confirm("Are you sure you want to delete this?")) return;
 
         try {
-            await fetchWithAuth(`${API_WRITEWISE_BASE_URL}/v1/topic-generations/topic-generation/${refId}`, {
-                method: 'DELETE'
-            });
+            await writewiseService.deleteTopicGeneration(refId);
             // Refetch based on type
             if (type === 'topic') {
-                const res = await fetchWithAuth(`${API_WRITEWISE_BASE_URL}/v1/topics`);
-                const newAllTopics = await res.json();
-                setAllTopicsState(newAllTopics);
+                const res = await writewiseService.getTopics();
+                setAllTopicsState(res);
             } else if (type === 'set') {
-                const res = await fetchWithAuth(`${API_WRITEWISE_BASE_URL}/v1/topic-generations`);
-                const newTopics = await res.json();
-                setTopicsState(newTopics);
+                const res = await writewiseService.getTopicGenerations();
+                setTopicsState(res);
             }
         } catch (e) {
             console.error(e);

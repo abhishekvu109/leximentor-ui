@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { API_WRITEWISE_BASE_URL } from "@/constants";
-import { fetchWithAuth } from "@/dataService";
+import writewiseService from "../../../../../services/writewise.service";
 import Layout from "@/components/layout/Layout";
 import { useRouter } from "next/router";
 import ErrorModal from "@/components/modal_notifications/ErrorModal";
@@ -145,8 +144,7 @@ const ViewTopic = () => {
             const loadData = async () => {
                 setLoading(true);
                 try {
-                    const res = await fetchWithAuth(`${API_WRITEWISE_BASE_URL}/v1/topic-generations/topic-generation/${topicGenerationId}`);
-                    const result = await res.json();
+                    const result = await writewiseService.getTopicGenerationDetails(topicGenerationId);
                     setData(result);
                 } catch (error) {
                     console.error("Failed to load topic details:", error);

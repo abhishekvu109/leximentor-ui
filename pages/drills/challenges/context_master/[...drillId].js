@@ -2,8 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import Layout from "@/components/layout/Layout";
-import { API_LEXIMENTOR_BASE_URL } from "@/constants";
-import { fetchData, fetchWithAuth } from "@/dataService";
+import leximentorService from "../../../../services/leximentor.service";
 import {
     ArrowLeftIcon,
     CheckCircleIcon,
@@ -116,9 +115,9 @@ const ContextMasterChallenge = () => {
             const fetchDataAsync = async () => {
                 try {
                     const [setData, wordData, scores] = await Promise.all([
-                        fetchWithAuth(`${API_LEXIMENTOR_BASE_URL}/drill/metadata/sets/${drillRefId}`).then(res => res.json()),
-                        fetchWithAuth(`${API_LEXIMENTOR_BASE_URL}/drill/metadata/sets/words/data/${drillRefId}`).then(res => res.json()),
-                        fetchWithAuth(`${API_LEXIMENTOR_BASE_URL}/drill/metadata/challenges/challenge/${challengeId}/scores`).then(res => res.json())
+                        leximentorService.getDrillSet(drillRefId),
+                        leximentorService.getDrillSetWords(drillRefId),
+                        leximentorService.getChallengeScores(challengeId)
                     ]);
 
                     setDrillSetData(setData || { data: [] });
@@ -192,17 +191,8 @@ const ContextMasterChallenge = () => {
     const submitResults = async (submissionData) => {
         setIsSubmitting(true);
         try {
-            const URL = `${API_LEXIMENTOR_BASE_URL}/drill/metadata/challenges/challenge/${challengeId}/scores`;
-            const response = await fetchWithAuth(URL, {
-                method: 'PUT',
-                body: JSON.stringify(submissionData),
-            });
-
-            if (response.ok) {
-                setNotification({ visible: true, message: "Challenge Completed! Progress saved.", type: 'success' });
-            } else {
-                throw new Error("Failed to save progress.");
-            }
+            await leximentorService.updateChallengeScores(challengeId, submissionData);
+            setNotification({ visible: true, message: "Challenge Completed! Progress saved.", type: 'success' });
         } catch (error) {
             console.error(error);
             setNotification({ visible: true, message: "Failed to save progress.", type: 'error' });

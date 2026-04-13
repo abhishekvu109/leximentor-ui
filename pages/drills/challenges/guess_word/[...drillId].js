@@ -1,8 +1,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import Script from "next/script";
-import { API_LEXIMENTOR_BASE_URL } from "@/constants";
-import { fetchWithAuth } from "@/dataService";
+import leximentorService from "../../../../services/leximentor.service";
 import Layout from "@/components/layout/Layout";
 import React from 'react';
 
@@ -26,13 +25,13 @@ const LoadGuessWordDrillChallenge = () => {
             setLoading(true);
             const fetchDataAsync = async () => {
                 try {
-                    const challengeIdVal = drillId[1];
-                    const drillRefIdVal = drillId[0];
+                    const challengeIdVal = drillId[0];
+                    const drillRefIdVal = drillId[1];
                     setChallengeId(challengeIdVal);
 
                     const [setData, wordData] = await Promise.all([
-                        fetchWithAuth(`${API_LEXIMENTOR_BASE_URL}/drill/metadata/sets/${drillRefIdVal}`).then(res => res.json()),
-                        fetchWithAuth(`${API_LEXIMENTOR_BASE_URL}/drill/metadata/sets/words/data/${drillRefIdVal}`).then(res => res.json())
+                        leximentorService.getDrillSet(drillRefIdVal),
+                        leximentorService.getDrillSetWords(drillRefIdVal)
                     ]);
 
                     if (setData && wordData) {
@@ -55,6 +54,29 @@ const LoadGuessWordDrillChallenge = () => {
             fetchDataAsync();
         }
     }, [drillId]);
+
+    const populateWordToOptions = (setData, wordData) => {
+        if (!setData?.data || !wordData?.data) return [];
+        return setData.data.map(item => {
+            const currentWord = wordData.data.find(w => w.refId === item.wordRefId);
+            if (!currentWord) return null;
+
+            // Get other words as distractors
+            const otherWords = wordData.data
+                .filter(w => w.refId !== item.wordRefId)
+                .map(w => w.word);
+
+            // Shuffle and pick 3 distractors
+            const shuffledDistractors = [...otherWords].sort(() => 0.5 - Math.random());
+            const options = [currentWord.word, ...shuffledDistractors.slice(0, 3)];
+
+            // Final shuffle of the 4 options
+            return {
+                wordRefId: item.wordRefId,
+                options: options.sort(() => 0.5 - Math.random())
+            };
+        }).filter(Boolean);
+    };
 
     const NotificationClose = () => {
         setNotificationVisible(false);
@@ -136,18 +158,7 @@ const LoadGuessWordDrillChallenge = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            const URL = `${API_LEXIMENTOR_BASE_URL}/drill/metadata/challenges/challenge/${challengeId}/scores`;
-            const response = await fetchWithAuth(URL, {
-                method: 'PUT',
-                body: JSON.stringify(formData),
-            });
-
-            if (!response.ok) {
-                setNotificationSuccess(false);
-                setNotificationMessage("Network response was not ok");
-                setNotificationVisible(true);
-                throw new Error('Network response was not ok');
-            }
+            await leximentorService.updateChallengeScores(challengeId, formData);
 
             setNotificationSuccess(true);
             setNotificationMessage("Response has been updated.");
