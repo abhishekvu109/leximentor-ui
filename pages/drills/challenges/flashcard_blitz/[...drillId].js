@@ -52,8 +52,8 @@ const FlashcardBlitzChallenge = () => {
 
     const [notification, setNotification] = useState({ visible: false, message: '', type: '' });
 
-    const drillRefId = drillId?.[0];
-    const challengeId = drillId?.[1];
+    const drillRefId = drillId?.[1];
+    const challengeId = drillId?.[0];
 
     // --- Init ---
     useEffect(() => {

@@ -25,8 +25,8 @@ const LoadGuessWordDrillChallenge = () => {
             setLoading(true);
             const fetchDataAsync = async () => {
                 try {
-                    const challengeIdVal = drillId[1];
-                    const drillRefIdVal = drillId[0];
+                    const challengeIdVal = drillId[0];
+                    const drillRefIdVal = drillId[1];
                     setChallengeId(challengeIdVal);
 
                     const [setData, wordData] = await Promise.all([
@@ -54,6 +54,29 @@ const LoadGuessWordDrillChallenge = () => {
             fetchDataAsync();
         }
     }, [drillId]);
+
+    const populateWordToOptions = (setData, wordData) => {
+        if (!setData?.data || !wordData?.data) return [];
+        return setData.data.map(item => {
+            const currentWord = wordData.data.find(w => w.refId === item.wordRefId);
+            if (!currentWord) return null;
+
+            // Get other words as distractors
+            const otherWords = wordData.data
+                .filter(w => w.refId !== item.wordRefId)
+                .map(w => w.word);
+
+            // Shuffle and pick 3 distractors
+            const shuffledDistractors = [...otherWords].sort(() => 0.5 - Math.random());
+            const options = [currentWord.word, ...shuffledDistractors.slice(0, 3)];
+
+            // Final shuffle of the 4 options
+            return {
+                wordRefId: item.wordRefId,
+                options: options.sort(() => 0.5 - Math.random())
+            };
+        }).filter(Boolean);
+    };
 
     const NotificationClose = () => {
         setNotificationVisible(false);
@@ -135,8 +158,6 @@ const LoadGuessWordDrillChallenge = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            await leximentorService.updateChallengeScores(challengeId, formData);
-
             await leximentorService.updateChallengeScores(challengeId, formData);
 
             setNotificationSuccess(true);

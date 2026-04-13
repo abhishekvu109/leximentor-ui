@@ -67,30 +67,18 @@ const WordScrambleChallenge = () => {
     const challengeId = drillId?.[0];
     const drillRefId = drillId?.[1];
 
-    // --- Fetching ---
-    useEffect(() => {
-        if (drillRefId && challengeId) {
-            setLoading(true);
-            const fetchDataAsync = async () => {
-                try {
-                    const [drillSetData, drillSetWordData, challengeScores] = await Promise.all([
-                        leximentorService.getDrillSet(drillRefId),
-                        leximentorService.getDrillSetWords(drillRefId),
-                        leximentorService.getChallengeScores(challengeId)
-                    ]);
-
-                    if (drillSetWordData?.data && challengeScores?.data && drillSetData?.data) {
-                        initializeGame(drillSetWordData.data, challengeScores.data, drillSetData.data);
-                    }
-                } catch (error) {
-                    console.error("Failed to fetch challenge data:", error);
-                } finally {
-                    setLoading(false);
-                }
-            };
-            fetchDataAsync();
-        }
-    }, [drillRefId, challengeId, initializeGame]);
+    const initializeWord = useCallback((wordData) => {
+        const letters = wordData.word.split('').map((letter, idx) => ({
+            id: idx,
+            letter: letter,
+            used: false
+        }));
+        setScrambledLetters(shuffleArray(letters));
+        setUserAnswer([]);
+        setIsCorrect(null);
+        setShowHint(false);
+        setAttempts(0);
+    }, []);
 
     const initializeGame = useCallback((data, scores, setData) => {
         // Map scores to words using drillSetData join table
@@ -118,18 +106,30 @@ const WordScrambleChallenge = () => {
         setIsCompleted(false);
     }, [challengeId, initializeWord]);
 
-    const initializeWord = useCallback((wordData) => {
-        const letters = wordData.word.split('').map((letter, idx) => ({
-            id: idx,
-            letter: letter,
-            used: false
-        }));
-        setScrambledLetters(shuffleArray(letters));
-        setUserAnswer([]);
-        setIsCorrect(null);
-        setShowHint(false);
-        setAttempts(0);
-    }, []);
+    // --- Fetching ---
+    useEffect(() => {
+        if (drillRefId && challengeId) {
+            setLoading(true);
+            const fetchDataAsync = async () => {
+                try {
+                    const [drillSetData, drillSetWordData, challengeScores] = await Promise.all([
+                        leximentorService.getDrillSet(drillRefId),
+                        leximentorService.getDrillSetWords(drillRefId),
+                        leximentorService.getChallengeScores(challengeId)
+                    ]);
+
+                    if (drillSetWordData?.data && challengeScores?.data && drillSetData?.data) {
+                        initializeGame(drillSetWordData.data, challengeScores.data, drillSetData.data);
+                    }
+                } catch (error) {
+                    console.error("Failed to fetch challenge data:", error);
+                } finally {
+                    setLoading(false);
+                }
+            };
+            fetchDataAsync();
+        }
+    }, [drillRefId, challengeId, initializeGame]);
 
     const closeNotification = () => setNotification({ ...notification, visible: false });
 

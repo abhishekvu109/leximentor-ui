@@ -379,7 +379,7 @@ const UnifiedRoutineBuilder = ({
         setHistoryPanel({ open: true, exercise: exerciseName, data: [], loading: true });
         try {
             const res = await fitmateService.getExerciseHistory(exerciseName);
-            setHistoryPanel(prev => ({ ...prev, data: res.data || [], loading: false }));
+            setHistoryPanel(prev => ({ ...prev, data: res.data?.content || res.data || [], loading: false }));
         } catch (e) {
             console.error("Failed to fetch history:", e);
             setHistoryPanel(prev => ({ ...prev, loading: false }));
@@ -677,13 +677,13 @@ const FitmateMakeRoutine = () => {
                 const [bodyRes, muscleRes, exerciseRes, trainingRes] = await Promise.all([
                     fitmateService.getBodyParts(),
                     fitmateService.getMuscles(),
-                    fitmateService.getExercises(),
+                    fitmateService.getExercises(0, 500), // Fetch a larger batch for the local builder grid
                     fitmateService.getTrainings()
                 ]);
-                setBodyParts(bodyRes.data || []);
-                setMuscles(muscleRes.data || []);
-                setExercises(exerciseRes.data || []);
-                setTrainings(trainingRes.data || []);
+                setBodyParts(bodyRes.data?.content || bodyRes.data || []);
+                setMuscles(muscleRes.data?.content || muscleRes.data || []);
+                setExercises(exerciseRes.data?.content || exerciseRes.data || []);
+                setTrainings(trainingRes.data?.content || trainingRes.data || []);
             } catch (error) { console.error("Error fetching dropdown data:", error); }
         };
         fetchInitialData();
