@@ -25,7 +25,8 @@ import {
     Grid,
     Plus,
     Activity as ActivityIcon,
-    UtensilsCrossed
+    UtensilsCrossed,
+    Tags
 } from 'lucide-react';
 
 const NewSidebar = ({ isOpen }) => {
@@ -130,6 +131,7 @@ const NewSidebar = ({ isOpen }) => {
             subItems: [
                 { label: 'Dashboard', href: '/cashflow', icon: Activity },
                 { label: 'Households', href: '/cashflow/households', icon: Grid },
+                { label: 'Categories', href: '/cashflow/categories', icon: Tags },
                 { label: 'Expense Logs', href: '/cashflow/logs', icon: List },
                 { label: 'Earnings', href: '/cashflow/earnings', icon: Activity }
             ]
