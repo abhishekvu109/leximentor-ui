@@ -338,9 +338,9 @@ const ExerciseDetailContent = () => {
                     fitmateService.getMuscles()
                 ]);
                 setRefData({
-                    trainings: trRes.data || [],
-                    bodyParts: bpRes.data || [],
-                    musclesAll: mRes.data || []
+                    trainings: trRes.data?.content || (Array.isArray(trRes.data) ? trRes.data : []),
+                    bodyParts: bpRes.data?.content || (Array.isArray(bpRes.data) ? bpRes.data : []),
+                    musclesAll: mRes.data?.content || (Array.isArray(mRes.data) ? mRes.data : [])
                 });
             } catch (e) {
                 console.error("Failed to load reference data", e);
