@@ -123,7 +123,6 @@ const CreateDeckContent = () => {
         e.preventDefault();
         setError('');
         if (!deck.title.trim()) return setError('Deck title is required.');
-        if (!user?.username)    return setError('You must be logged in.');
         if (flashcards.some(c => !c.question.trim())) return setError('All cards must have a question.');
 
         setSaving(true);
@@ -131,7 +130,6 @@ const CreateDeckContent = () => {
             const deckRes = await flashcardService.createDeck({
                 title: deck.title,
                 description: deck.description,
-                userId: user.username,
                 categoryRefId: deck.categoryRefId || null,
                 status: deck.status,
                 isPublic: deck.isPublic,

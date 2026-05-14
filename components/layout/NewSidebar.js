@@ -155,7 +155,7 @@ const NewSidebar = ({ isOpen }) => {
             type: 'category',
             label: 'Flashcards',
             icon: Layers,
-            id: 'flashcards',
+            id: 'flashcard',
             subItems: [
                 { label: 'Dashboard', href: '/flashcards', icon: ActivityIcon },
                 { label: 'Browse Categories', href: '/flashcards/categories', icon: Grid },

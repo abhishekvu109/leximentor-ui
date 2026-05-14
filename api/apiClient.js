@@ -10,13 +10,17 @@ const apiClient = axios.create({
     },
 });
 
-// Request Interceptor: Inject Token
+// Request Interceptor: Inject Token + User-Id
 apiClient.interceptors.request.use(
     (config) => {
         if (typeof window !== 'undefined') {
             const token = localStorage.getItem('token');
             if (token) {
                 config.headers.Authorization = `Bearer ${token}`;
+            }
+            const username = localStorage.getItem('username');
+            if (username) {
+                config.headers['X-User-Id'] = username;
             }
         }
         return config;

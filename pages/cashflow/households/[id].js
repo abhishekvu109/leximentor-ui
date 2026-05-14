@@ -2662,45 +2662,48 @@ const LogsTab = ({ expenses, currency, onEditClick, onDeleteClick }) => {
                 </div>
 
                 {/* Pagination Footer */}
-                {totalPages > 1 && (
-                    <div className="px-8 py-6 bg-gray-50/50 dark:bg-gray-900/30 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between">
-                        <div className="flex items-center gap-6">
-                            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                {totalPages > 1 && (() => {
+                    const maxButtons = 10;
+                    const half = Math.floor(maxButtons / 2);
+                    let startPage = Math.max(1, currentPage - half);
+                    let endPage = Math.min(totalPages, startPage + maxButtons - 1);
+                    if (endPage - startPage < maxButtons - 1) startPage = Math.max(1, endPage - maxButtons + 1);
+                    const pageButtons = Array.from({ length: endPage - startPage + 1 }, (_, i) => startPage + i);
+                    const btnBase = "h-8 rounded-xl text-[10px] font-black transition-all disabled:opacity-30 disabled:cursor-not-allowed";
+                    return (
+                        <div className="px-8 py-6 bg-gray-50/50 dark:bg-gray-900/30 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between gap-4 flex-wrap">
+                            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest shrink-0">
                                 Page {currentPage} of {totalPages}
                             </span>
-                            <div className="flex gap-1">
-                                {Array.from({ length: totalPages }).map((_, i) => (
-                                    <button
-                                        key={i}
-                                        onClick={() => setCurrentPage(i + 1)}
-                                        className={`w-8 h-8 rounded-xl text-[10px] font-black transition-all ${currentPage === i + 1
+                            <div className="flex items-center gap-1 flex-wrap">
+                                <button onClick={() => setCurrentPage(1)} disabled={currentPage === 1}
+                                    className={`${btnBase} px-3 text-gray-400 hover:bg-white dark:hover:bg-gray-800`}>
+                                    «
+                                </button>
+                                <button onClick={() => setCurrentPage(p => p - 1)} disabled={currentPage === 1}
+                                    className={`${btnBase} px-3 text-gray-400 hover:bg-white dark:hover:bg-gray-800`}>
+                                    ‹
+                                </button>
+                                {pageButtons.map(page => (
+                                    <button key={page} onClick={() => setCurrentPage(page)}
+                                        className={`${btnBase} w-8 ${currentPage === page
                                             ? "bg-indigo-600 text-white shadow-lg shadow-indigo-100"
-                                            : "text-gray-400 hover:bg-white dark:hover:bg-gray-800"
-                                            }`}
-                                    >
-                                        {i + 1}
+                                            : "text-gray-400 hover:bg-white dark:hover:bg-gray-800"}`}>
+                                        {page}
                                     </button>
                                 ))}
+                                <button onClick={() => setCurrentPage(p => p + 1)} disabled={currentPage === totalPages}
+                                    className={`${btnBase} px-3 text-gray-400 hover:bg-white dark:hover:bg-gray-800`}>
+                                    ›
+                                </button>
+                                <button onClick={() => setCurrentPage(totalPages)} disabled={currentPage === totalPages}
+                                    className={`${btnBase} px-3 text-gray-400 hover:bg-white dark:hover:bg-gray-800`}>
+                                    »
+                                </button>
                             </div>
                         </div>
-                        <div className="flex gap-3">
-                            <button
-                                disabled={currentPage === 1}
-                                onClick={() => setCurrentPage(prev => prev - 1)}
-                                className="px-6 py-3 bg-white dark:bg-gray-800 text-[10px] font-black uppercase tracking-widest text-gray-500 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-50 transition-all"
-                            >
-                                Previous
-                            </button>
-                            <button
-                                disabled={currentPage === totalPages}
-                                onClick={() => setCurrentPage(prev => prev + 1)}
-                                className="px-6 py-3 bg-indigo-600 text-[10px] font-black uppercase tracking-widest text-white rounded-xl shadow-md shadow-indigo-100 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-indigo-700 transition-all"
-                            >
-                                Next
-                            </button>
-                        </div>
-                    </div>
-                )}
+                    );
+                })()}
             </div>
         </div>
     );
