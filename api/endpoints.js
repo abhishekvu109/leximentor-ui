@@ -71,5 +71,16 @@ export const ENDPOINTS = {
     WRITEWISE: {
         BASE: '/writewise',
         TOPICS: '/writewise/topics',
+    },
+    FLASHCARD: {
+        BASE: '/flashcard',
+        CATEGORIES: '/flashcard/api/v1/categories',
+        CATEGORY: (id) => `/flashcard/api/v1/categories/${id}`,
+        CATEGORY_SUBCATEGORIES: (id) => `/flashcard/api/v1/categories/${id}/subcategories`,
+        DECKS: '/flashcard/api/v1/decks',
+        DECK: (id) => `/flashcard/api/v1/decks/${id}`,
+        DECK_FLASHCARDS: (deckId) => `/flashcard/api/v1/decks/${deckId}/flashcards`,
+        DECK_FLASHCARDS_REORDER: (deckId) => `/flashcard/api/v1/decks/${deckId}/flashcards/reorder`,
+        FLASHCARD: (id) => `/flashcard/api/v1/flashcards/${id}`,
     }
 };
