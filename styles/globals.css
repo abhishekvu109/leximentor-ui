@@ -26,3 +26,40 @@ body {
   /* add styles here */
   min-height: 100vh;
 }
+
+/* ── react-quill overrides ───────────────────────────────────────────────── */
+.rich-editor-wrap .ql-toolbar {
+  border-top-left-radius: 0.75rem;
+  border-top-right-radius: 0.75rem;
+  border-color: #e5e7eb;
+  background: #f9fafb;
+}
+.rich-editor-wrap .ql-container {
+  border-bottom-left-radius: 0.75rem;
+  border-bottom-right-radius: 0.75rem;
+  border-color: #e5e7eb;
+  font-size: 0.875rem;
+  min-height: 8rem;
+}
+.rich-editor-wrap .ql-editor {
+  min-height: 8rem;
+}
+
+/* Dark mode */
+.dark .rich-editor-wrap .ql-toolbar {
+  background: #374151;
+  border-color: #4b5563;
+}
+.dark .rich-editor-wrap .ql-toolbar button,
+.dark .rich-editor-wrap .ql-toolbar .ql-picker-label {
+  color: #d1d5db;
+  filter: invert(0.7);
+}
+.dark .rich-editor-wrap .ql-container {
+  background: #1f2937;
+  border-color: #4b5563;
+  color: #f3f4f6;
+}
+.dark .rich-editor-wrap .ql-editor.ql-blank::before {
+  color: #6b7280;
+}

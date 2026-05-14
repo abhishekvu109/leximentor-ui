@@ -1,5 +1,6 @@
 import "../styles/globals.css";
-import Script from "next/script";
+import 'react-quill/dist/quill.snow.css';
+import 'katex/dist/katex.min.css';
 import { QueryClient, QueryClientProvider } from 'react-query';
 import { AuthProvider } from '../context/AuthContext';
 import { RouteGuard } from '../components/auth/RouteGuard';

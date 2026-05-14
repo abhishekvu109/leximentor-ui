@@ -26,7 +26,8 @@ import {
     Plus,
     Activity as ActivityIcon,
     UtensilsCrossed,
-    Tags
+    Tags,
+    Layers
 } from 'lucide-react';
 
 const NewSidebar = ({ isOpen }) => {
@@ -148,6 +149,19 @@ const NewSidebar = ({ isOpen }) => {
                 { label: 'Dashboard', href: '/synapster/subject/list-subjects', icon: ActivityIcon },
                 { label: 'Subjects', href: '/synapster/subject/list-subjects', icon: List },
                 { label: 'Create', href: '/synapster/subject/subject', icon: Plus }
+            ]
+        },
+        {
+            type: 'category',
+            label: 'Flashcards',
+            icon: Layers,
+            id: 'flashcards',
+            subItems: [
+                { label: 'Dashboard', href: '/flashcards', icon: ActivityIcon },
+                { label: 'Browse Categories', href: '/flashcards/categories', icon: Grid },
+                { label: 'Manage Categories', href: '/flashcards/categories-manage', icon: Settings },
+                { label: 'My Decks', href: '/flashcards/decks', icon: List },
+                { label: 'Create Deck', href: '/flashcards/decks/create', icon: Plus },
             ]
         },
     ];
