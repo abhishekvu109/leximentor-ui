@@ -66,26 +66,39 @@ const ViewResponse = () => {
         if (!challengeId) return;
         setLoading(true);
         try {
-            const [challengeRes, scoresRes, evaluatorsRes] = await Promise.all([
+            const [challengeResult, scoresResult, evaluatorsResult] = await Promise.allSettled([
                 leximentorService.getChallenge(challengeId),
                 leximentorService.getChallengeScores(challengeId),
                 leximentorService.getEvaluators(challengeId)
             ]);
-            setChallenge(challengeRes.data || challengeRes);
-            const scoresData = scoresRes.data || (Array.isArray(scoresRes) ? scoresRes : []);
-            setScores(scoresData);
 
-            const evData = evaluatorsRes.data || (Array.isArray(evaluatorsRes) ? evaluatorsRes : []);
-            setEvaluators(evData);
-            if (evData.length > 0) {
-                setSelectedEvaluator(evData[0].name);
+            if (challengeResult.status === 'fulfilled') {
+                const challengeRes = challengeResult.value;
+                const challengeData = challengeRes.data || challengeRes;
+                setChallenge(challengeData);
+                if (challengeData?.evaluationStatus === 'EVALUATING') {
+                    checkStatus();
+                }
+            } else {
+                console.error("Failed to fetch challenge:", challengeResult.reason);
             }
 
-            if (challengeRes.data?.evaluationStatus === 'EVALUATING' || challengeRes.evaluationStatus === 'EVALUATING') {
-                checkStatus();
+            if (scoresResult.status === 'fulfilled') {
+                const scoresRes = scoresResult.value;
+                const scoresData = scoresRes?.data?.content || (Array.isArray(scoresRes?.data) ? scoresRes.data : []) || (Array.isArray(scoresRes) ? scoresRes : []);
+                setScores(scoresData);
+            } else {
+                console.error("Failed to fetch scores:", scoresResult.reason);
             }
-        } catch (error) {
-            console.error("Failed to fetch data:", error);
+
+            if (evaluatorsResult.status === 'fulfilled') {
+                const evaluatorsRes = evaluatorsResult.value;
+                const evData = evaluatorsRes?.data?.content || (Array.isArray(evaluatorsRes?.data) ? evaluatorsRes.data : []) || (Array.isArray(evaluatorsRes) ? evaluatorsRes : []);
+                setEvaluators(evData);
+                if (evData.length > 0) setSelectedEvaluator(evData[0].name);
+            } else {
+                console.error("Failed to fetch evaluators:", evaluatorsResult.reason);
+            }
         } finally {
             setLoading(false);
         }
