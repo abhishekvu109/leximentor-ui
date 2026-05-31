@@ -91,10 +91,10 @@ const NewSidebar = ({ isOpen }) => {
             icon: PenTool,
             id: 'writewise',
             subItems: [
-                { label: 'Dashboard', href: '/writewise/topics/generate-topics', icon: Activity },
-                { label: 'Topics', href: '/writewise/topics/list-topics', icon: List },
+                { label: 'Dashboard', href: '/writewise/dashboard', icon: Activity },
+                { label: 'Topics', href: '/writewise/topics', icon: List },
                 { label: 'Challenges', href: '/writewise/topics/topic/evaluation-view', icon: Trophy },
-                { label: 'Analytics', href: '#', icon: BarChart3 }
+                { label: 'Analytics', href: '/writewise/analytics', icon: BarChart3 }
             ]
         },
         {

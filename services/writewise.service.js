@@ -15,7 +15,7 @@ const writewiseService = {
         return apiClient.get(`${ENDPOINTS.WRITEWISE.BASE}/v1/response/evaluated-responses`);
     },
     createTopics: (payload) => {
-        return apiClient.post(`${ENDPOINTS.WRITEWISE.BASE}/v1/topics`, payload);
+        return apiClient.post(`${ENDPOINTS.WRITEWISE.BASE}/v1/topic-generations`, payload);
     },
     deleteTopicGeneration: (refId) => {
         return apiClient.delete(`${ENDPOINTS.WRITEWISE.BASE}/v1/topic-generations/topic-generation/${refId}`);
@@ -49,6 +49,18 @@ const writewiseService = {
     },
     getDashboardStats: () => {
         return apiClient.get(`${ENDPOINTS.WRITEWISE.BASE}/dashboard`);
+    },
+    getInstantAnalytics: () => {
+        return apiClient.get(`${ENDPOINTS.WRITEWISE.BASE}/v1/analytics`);
+    },
+    generateLlmInsights: () => {
+        return apiClient.post(`${ENDPOINTS.WRITEWISE.BASE}/v1/analytics/insights`);
+    },
+    deleteResponseVersion: (topicRefId, versionRefId) => {
+        return apiClient.delete(`${ENDPOINTS.WRITEWISE.BASE}/v1/topics/topic/${topicRefId}/versions/version/${versionRefId}`);
+    },
+    createTopicManually: (payload) => {
+        return apiClient.post(`${ENDPOINTS.WRITEWISE.BASE}/v1/topics/create-manually`, payload);
     }
 };
 
