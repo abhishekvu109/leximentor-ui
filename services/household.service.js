@@ -21,7 +21,7 @@ const householdService = {
         return apiClient.post(ENDPOINTS.CASHFLOW.DEPOSITS, payload);
     },
     searchCategories: (payload = {}) => {
-        return apiClient.post(ENDPOINTS.CASHFLOW.CATEGORIES, payload);
+        return apiClient.post(ENDPOINTS.CASHFLOW.CATEGORY_SEARCH, payload);
     },
     searchExpenses: (payload) => {
         return apiClient.post(ENDPOINTS.CASHFLOW.EXPENSE_SEARCH, payload);
