@@ -190,7 +190,7 @@ const InviteMemberModal = ({ isOpen, onClose, onSuccess, householdRefId }) => {
     );
 };
 
-const AddBudgetModal = ({ isOpen, onClose, onSuccess, householdRefId }) => {
+const AddBudgetModal = ({ isOpen, onClose, onSuccess, householdRefId, categories = [] }) => {
     const [formData, setFormData] = useState({
         category: "",
         categoryRefId: "",
@@ -198,31 +198,10 @@ const AddBudgetModal = ({ isOpen, onClose, onSuccess, householdRefId }) => {
         period: "MONTHLY",
         budgetDate: new Date().toISOString().split('T')[0]
     });
-    const [categories, setCategories] = useState([]);
     const [filteredCategories, setFilteredCategories] = useState([]);
     const [showCategoryList, setShowCategoryList] = useState(false);
-    const [loadingCategories, setLoadingCategories] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState("");
-
-    useEffect(() => {
-        if (isOpen) {
-            const fetchCategories = async () => {
-                setLoadingCategories(true);
-                try {
-                    const response = await householdService.searchCategories({});
-                    if (response?.data) {
-                        setCategories(response.data);
-                    }
-                } catch (err) {
-                    console.error("Failed to fetch categories:", err);
-                } finally {
-                    setLoadingCategories(false);
-                }
-            };
-            fetchCategories();
-        }
-    }, [isOpen]);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -400,7 +379,7 @@ const AddBudgetModal = ({ isOpen, onClose, onSuccess, householdRefId }) => {
     );
 };
 
-const EditBudgetModal = ({ isOpen, onClose, onSuccess, budget, householdRefId }) => {
+const EditBudgetModal = ({ isOpen, onClose, onSuccess, budget, householdRefId, categories = [] }) => {
     const [formData, setFormData] = useState({
         category: "",
         categoryRefId: "",
@@ -408,10 +387,8 @@ const EditBudgetModal = ({ isOpen, onClose, onSuccess, budget, householdRefId })
         period: "MONTHLY",
         budgetDate: new Date().toISOString().split('T')[0]
     });
-    const [categories, setCategories] = useState([]);
     const [filteredCategories, setFilteredCategories] = useState([]);
     const [showCategoryList, setShowCategoryList] = useState(false);
-    const [loadingCategories, setLoadingCategories] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState("");
 
@@ -426,25 +403,6 @@ const EditBudgetModal = ({ isOpen, onClose, onSuccess, budget, householdRefId })
             });
         }
     }, [isOpen, budget]);
-
-    useEffect(() => {
-        if (isOpen) {
-            const fetchCategories = async () => {
-                setLoadingCategories(true);
-                try {
-                    const response = await householdService.searchCategories({});
-                    if (response?.data) {
-                        setCategories(response.data);
-                    }
-                } catch (err) {
-                    console.error("Failed to fetch categories:", err);
-                } finally {
-                    setLoadingCategories(false);
-                }
-            };
-            fetchCategories();
-        }
-    }, [isOpen]);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -763,7 +721,7 @@ const AddDepositModal = ({ isOpen, onClose, onSuccess, householdRefId }) => {
 };
 
 
-const AddExpenseModal = ({ isOpen, onClose, onSuccess, householdRefId }) => {
+const AddExpenseModal = ({ isOpen, onClose, onSuccess, householdRefId, categories = [] }) => {
     const { user } = useAuth();
     const [formData, setFormData] = useState({
         category: "",
@@ -775,32 +733,10 @@ const AddExpenseModal = ({ isOpen, onClose, onSuccess, householdRefId }) => {
         expenseFor: "FAMILY",
         paymentMode: "UPI"
     });
-    const [categories, setCategories] = useState([]);
     const [filteredCategories, setFilteredCategories] = useState([]);
     const [showCategoryList, setShowCategoryList] = useState(false);
-    const [loadingCategories, setLoadingCategories] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState("");
-
-    useEffect(() => {
-        if (isOpen) {
-            const fetchCategories = async () => {
-                setLoadingCategories(true);
-                try {
-                    const response = await categoryService.searchCategories({});
-                    if (response?.data) {
-                        setCategories(response.data);
-                        setFilteredCategories(response.data);
-                    }
-                } catch (err) {
-                    console.error("Failed to fetch categories:", err);
-                } finally {
-                    setLoadingCategories(false);
-                }
-            };
-            fetchCategories();
-        }
-    }, [isOpen]);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -1034,7 +970,7 @@ const AddExpenseModal = ({ isOpen, onClose, onSuccess, householdRefId }) => {
     );
 };
 
-const EditExpenseModal = ({ isOpen, onClose, onSuccess, expense, householdRefId }) => {
+const EditExpenseModal = ({ isOpen, onClose, onSuccess, expense, householdRefId, categories = [] }) => {
     const { user } = useAuth();
     const [formData, setFormData] = useState({
         category: "",
@@ -1046,10 +982,8 @@ const EditExpenseModal = ({ isOpen, onClose, onSuccess, expense, householdRefId 
         expenseFor: "FAMILY",
         paymentMode: "UPI"
     });
-    const [categories, setCategories] = useState([]);
     const [filteredCategories, setFilteredCategories] = useState([]);
     const [showCategoryList, setShowCategoryList] = useState(false);
-    const [loadingCategories, setLoadingCategories] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState("");
 
@@ -1067,25 +1001,6 @@ const EditExpenseModal = ({ isOpen, onClose, onSuccess, expense, householdRefId 
             });
         }
     }, [isOpen, expense]);
-
-    useEffect(() => {
-        if (isOpen) {
-            const fetchCategories = async () => {
-                setLoadingCategories(true);
-                try {
-                    const response = await householdService.searchCategories({});
-                    if (response?.data) {
-                        setCategories(response.data);
-                    }
-                } catch (err) {
-                    console.error("Failed to fetch categories:", err);
-                } finally {
-                    setLoadingCategories(false);
-                }
-            };
-            fetchCategories();
-        }
-    }, [isOpen]);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -2719,6 +2634,13 @@ const HouseholdDetailsLogic = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [activeTab, setActiveTab] = useState("overview");
+    const [categories, setCategories] = useState([]);
+
+    useEffect(() => {
+        categoryService.searchCategories({})
+            .then(res => { if (res?.data) setCategories(Array.isArray(res.data) ? res.data : []); })
+            .catch(e => console.error('Failed to load categories:', e));
+    }, []);
     const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
     const [isBudgetModalOpen, setIsBudgetModalOpen] = useState(false);
     const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
@@ -2801,42 +2723,31 @@ const HouseholdDetailsLogic = () => {
             if (data) {
                 console.log("[Diagnostic] Raw Household Data:", data);
 
-                // Final Fallback: Resolve missing categories individually via GET API
+                // Fallback: resolve only genuine category reference fields that the map doesn't cover yet
+                const CATEGORY_ID_FIELDS = ['categoryRefId', 'categoryId'];
                 const missingIds = new Set();
                 const scanItemsForMissingIds = (items) => {
                     items?.forEach(item => {
-                        // Scan ALL properties for anything that looks like a RefID/UUID
-                        for (const key in item) {
-                            const val = item[key];
-                            if (val && typeof val !== 'object') {
-                                const sid = String(val).trim();
-                                // Pattern: Numeric RefIDs (long) or UUIDs (hex with dashes)
-                                const isLongNumeric = sid.length >= 10 && /^\d+$/.test(sid);
-                                const isUuid = sid.length >= 32 && /^[a-fA-F0-9-]+$/.test(sid);
-
-                                if (isLongNumeric && !categoryMap[sid]) {
-                                    missingIds.add(sid);
-                                }
-                            }
-                        }
+                        CATEGORY_ID_FIELDS.forEach(field => {
+                            const val = String(item[field] || '').trim();
+                            if (val && !categoryMap[val]) missingIds.add(val);
+                        });
                     });
                 };
                 scanItemsForMissingIds(data.budgets);
                 scanItemsForMissingIds(data.expenses);
 
                 if (missingIds.size > 0) {
-                    console.log(`[Diagnostic] Triggering individual resolution for ${missingIds.size} missing categories:`, Array.from(missingIds));
                     await Promise.all(Array.from(missingIds).map(async (refId) => {
                         try {
                             const res = await categoryService.getCategory(refId);
                             if (res?.data?.name) {
                                 categoryMap[refId] = res.data.name;
                                 if (res.data.uuid) categoryMap[res.data.uuid] = res.data.name;
-                                if (res.data.refId) categoryMap[res.data.refId] = res.data.name;
-                                console.log(`[SUCCESS] Category Resolved: ${refId} -> ${res.data.name}`);
+                                if (res.data.refId) categoryMap[String(res.data.refId)] = res.data.name;
                             }
                         } catch (e) {
-                            console.warn(`[FAILURE] Category Fallback Failed for ID: ${refId}`);
+                            console.warn(`Category not found for ID: ${refId}`);
                         }
                     }));
                 }
@@ -3064,6 +2975,7 @@ const HouseholdDetailsLogic = () => {
                 onClose={() => setIsBudgetModalOpen(false)}
                 onSuccess={fetchHouseholdDetails}
                 householdRefId={id}
+                categories={categories}
             />
 
             <AddExpenseModal
@@ -3071,6 +2983,7 @@ const HouseholdDetailsLogic = () => {
                 onClose={() => setIsExpenseModalOpen(false)}
                 onSuccess={fetchHouseholdDetails}
                 householdRefId={id}
+                categories={categories}
             />
 
             <EditBudgetModal
@@ -3079,6 +2992,7 @@ const HouseholdDetailsLogic = () => {
                 onSuccess={fetchHouseholdDetails}
                 budget={editingBudget}
                 householdRefId={id}
+                categories={categories}
             />
 
             <DeleteBudgetModal
@@ -3094,6 +3008,7 @@ const HouseholdDetailsLogic = () => {
                 onSuccess={fetchHouseholdDetails}
                 expense={editingExpense}
                 householdRefId={id}
+                categories={categories}
             />
 
             <DeleteExpenseModal
