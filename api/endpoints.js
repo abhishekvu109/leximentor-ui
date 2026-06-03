@@ -18,6 +18,7 @@ export const ENDPOINTS = {
         EXPENSE_SEARCH: '/cashflow/households/expenses/expense/search',
         CATEGORY: '/cashflow/categories/category',
         CATEGORY_SEARCH: '/cashflow/categories/category/search',
+        CATEGORIES: '/cashflow/categories/category/search',
         DASHBOARD: '/cashflow/dashboard',
         HOUSEHOLD_DASHBOARD: '/cashflow/dashboard/household',
         HOUSEHOLD_ANALYTICS_CORE: '/cashflow/households/analytics/core',
