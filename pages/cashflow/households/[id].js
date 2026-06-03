@@ -208,12 +208,17 @@ const AddBudgetModal = ({ isOpen, onClose, onSuccess, householdRefId, categories
         setFormData(prev => ({ ...prev, [name]: value }));
 
         if (name === "category") {
-            const filtered = categories.filter(cat =>
-                cat.name.toLowerCase().includes(value.toLowerCase())
-            );
+            const filtered = value.trim()
+                ? categories.filter(cat => cat.name.toLowerCase().includes(value.toLowerCase()))
+                : categories;
             setFilteredCategories(filtered);
             setShowCategoryList(true);
         }
+    };
+
+    const handleCategoryFocus = () => {
+        setFilteredCategories(categories);
+        setShowCategoryList(true);
     };
 
     const handleSelectCategory = (cat) => {
@@ -301,7 +306,7 @@ const AddBudgetModal = ({ isOpen, onClose, onSuccess, householdRefId, categories
                                 name="category"
                                 value={formData.category}
                                 onChange={handleChange}
-                                onFocus={() => formData.category && setShowCategoryList(true)}
+                                onFocus={handleCategoryFocus}
                                 onBlur={() => setTimeout(() => setShowCategoryList(false), 200)}
                                 placeholder="e.g. Groceries, Rent..."
                                 className="w-full bg-white dark:bg-gray-800 border-none rounded-2xl px-5 py-4 text-sm font-bold focus:ring-2 focus:ring-emerald-500/20 shadow-sm dark:text-white"
