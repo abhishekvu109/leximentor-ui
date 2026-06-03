@@ -2,8 +2,12 @@ import writewiseService from "../../../../../services/writewise.service";
 import Layout from "@/components/layout/Layout";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
+import Link from "next/link";
 import Dropdown from "@/components/form/DropDown";
-import { ChevronDownIcon, PlayIcon, CheckBadgeIcon, PaperAirplaneIcon, BeakerIcon } from "@heroicons/react/24/solid";
+import ToastContainer from "@/components/common/ToastContainer";
+import ConfirmDialog from "@/components/common/ConfirmDialog";
+import { useToast } from "@/hooks/useToast";
+import { ChevronDownIcon, PlayIcon, CheckBadgeIcon, PaperAirplaneIcon, BeakerIcon, SparklesIcon, TrashIcon, ArrowLeftIcon } from "@heroicons/react/24/solid";
 import { MODEL_DATA } from "@/constants";
 
 // --- Reusable Components ---
@@ -44,10 +48,42 @@ const ActionButton = ({ onClick, label, icon: Icon, colorClass, disabled, loadin
     </button>
 );
 
+const syntaxHighlight = (raw) => {
+    if (!raw) return "// No data generated yet...";
+
+    // Unwrap double-encoded JSON: parse once, and if result is still a string, parse again
+    let cleaned = raw;
+    try {
+        let parsed = JSON.parse(raw);
+        if (typeof parsed === 'string') parsed = JSON.parse(parsed);
+        cleaned = JSON.stringify(parsed, null, 2);
+    } catch {
+        // Manual fallback: strip common escape sequences
+        cleaned = raw
+            .replace(/\\n/g, '\n')
+            .replace(/\\t/g, '\t')
+            .replace(/\\"/g, '"')
+            .replace(/\\\\/g, '\\');
+    }
+
+    return cleaned.replace(
+        /("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+-]?\d+)?)/g,
+        (match) => {
+            if (/^"/.test(match)) {
+                if (/:$/.test(match)) return `<span class="text-sky-300">${match}</span>`;
+                return `<span class="text-emerald-300">${match}</span>`;
+            }
+            if (/true|false/.test(match)) return `<span class="text-purple-300">${match}</span>`;
+            if (/null/.test(match)) return `<span class="text-red-400">${match}</span>`;
+            return `<span class="text-amber-300">${match}</span>`;
+        }
+    );
+};
+
 const ResultViewer = ({ title, status, content, isValid, validatedStatus }) => {
     const [isOpen, setIsOpen] = useState(false);
+    const [isFormatted, setIsFormatted] = useState(false);
 
-    // Determine border color based on validation state
     let borderColor = "border-slate-200";
     if (isValid) {
         borderColor = validatedStatus ? "border-green-300 ring-1 ring-green-100" : "border-red-300 ring-1 ring-red-100";
@@ -55,36 +91,60 @@ const ResultViewer = ({ title, status, content, isValid, validatedStatus }) => {
 
     return (
         <div className={`bg-white rounded-xl border ${borderColor} shadow-sm overflow-hidden transition-all duration-300`}>
-            <div
-                className="flex items-center justify-between p-4 bg-slate-50 cursor-pointer hover:bg-slate-100 transition"
-                onClick={() => setIsOpen(!isOpen)}
-            >
-                <div className="flex items-center gap-3">
+            <div className="flex items-center justify-between p-4 bg-slate-50 hover:bg-slate-100 transition">
+                <div
+                    className="flex items-center gap-3 flex-1 cursor-pointer"
+                    onClick={() => setIsOpen(!isOpen)}
+                >
                     <div className={`p-1.5 rounded-lg ${isOpen ? 'bg-indigo-100 text-indigo-600' : 'bg-slate-200 text-slate-500'}`}>
                         <ChevronDownIcon className={`w-4 h-4 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} />
                     </div>
                     <span className="font-bold text-slate-700">{title}</span>
                 </div>
-                <StatusPill status={status} />
+                <div className="flex items-center gap-3">
+                    {isOpen && content && (
+                        <button
+                            onClick={(e) => { e.stopPropagation(); setIsFormatted(f => !f); }}
+                            className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold border transition-all ${
+                                isFormatted
+                                    ? 'bg-indigo-600 text-white border-indigo-600'
+                                    : 'bg-white text-slate-500 border-slate-200 hover:border-indigo-300 hover:text-indigo-600'
+                            }`}
+                        >
+                            <SparklesIcon className="w-3 h-3" />
+                            {isFormatted ? 'Raw' : 'Beautify'}
+                        </button>
+                    )}
+                    <StatusPill status={status} />
+                </div>
             </div>
 
             {isOpen && (
-                <div className="p-0 bg-slate-900">
-                    <pre className="p-4 text-xs font-mono text-slate-300 overflow-x-auto max-h-96 leading-relaxed custom-scrollbar">
-                        {content || "// No data generated yet..."}
-                    </pre>
+                <div className="bg-slate-900">
+                    {isFormatted ? (
+                        <pre
+                            className="p-4 text-xs font-mono overflow-x-auto max-h-96 leading-relaxed"
+                            dangerouslySetInnerHTML={{ __html: syntaxHighlight(content) }}
+                        />
+                    ) : (
+                        <pre className="p-4 text-xs font-mono text-slate-300 overflow-x-auto max-h-96 leading-relaxed">
+                            {content || "// No data generated yet..."}
+                        </pre>
+                    )}
                 </div>
             )}
         </div>
     );
 };
 
-const EvaluationControlPanel = ({ title, type, topicRefId, versionRefId, model, setModel }) => {
+const EvaluationControlPanel = ({ title, type, topicRefId, versionRefId, model, setModel, onVersionDeleted, toast }) => {
     // Local state for this panel (High level vs Low level)
     const [resultText, setResultText] = useState("");
     const [status, setStatus] = useState("Not Started");
     const [validationStatus, setValidationStatus] = useState(null); // true/false/null
     const [isValidating, setIsValidating] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
+    const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
     // Polling Functionality
     useEffect(() => {
@@ -123,91 +183,144 @@ const EvaluationControlPanel = ({ title, type, topicRefId, versionRefId, model, 
 
     const handleAction = async (action) => {
         const isHighLevel = type === 'High';
-        let endpoint = "";
-        let body = { topicRefId, versionRefId, model, isHighLevel };
+        const body = { topicRefId, versionRefId, model, isHighLevel };
 
-        if (!model) {
-            alert("Please select a model first!");
+        if (!model && action !== 'delete') {
+            toast.error("Please select a model first!");
             return;
         }
 
-        try {
-            let res;
-            if (action === 'generate') {
-                res = await writewiseService.evaluateResponse(body);
-            } else if (action === 'validate') {
-                res = await writewiseService.validateEvaluation(body);
-                setIsValidating(true);
-            } else if (action === 'submit') {
-                res = await writewiseService.submitEvaluationResults(body);
-            }
+        if (action === 'delete') {
+            setShowDeleteDialog(true);
+            return;
+        }
 
-            if (!res.ok) throw new Error("Request failed");
+        if (action === 'validate') setIsValidating(true);
+
+        try {
+            if (action === 'generate') {
+                await writewiseService.evaluateResponse(body);
+                toast.success("Evaluation started. This may take a moment...");
+            } else if (action === 'validate') {
+                const res = await writewiseService.validateEvaluation(body);
+                setValidationStatus(Boolean(res?.data));
+                setTimeout(() => setValidationStatus(null), 3000);
+                if (res?.data) {
+                    toast.success("Validation passed!");
+                } else {
+                    toast.error("Validation failed. Please check the output.");
+                }
+            } else if (action === 'submit') {
+                await writewiseService.submitEvaluationResults(body);
+                toast.success("Results submitted successfully!");
+            }
+        } catch (e) {
+            const errorMsg = e?.response?.data?.data || e?.message || "An error occurred";
 
             if (action === 'validate') {
-                const data = res;
-                setValidationStatus(Boolean(data.data));
-                setTimeout(() => setValidationStatus(null), 3000); // Clears validation highlight
-            } else {
-                alert(`${action} triggered successfully!`);
-                setStatus('In Progress');
+                console.error('Validate failed:', e);
+                setValidationStatus(false);
+                setTimeout(() => setValidationStatus(null), 3000);
+                toast.error(`Validation error: ${errorMsg}`);
+            } else if (action === 'generate') {
+                console.warn(`Generate returned an error:`, e);
+                toast.warning("Evaluation job submitted, but received a warning. Check back in a moment.");
+            } else if (action === 'submit') {
+                console.warn(`Submit returned an error:`, e);
+                toast.warning("Submit returned a warning. Results may still be processing.");
             }
-
-        } catch (e) {
-            console.error(e);
-            alert("Action failed. Check console.");
         } finally {
             if (action === 'validate') setIsValidating(false);
+            // Optimistically reflect that the async job was kicked off
+            if (action === 'generate') setStatus('In Progress');
+            if (action === 'submit') setStatus('Submitted');
+        }
+    };
+
+    const handleConfirmDelete = async () => {
+        setShowDeleteDialog(false);
+        setIsDeleting(true);
+        try {
+            await writewiseService.deleteResponseVersion(topicRefId, versionRefId);
+            toast.success("Response version deleted successfully!");
+            onVersionDeleted();
+        } catch (e) {
+            const errorMsg = e?.response?.data?.data || e?.message || "An error occurred";
+            console.error('Delete failed:', e);
+            toast.error(`Failed to delete: ${errorMsg}`);
+        } finally {
+            setIsDeleting(false);
         }
     };
 
     return (
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 mb-6">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-                <div className="flex items-center gap-3">
-                    <span className={`p-2 rounded-lg ${type === 'High' ? 'bg-indigo-100 text-indigo-600' : 'bg-emerald-100 text-emerald-600'}`}>
-                        <BeakerIcon className="w-6 h-6" />
-                    </span>
-                    <div>
-                        <h2 className="text-lg font-bold text-slate-800">{title} Analysis</h2>
-                        <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">AI Evaluation Pipeline</p>
+        <>
+            <ConfirmDialog
+                isOpen={showDeleteDialog}
+                title="Delete Response Version?"
+                message="This will permanently delete this response version and all its evaluation data. This action cannot be undone."
+                confirmText="Delete Version"
+                cancelText="Cancel"
+                isDangerous={true}
+                onConfirm={handleConfirmDelete}
+                onCancel={() => setShowDeleteDialog(false)}
+            />
+
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 mb-6">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                    <div className="flex items-center gap-3">
+                        <span className={`p-2 rounded-lg ${type === 'High' ? 'bg-indigo-100 text-indigo-600' : 'bg-emerald-100 text-emerald-600'}`}>
+                            <BeakerIcon className="w-6 h-6" />
+                        </span>
+                        <div>
+                            <h2 className="text-lg font-bold text-slate-800">{title} Analysis</h2>
+                            <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">AI Evaluation Pipeline</p>
+                        </div>
+                    </div>
+
+                    {/* Action Pipeline */}
+                    <div className="flex items-center gap-2 bg-slate-50 p-1.5 rounded-xl border border-slate-100 flex-wrap">
+                        <ActionButton
+                            label="Generate"
+                            icon={PlayIcon}
+                            onClick={() => handleAction('generate')}
+                            colorClass="bg-white text-indigo-600 border-indigo-200 hover:bg-indigo-50"
+                        />
+                        <div className="w-6 h-px bg-slate-300 hidden md:block" />
+                        <ActionButton
+                            label="Validate"
+                            icon={CheckBadgeIcon}
+                            onClick={() => handleAction('validate')}
+                            loading={isValidating}
+                            colorClass="bg-white text-emerald-600 border-emerald-200 hover:bg-emerald-50"
+                        />
+                        <div className="w-6 h-px bg-slate-300 hidden md:block" />
+                        <ActionButton
+                            label="Submit"
+                            icon={PaperAirplaneIcon}
+                            onClick={() => handleAction('submit')}
+                            colorClass="bg-slate-800 text-white border-transparent hover:bg-slate-700"
+                        />
+                        <div className="w-6 h-px bg-slate-300 hidden md:block" />
+                        <ActionButton
+                            label="Delete"
+                            icon={TrashIcon}
+                            onClick={() => handleAction('delete')}
+                            loading={isDeleting}
+                            colorClass="bg-white text-red-600 border-red-200 hover:bg-red-50"
+                        />
                     </div>
                 </div>
 
-                {/* Action Pipeline */}
-                <div className="flex items-center gap-2 bg-slate-50 p-1.5 rounded-xl border border-slate-100">
-                    <ActionButton
-                        label="Generate"
-                        icon={PlayIcon}
-                        onClick={() => handleAction('generate')}
-                        colorClass="bg-white text-indigo-600 border-indigo-200 hover:bg-indigo-50"
-                    />
-                    <div className="w-6 h-px bg-slate-300 hidden md:block" />
-                    <ActionButton
-                        label="Validate"
-                        icon={CheckBadgeIcon}
-                        onClick={() => handleAction('validate')}
-                        loading={isValidating}
-                        colorClass="bg-white text-emerald-600 border-emerald-200 hover:bg-emerald-50"
-                    />
-                    <div className="w-6 h-px bg-slate-300 hidden md:block" />
-                    <ActionButton
-                        label="Submit"
-                        icon={PaperAirplaneIcon}
-                        onClick={() => handleAction('submit')}
-                        colorClass="bg-slate-800 text-white border-transparent hover:bg-slate-700"
-                    />
-                </div>
+                <ResultViewer
+                    title={`${title} Output JSON`}
+                    status={status}
+                    content={resultText}
+                    isValid={validationStatus !== null}
+                    validatedStatus={validationStatus}
+                />
             </div>
-
-            <ResultViewer
-                title={`${title} Output JSON`}
-                status={status}
-                content={resultText}
-                isValid={validationStatus !== null}
-                validatedStatus={validationStatus}
-            />
-        </div>
+        </>
     );
 };
 
@@ -221,12 +334,41 @@ const EvaluationView = () => {
     const versionRefId = ids?.[1];
 
     const [selectedModel, setSelectedModel] = useState("");
+    const toast = useToast();
 
     const handleModelSelect = (m) => setSelectedModel(m);
+
+    const handleVersionDeleted = () => {
+        setTimeout(() => {
+            router.push('/writewise/dashboard');
+        }, 1500);
+    };
 
     return (
         <Layout content={
             <div className="min-h-screen bg-slate-50/50 p-4 sm:p-8 font-sans">
+                <ToastContainer toasts={toast.toasts} onRemoveToast={toast.removeToast} />
+
+                {/* Navigation Breadcrumb */}
+                <nav className="max-w-5xl mx-auto mb-6 flex items-center gap-2 text-sm">
+                    <button
+                        onClick={() => router.back()}
+                        className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition"
+                        title="Go back"
+                    >
+                        <ArrowLeftIcon className="w-5 h-5" />
+                    </button>
+                    <Link href="/writewise/dashboard" className="text-indigo-600 hover:text-indigo-700 font-medium">
+                        Dashboard
+                    </Link>
+                    <span className="text-slate-400">/</span>
+                    <Link href="/writewise/topics/generate-topics" className="text-indigo-600 hover:text-indigo-700 font-medium">
+                        Topics
+                    </Link>
+                    <span className="text-slate-400">/</span>
+                    <span className="text-slate-600 font-medium">Evaluation</span>
+                </nav>
+
                 <div className="max-w-5xl mx-auto">
                     {/* Page Header */}
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
@@ -254,6 +396,8 @@ const EvaluationView = () => {
                             versionRefId={versionRefId}
                             model={selectedModel}
                             setModel={setSelectedModel}
+                            onVersionDeleted={handleVersionDeleted}
+                            toast={toast}
                         />
 
                         <EvaluationControlPanel
@@ -263,6 +407,8 @@ const EvaluationView = () => {
                             versionRefId={versionRefId}
                             model={selectedModel}
                             setModel={setSelectedModel}
+                            onVersionDeleted={handleVersionDeleted}
+                            toast={toast}
                         />
                     </div>
                 </div>
