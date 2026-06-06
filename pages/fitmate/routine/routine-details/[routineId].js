@@ -10,6 +10,9 @@ import {
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { exportToExcel, exportToPDF } from "../../../../utils/exportRoutine";
+import ToastContainer from "@/components/common/ToastContainer";
+import ConfirmDialog from "@/components/common/ConfirmDialog";
+import { useToast } from "@/hooks/useToast";
 
 // --- Components ---
 
@@ -280,7 +283,6 @@ const AddExerciseModal = ({ isOpen, onClose, onAdd, bodyParts, muscles, exercise
 
     const filteredExercises = exercises.filter(e => {
         if (searchQuery && !e.name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
-        if (trainingName && e.training?.name !== trainingName) return false;
         if (selectedBodyPart && e.bodyPart?.name !== selectedBodyPart) return false;
         if (selectedMuscle && !e.targetMuscles?.some(m => m.name === selectedMuscle)) return false;
         return true;
@@ -494,10 +496,12 @@ const CompletionModal = ({ isOpen, onClose, onComplete }) => {
 
 const RoutineLogger = ({ initialData, bodyParts, muscles, exercises, trainings }) => {
     const router = useRouter();
+    const toast = useToast();
     const [routine, setRoutine] = useState(initialData);
     const [isCompleteModalOpen, setIsCompleteModalOpen] = useState(false);
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [showExportMenu, setShowExportMenu] = useState(false);
+    const [drillToDelete, setDrillToDelete] = useState(null);
 
     // Status Logic
     const status = (routine?.status || 'not_started').toLowerCase();
@@ -526,12 +530,11 @@ const RoutineLogger = ({ initialData, bodyParts, muscles, exercises, trainings }
         };
         try {
             await fitmateService.updateRoutine(payload);
-            alert(`Routine updated to ${newStatus}`); // Simple feedback (can be toast)
-            // Ideally we refresh data or update local state
+            toast.success(`Session ${newStatus === 'IN_PROGRESS' ? 'started!' : 'completed!'}`);
             setRoutine(prev => ({ ...prev, status: newStatus, ...extraData }));
         } catch (e) {
             console.error(e);
-            alert("Update failed");
+            toast.error("Failed to update session. Please try again.");
         }
     };
 
@@ -548,31 +551,32 @@ const RoutineLogger = ({ initialData, bodyParts, muscles, exercises, trainings }
 
     const handleDrillSave = async (updatedDrill) => {
         try {
-            // Optimistic update
-            const oldDrills = [...routine.drills];
-            const newDrills = oldDrills.map(d => d.refId === updatedDrill.refId ? updatedDrill : d);
+            const newDrills = routine.drills.map(d => d.refId === updatedDrill.refId ? updatedDrill : d);
             setRoutine({ ...routine, drills: newDrills });
-
             await fitmateService.updateDrill(updatedDrill);
+            toast.success("Set saved.");
         } catch (e) {
             console.error(e);
-            alert("Failed to save drill");
+            toast.error("Failed to save set. Please try again.");
         }
     };
 
-    const handleDrillDelete = async (drill) => {
-        if (!confirm("Remove this set/exercise from routine?")) return;
+    const handleDrillDelete = (drill) => {
+        setDrillToDelete(drill);
+    };
+
+    const confirmDrillDelete = async () => {
+        if (!drillToDelete) return;
+        const drill = drillToDelete;
+        setDrillToDelete(null);
         try {
             await fitmateService.deleteDrill(drill.refId);
-            // Refresh routine data after successful deletion
             const updatedRoutine = await fitmateService.getRoutine(routine.refId);
-            if (updatedRoutine?.data) {
-                setRoutine(updatedRoutine.data);
-            }
-            alert("Removed successfully!");
+            if (updatedRoutine?.data) setRoutine(updatedRoutine.data);
+            toast.success("Exercise removed from routine.");
         } catch (e) {
             console.error("Failed to delete drill:", e);
-            alert("Failed to remove. Please try again.");
+            toast.error("Failed to remove. Please try again.");
         }
     };
 
@@ -593,20 +597,16 @@ const RoutineLogger = ({ initialData, bodyParts, muscles, exercises, trainings }
         };
 
         try {
-            // Sequential additions to ensure server order (if relevant)
             for (let i = 0; i < numSets; i++) {
                 await fitmateService.addDrill(payload);
             }
             setIsAddModalOpen(false);
-            // Refresh routine
             const updatedRoutine = await fitmateService.getRoutine(routine.refId);
-            if (updatedRoutine?.data) {
-                setRoutine(updatedRoutine.data);
-            }
-            alert(`${numSets} sets added to routine!`);
+            if (updatedRoutine?.data) setRoutine(updatedRoutine.data);
+            toast.success(`${numSets} set${numSets > 1 ? 's' : ''} added to routine!`);
         } catch (e) {
             console.error("Failed to add exercise sets:", e);
-            alert("Failed to add one or more sets.");
+            toast.error("Failed to add one or more sets.");
         }
     };
 
@@ -788,6 +788,19 @@ const RoutineLogger = ({ initialData, bodyParts, muscles, exercises, trainings }
                 exercises={exercises}
                 trainingName={routine.training?.name}
             />
+
+            <ConfirmDialog
+                isOpen={!!drillToDelete}
+                title="Remove Exercise"
+                message={`Remove "${drillToDelete?.exercise?.name}" from this routine? This cannot be undone.`}
+                confirmText="Remove"
+                cancelText="Keep"
+                isDangerous
+                onConfirm={confirmDrillDelete}
+                onCancel={() => setDrillToDelete(null)}
+            />
+
+            <ToastContainer toasts={toast.toasts} onRemoveToast={toast.removeToast} />
         </div>
     );
 };
@@ -805,14 +818,14 @@ const RoutineDetail = () => {
                 const [bodyRes, muscleRes, exerciseRes, trainingRes] = await Promise.all([
                     fitmateService.getBodyParts(),
                     fitmateService.getMuscles(),
-                    fitmateService.getExercises(),
+                    fitmateService.getExercises(0, 500),
                     fitmateService.getTrainings()
                 ]);
                 setDropdownData({
-                    bodyParts: bodyRes.data || [],
-                    muscles: muscleRes.data || [],
-                    exercises: exerciseRes.data || [],
-                    trainings: trainingRes.data || []
+                    bodyParts: bodyRes.data?.content || (Array.isArray(bodyRes.data) ? bodyRes.data : []),
+                    muscles: muscleRes.data?.content || (Array.isArray(muscleRes.data) ? muscleRes.data : []),
+                    exercises: exerciseRes.data?.content || (Array.isArray(exerciseRes.data) ? exerciseRes.data : []),
+                    trainings: trainingRes.data?.content || (Array.isArray(trainingRes.data) ? trainingRes.data : []),
                 });
             } catch (error) {
                 console.error("Error fetching dropdown data:", error);
