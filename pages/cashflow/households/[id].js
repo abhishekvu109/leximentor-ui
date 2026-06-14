@@ -2407,12 +2407,35 @@ const LogsTab = ({ expenses, currency, onEditClick, onDeleteClick }) => {
     const [searchQuery, setSearchQuery] = useState("");
     const [categoryFilter, setCategoryFilter] = useState("all");
     const [typeFilter, setTypeFilter] = useState("all");
+    const [ownerFilter, setOwnerFilter] = useState("all");
+    const [paymentModeFilter, setPaymentModeFilter] = useState("all");
+    const [amountMin, setAmountMin] = useState("");
+    const [amountMax, setAmountMax] = useState("");
+    const [dateFrom, setDateFrom] = useState("");
+    const [dateTo, setDateTo] = useState("");
     const [sortConfig, setSortConfig] = useState({ key: 'expenseDate', direction: 'desc' });
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 5;
 
-    // Get unique categories for filter
+    // Get unique categories and owners for filters
     const categories = Array.from(new Set(expenses?.map(e => e.category))).filter(Boolean);
+    const owners = Array.from(new Set(expenses?.map(e => e.owner))).filter(Boolean);
+
+    const resetFilters = () => {
+        setSearchQuery("");
+        setCategoryFilter("all");
+        setTypeFilter("all");
+        setOwnerFilter("all");
+        setPaymentModeFilter("all");
+        setAmountMin("");
+        setAmountMax("");
+        setDateFrom("");
+        setDateTo("");
+        setCurrentPage(1);
+    };
+
+    const hasActiveFilters = searchQuery || categoryFilter !== "all" || typeFilter !== "all" ||
+        ownerFilter !== "all" || paymentModeFilter !== "all" || amountMin || amountMax || dateFrom || dateTo;
 
     // Filtering logic (client-side for design demonstration)
     const filteredExpenses = (expenses || []).filter(expense => {
@@ -2420,7 +2443,19 @@ const LogsTab = ({ expenses, currency, onEditClick, onDeleteClick }) => {
             expense.category?.toLowerCase().includes(searchQuery.toLowerCase());
         const matchesCategory = categoryFilter === "all" || expense.category === categoryFilter;
         const matchesType = typeFilter === "all" || expense.type === typeFilter;
-        return matchesSearch && matchesCategory && matchesType;
+        const matchesOwner = ownerFilter === "all" || expense.owner === ownerFilter;
+        const matchesPaymentMode = paymentModeFilter === "all" || expense.paymentMode === paymentModeFilter;
+        const amount = expense.amount || 0;
+        const matchesAmountMin = amountMin === "" || amount >= parseFloat(amountMin);
+        const matchesAmountMax = amountMax === "" || amount <= parseFloat(amountMax);
+        const expDate = expense.expenseDate
+            ? new Date(Array.isArray(expense.expenseDate)
+                ? `${expense.expenseDate[0]}-${String(expense.expenseDate[1]).padStart(2, '0')}-${String(expense.expenseDate[2]).padStart(2, '0')}`
+                : expense.expenseDate)
+            : null;
+        const matchesDateFrom = !dateFrom || (expDate && expDate >= new Date(dateFrom));
+        const matchesDateTo = !dateTo || (expDate && expDate <= new Date(dateTo));
+        return matchesSearch && matchesCategory && matchesType && matchesOwner && matchesPaymentMode && matchesAmountMin && matchesAmountMax && matchesDateFrom && matchesDateTo;
     });
 
     // Sorting logic
@@ -2489,6 +2524,79 @@ const LogsTab = ({ expenses, currency, onEditClick, onDeleteClick }) => {
                             <option value="RECURRING">Recurring</option>
                         </select>
                     </div>
+                </div>
+                <div className="flex flex-col lg:flex-row gap-4">
+                    <select
+                        value={ownerFilter}
+                        onChange={(e) => { setOwnerFilter(e.target.value); setCurrentPage(1); }}
+                        className="bg-gray-50 dark:bg-gray-900 border-none rounded-2xl px-6 py-4 text-xs font-black uppercase tracking-widest text-gray-500 focus:ring-2 focus:ring-indigo-500/20 cursor-pointer shadow-sm"
+                    >
+                        <option value="all">All Owners</option>
+                        {owners.map(owner => <option key={owner} value={owner}>{owner}</option>)}
+                    </select>
+                    <select
+                        value={paymentModeFilter}
+                        onChange={(e) => { setPaymentModeFilter(e.target.value); setCurrentPage(1); }}
+                        className="bg-gray-50 dark:bg-gray-900 border-none rounded-2xl px-6 py-4 text-xs font-black uppercase tracking-widest text-gray-500 focus:ring-2 focus:ring-indigo-500/20 cursor-pointer shadow-sm"
+                    >
+                        <option value="all">Any Payment Mode</option>
+                        <option value="UPI">UPI</option>
+                        <option value="INTERNET BANKING">Internet Banking</option>
+                        <option value="DEBIT CARD">Debit Card</option>
+                        <option value="CREDIT CARD">Credit Card</option>
+                        <option value="CASH">Cash</option>
+                        <option value="OTHERS">Others</option>
+                    </select>
+                    <div className="flex items-center gap-2 flex-1">
+                        <div className="relative flex-1">
+                            <input
+                                type="number"
+                                placeholder="Min amount"
+                                value={amountMin}
+                                onChange={(e) => { setAmountMin(e.target.value); setCurrentPage(1); }}
+                                className="w-full px-5 py-4 bg-gray-50 dark:bg-gray-900 border-none rounded-2xl text-xs font-black text-gray-500 focus:ring-2 focus:ring-indigo-500/20 shadow-sm"
+                                min="0"
+                            />
+                        </div>
+                        <span className="text-gray-300 dark:text-gray-600 font-black text-sm shrink-0">—</span>
+                        <div className="relative flex-1">
+                            <input
+                                type="number"
+                                placeholder="Max amount"
+                                value={amountMax}
+                                onChange={(e) => { setAmountMax(e.target.value); setCurrentPage(1); }}
+                                className="w-full px-5 py-4 bg-gray-50 dark:bg-gray-900 border-none rounded-2xl text-xs font-black text-gray-500 focus:ring-2 focus:ring-indigo-500/20 shadow-sm"
+                                min="0"
+                            />
+                        </div>
+                    </div>
+                </div>
+                <div className="flex flex-col lg:flex-row gap-4 items-center">
+                    <div className="flex items-center gap-2 flex-1">
+                        <Calendar size={16} className="text-gray-400 shrink-0" />
+                        <input
+                            type="date"
+                            value={dateFrom}
+                            onChange={(e) => { setDateFrom(e.target.value); setCurrentPage(1); }}
+                            className="flex-1 px-5 py-4 bg-gray-50 dark:bg-gray-900 border-none rounded-2xl text-xs font-black text-gray-500 focus:ring-2 focus:ring-indigo-500/20 shadow-sm"
+                        />
+                        <span className="text-gray-300 dark:text-gray-600 font-black text-sm shrink-0">—</span>
+                        <input
+                            type="date"
+                            value={dateTo}
+                            onChange={(e) => { setDateTo(e.target.value); setCurrentPage(1); }}
+                            className="flex-1 px-5 py-4 bg-gray-50 dark:bg-gray-900 border-none rounded-2xl text-xs font-black text-gray-500 focus:ring-2 focus:ring-indigo-500/20 shadow-sm"
+                        />
+                    </div>
+                    {hasActiveFilters && (
+                        <button
+                            onClick={resetFilters}
+                            className="flex items-center gap-2 px-5 py-4 bg-rose-50 dark:bg-rose-900/20 text-rose-500 dark:text-rose-400 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-rose-100 dark:hover:bg-rose-900/30 transition-colors shrink-0"
+                        >
+                            <X size={14} />
+                            Clear
+                        </button>
+                    )}
                 </div>
             </div>
 
