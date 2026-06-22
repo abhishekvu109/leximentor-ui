@@ -1,6 +1,6 @@
 
 import Layout from "@/components/layout/Layout";
-import { ChevronDown, Option, CheckCircle2, MoreVertical, Plus, Trash2, Timer, Check, X, Dumbbell, Calendar, Save, Filter, Search, ArrowRight, Download, FileText, History, Info, Clock, Sparkles } from "lucide-react";
+import { ChevronDown, Option, CheckCircle2, MoreVertical, Plus, Trash2, Timer, Check, X, Dumbbell, Calendar, Save, Filter, Search, ArrowRight, Download, FileText, History, Info, Clock, Sparkles, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState } from "react";
 import fitmateService from "../../../services/fitmate.service";
@@ -10,6 +10,166 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
 // --- Sub-components ---
+
+const AddExerciseModal = ({ isOpen, onClose, onSuccess, trainings, bodyParts, musclesAll }) => {
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
+    const [form, setForm] = useState({ name: "", description: "", training: "", bodyPart: "", targetMuscles: [], equipments: [], status: "ACTIVE", unit: "reps" });
+    const [filteredMuscles, setFilteredMuscles] = useState([]);
+
+    useEffect(() => {
+        if (isOpen) {
+            setForm({ name: "", description: "", training: "", bodyPart: "", targetMuscles: [], equipments: [], status: "ACTIVE", unit: "reps" });
+            setFilteredMuscles([]);
+            setError('');
+        }
+    }, [isOpen]);
+
+    useEffect(() => {
+        if (form.bodyPart && musclesAll) {
+            setFilteredMuscles(musclesAll.filter(m => m.bodyPart?.name === form.bodyPart));
+        } else {
+            setFilteredMuscles([]);
+        }
+    }, [form.bodyPart, musclesAll]);
+
+    const toggleSelection = (field, value) => {
+        setForm(prev => {
+            const current = prev[field];
+            return { ...prev, [field]: current.includes(value) ? current.filter(i => i !== value) : [...current, value] };
+        });
+    };
+
+    const handleSubmit = async (e) => {
+        e?.preventDefault();
+        setError('');
+        setLoading(true);
+        try {
+            const payload = [{
+                name: form.name, description: form.description,
+                training: { name: form.training }, bodyPart: { name: form.bodyPart },
+                targetMuscles: form.targetMuscles.map(m => ({ name: m })),
+                equipments: form.equipments, status: form.status, unit: form.unit
+            }];
+            await fitmateService.addExercise(payload);
+            onSuccess(form.name);
+            onClose();
+        } catch (err) {
+            console.error(err);
+            setError("Failed to create exercise. Please try again.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <AnimatePresence>
+            {isOpen && (
+                <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="fixed inset-0 bg-slate-900/60 backdrop-blur-md" />
+                    <motion.div
+                        initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                        animate={{ scale: 1, opacity: 1, y: 0 }}
+                        exit={{ scale: 0.9, opacity: 0, y: 20 }}
+                        className="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl overflow-hidden"
+                    >
+                        <div className="p-6 border-b border-gray-100 flex justify-between items-center">
+                            <div>
+                                <h2 className="text-xl font-bold text-gray-800">New Exercise</h2>
+                                <p className="text-sm text-gray-400 mt-0.5">Add it to your library and use it right away</p>
+                            </div>
+                            <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-600 rounded-xl hover:bg-gray-100"><X size={20} /></button>
+                        </div>
+
+                        <form onSubmit={handleSubmit} className="overflow-y-auto max-h-[65vh] p-6 space-y-5">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Exercise Name *</label>
+                                    <input required value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} className="w-full rounded-xl border-gray-200 focus:border-blue-500 focus:ring-blue-500 text-sm" placeholder="e.g. Incline Bench Press" />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Training Type *</label>
+                                    <select required value={form.training} onChange={e => setForm({ ...form, training: e.target.value })} className="w-full rounded-xl border-gray-200 focus:border-blue-500 focus:ring-blue-500 text-sm">
+                                        <option value="">Select Type</option>
+                                        {trainings.map((t, i) => <option key={i} value={t.name}>{t.name}</option>)}
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Measure By</label>
+                                <div className="flex gap-2">
+                                    {['reps', 'weight', 'time'].map(u => (
+                                        <button key={u} type="button" onClick={() => setForm({ ...form, unit: u })}
+                                            className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all border ${form.unit === u ? 'bg-blue-600 text-white border-blue-600 shadow-md' : 'bg-white text-gray-600 border-gray-200 hover:border-blue-300'}`}>
+                                            {u.charAt(0).toUpperCase() + u.slice(1)}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Description</label>
+                                <textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} className="w-full rounded-xl border-gray-200 focus:border-blue-500 focus:ring-blue-500 text-sm" rows="2" placeholder="Optional instructions..." />
+                            </div>
+
+                            <div className="w-full h-px bg-gray-100" />
+
+                            <div>
+                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Target Body Part *</label>
+                                <select required value={form.bodyPart} onChange={e => setForm({ ...form, bodyPart: e.target.value, targetMuscles: [] })} className="w-full rounded-xl border-gray-200 focus:border-blue-500 focus:ring-blue-500 text-sm mb-4">
+                                    <option value="">Select Body Part</option>
+                                    {bodyParts.map((b, i) => <option key={i} value={b.name}>{b.name}</option>)}
+                                </select>
+                                {form.bodyPart && (
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Target Muscles ({form.targetMuscles.length})</label>
+                                        <div className="flex flex-wrap gap-2 p-3 bg-gray-50 rounded-xl max-h-32 overflow-y-auto">
+                                            {filteredMuscles.length > 0 ? filteredMuscles.map((m, i) => {
+                                                const isActive = form.targetMuscles.includes(m.name);
+                                                return (
+                                                    <button key={i} type="button" onClick={() => toggleSelection('targetMuscles', m.name)}
+                                                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${isActive ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-gray-600 border border-gray-200 hover:border-blue-300'}`}>
+                                                        {m.name}
+                                                    </button>
+                                                );
+                                            }) : <p className="text-gray-400 text-sm italic">No muscles found for this body part.</p>}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Equipment Needed</label>
+                                <div className="flex flex-wrap gap-2">
+                                    {['Body Weight', 'Dumbbell', 'Barbell Bar', 'Weights', 'Cable', 'Machine', 'Kettlebell'].map((eq, i) => {
+                                        const isActive = form.equipments.includes(eq);
+                                        return (
+                                            <button key={i} type="button" onClick={() => toggleSelection('equipments', eq)}
+                                                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${isActive ? 'bg-gray-800 text-white shadow-md' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'}`}>
+                                                {eq}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                            {error && <p className="text-red-500 text-sm font-medium bg-red-50 px-4 py-3 rounded-xl">{error}</p>}
+                        </form>
+
+                        <div className="p-6 border-t border-gray-100 flex justify-end gap-3 bg-gray-50/50">
+                            <button onClick={onClose} className="px-5 py-2.5 text-gray-600 font-medium hover:bg-gray-100 rounded-xl transition-colors">Cancel</button>
+                            <button onClick={handleSubmit} disabled={loading} className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg shadow-blue-200 flex items-center gap-2 disabled:opacity-70 transition-all">
+                                {loading ? <Loader2 size={18} className="animate-spin" /> : <Check size={18} />}
+                                Save Exercise
+                            </button>
+                        </div>
+                    </motion.div>
+                </div>
+            )}
+        </AnimatePresence>
+    );
+};
 
 const GenerateRoutineModal = ({ isOpen, onClose, onGenerate, trainings, bodyParts }) => {
     const [trainingType, setTrainingType] = useState('Weight Training');
@@ -366,13 +526,15 @@ const UnifiedRoutineBuilder = ({
     handleDownloadPDF,
     showSuccess,
     successMessage,
-    setShowSuccess
+    setShowSuccess,
+    onExerciseAdded
 }) => {
     const { user } = useAuth();
     const [selectedBodyPart, setSelectedBodyPart] = useState(null);
     const [selectedMuscle, setSelectedMuscle] = useState(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [isGeneratorOpen, setIsGeneratorOpen] = useState(false);
+    const [isAddExerciseOpen, setIsAddExerciseOpen] = useState(false);
     const [historyPanel, setHistoryPanel] = useState({ open: false, exercise: null, data: [], loading: false });
 
     const openHistory = async (exerciseName) => {
@@ -523,6 +685,15 @@ const UnifiedRoutineBuilder = ({
                 {/* Explorer */}
                 <div className="col-span-4 border-r border-gray-200 bg-white flex flex-col overflow-hidden">
                     <div className="p-4 border-b border-gray-100 space-y-4">
+                        <div className="flex items-center justify-between">
+                            <span className="text-xs font-black text-gray-400 uppercase tracking-widest">Exercise Library</span>
+                            <button
+                                onClick={() => setIsAddExerciseOpen(true)}
+                                className="flex items-center gap-1.5 text-xs font-bold text-blue-600 hover:text-blue-700 hover:bg-blue-50 px-2.5 py-1.5 rounded-lg transition-colors"
+                            >
+                                <Plus size={13} /> New Exercise
+                            </button>
+                        </div>
                         <div className="relative">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
                             <input
@@ -538,23 +709,35 @@ const UnifiedRoutineBuilder = ({
 
                     <div className="flex-1 overflow-y-auto p-4 content-start">
                         <div className="grid grid-cols-2 gap-3">
-                            {exercises
-                                .filter(e => {
-                                    // 1. Search Query
+                            {(() => {
+                                const filtered = exercises.filter(e => {
                                     if (searchQuery && !e.name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
-
-                                    // 2. Training Type (Always filter by this if selected)
                                     if (routine.training?.name && e.training?.name !== routine.training.name) return false;
-
-                                    // 3. Body Part (Incremental)
                                     if (selectedBodyPart && e.bodyPart?.name !== selectedBodyPart) return false;
-
-                                    // 4. Muscle (Incremental)
                                     if (selectedMuscle && !e.targetMuscles?.some(m => m.name === selectedMuscle)) return false;
-
                                     return true;
-                                })
-                                .map((ex) => <ExerciseGridItem key={ex.refId || Math.random()} name={ex.name} refId={ex.refId} onClick={() => addToCart(ex)} />)}
+                                });
+
+                                if (filtered.length === 0) {
+                                    return (
+                                        <div className="col-span-2 flex flex-col items-center justify-center py-12 text-center gap-3">
+                                            <Dumbbell size={32} className="text-gray-200" />
+                                            <p className="text-sm text-gray-400">No exercises found.</p>
+                                            <button
+                                                onClick={() => setIsAddExerciseOpen(true)}
+                                                className="flex items-center gap-1.5 text-xs font-bold text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 px-3 py-2 rounded-xl transition-colors"
+                                            >
+                                                <Plus size={13} />
+                                                {searchQuery ? `Add "${searchQuery}"` : 'Add New Exercise'}
+                                            </button>
+                                        </div>
+                                    );
+                                }
+
+                                return filtered.map((ex) => (
+                                    <ExerciseGridItem key={ex.refId || Math.random()} name={ex.name} refId={ex.refId} onClick={() => addToCart(ex)} />
+                                ));
+                            })()}
                         </div>
                     </div>
                 </div>
@@ -654,6 +837,14 @@ const UnifiedRoutineBuilder = ({
             {showSuccess && <SuccessNotification message={successMessage} onClose={() => setShowSuccess(false)} />}
             <HistoryPanel isOpen={historyPanel.open} onClose={() => setHistoryPanel(prev => ({ ...prev, open: false }))} exerciseName={historyPanel.exercise} historyData={historyPanel.data} loading={historyPanel.loading} />
             <GenerateRoutineModal isOpen={isGeneratorOpen} onClose={() => setIsGeneratorOpen(false)} onGenerate={handleGenerateWorkout} trainings={trainings} bodyParts={bodyParts} />
+            <AddExerciseModal
+                isOpen={isAddExerciseOpen}
+                onClose={() => setIsAddExerciseOpen(false)}
+                onSuccess={(name) => { setIsAddExerciseOpen(false); onExerciseAdded(name); }}
+                trainings={trainings}
+                bodyParts={bodyParts}
+                musclesAll={muscles}
+            />
         </div>
     );
 };
@@ -726,6 +917,20 @@ const FitmateMakeRoutine = () => {
         doc.save(`workout-${workoutDate}.pdf`);
     };
 
+    const refreshExercises = async () => {
+        try {
+            const exerciseRes = await fitmateService.getExercises(0, 500);
+            setExercises(exerciseRes.data?.content || exerciseRes.data || []);
+        } catch (error) { console.error("Failed to refresh exercises:", error); }
+    };
+
+    const handleExerciseAdded = async (name) => {
+        await refreshExercises();
+        setSuccessMessage(`"${name}" added to the library! Find it in the exercise list.`);
+        setShowSuccess(true);
+        setTimeout(() => setShowSuccess(false), 5000);
+    };
+
     const handleSubmit = async () => {
         if (!routine.training?.name || exerciseCart.length === 0) return alert("Please finish setup.");
         const drills = [];
@@ -754,6 +959,7 @@ const FitmateMakeRoutine = () => {
             showSuccess={showSuccess}
             successMessage={successMessage}
             setShowSuccess={setShowSuccess}
+            onExerciseAdded={handleExerciseAdded}
         />
     );
 };
