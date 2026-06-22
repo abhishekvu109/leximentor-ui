@@ -6,16 +6,20 @@ import fitmateService from "../../../services/fitmate.service";
 import {
     Search, Plus, Filter, Trash2, Edit2, Dumbbell,
     MoreVertical, X, Check, AlertCircle, Loader2, Info, Camera,
-    ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, History
+    ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, History, Globe
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { motion, AnimatePresence } from "framer-motion";
 
 // --- Components ---
 
-const ExerciseCard = ({ exercise, analytics, onDelete, onEdit, onThumbnailUpload }) => {
+const ExerciseCard = ({ exercise, analytics, onDelete, onEdit, onThumbnailUpload, onNotification }) => {
     const [uploading, setUploading] = useState(false);
     const [thumbUrl, setThumbUrl] = useState(null);
+    const [showUrlInput, setShowUrlInput] = useState(false);
+    const [urlInput, setUrlInput] = useState('');
+    const [urlError, setUrlError] = useState('');
+    const [urlLoading, setUrlLoading] = useState(false);
 
     useEffect(() => {
         const fetchThumb = async () => {
@@ -62,6 +66,33 @@ const ExerciseCard = ({ exercise, analytics, onDelete, onEdit, onThumbnailUpload
             setUploading(false);
         }
     };
+
+    const handleUrlSubmit = async () => {
+        const url = urlInput.trim();
+        if (!url) return;
+        setUrlError('');
+        setUrlLoading(true);
+        try {
+            const response = await fetch(url);
+            if (!response.ok) throw new Error('Could not fetch the image.');
+            const blob = await response.blob();
+            if (!blob.type.startsWith('image/')) throw new Error('URL does not point to an image.');
+            const ext = blob.type.split('/')[1] || 'jpg';
+            const file = new File([blob], `thumbnail.${ext}`, { type: blob.type });
+            await onThumbnailUpload(exercise.refId, file);
+            setShowUrlInput(false);
+            setUrlInput('');
+        } catch (err) {
+            // CORS or network errors surface here
+            const msg = err.message.includes('fetch')
+                ? 'CORS blocked — try downloading and uploading the image directly.'
+                : err.message;
+            setUrlError(msg);
+        } finally {
+            setUrlLoading(false);
+        }
+    };
+
     return (
         <div className="group bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden flex flex-col relative cursor-pointer">
             <Link href={`/fitmate/exercise/view/${exercise.refId}`} className="flex-1 flex flex-col">
@@ -129,10 +160,23 @@ const ExerciseCard = ({ exercise, analytics, onDelete, onEdit, onThumbnailUpload
             </Link>
 
             <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1 z-10">
-                <label className="p-2 bg-white/90 rounded-full text-blue-600 hover:text-blue-700 shadow-sm backdrop-blur-sm cursor-pointer" title="Upload Thumbnail">
+                <label className="p-2 bg-white/90 rounded-full text-blue-600 hover:text-blue-700 shadow-sm backdrop-blur-sm cursor-pointer" title="Upload from file">
                     <input type="file" className="hidden" accept="image/*" onChange={handleFileChange} disabled={uploading} />
                     {uploading ? <Loader2 size={14} className="animate-spin" /> : <Camera size={14} />}
                 </label>
+                <button
+                    onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setUrlError('');
+                        setUrlInput('');
+                        setShowUrlInput(v => !v);
+                    }}
+                    className={`p-2 rounded-full shadow-sm backdrop-blur-sm transition-colors ${showUrlInput ? 'bg-blue-600 text-white' : 'bg-white/90 text-blue-600 hover:text-blue-700'}`}
+                    title="Paste image URL"
+                >
+                    <Globe size={14} />
+                </button>
                 <button
                     onClick={(e) => {
                         e.preventDefault();
@@ -145,6 +189,42 @@ const ExerciseCard = ({ exercise, analytics, onDelete, onEdit, onThumbnailUpload
                     <Trash2 size={14} />
                 </button>
             </div>
+
+            {/* URL paste overlay — sits outside <Link> to avoid navigation */}
+            {showUrlInput && (
+                <div className="absolute inset-0 z-20 bg-black/75 backdrop-blur-sm rounded-2xl flex flex-col items-center justify-center p-4 gap-3">
+                    <p className="text-white text-xs font-bold tracking-wide uppercase">Paste image URL</p>
+                    <div className="flex gap-2 w-full">
+                        <input
+                            autoFocus
+                            type="url"
+                            value={urlInput}
+                            onChange={e => { setUrlInput(e.target.value); setUrlError(''); }}
+                            onKeyDown={e => e.key === 'Enter' && handleUrlSubmit()}
+                            placeholder="https://example.com/image.jpg"
+                            className="flex-1 text-xs px-3 py-2 rounded-lg border-none outline-none min-w-0"
+                        />
+                        <button
+                            onClick={handleUrlSubmit}
+                            disabled={urlLoading || !urlInput.trim()}
+                            className="p-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg disabled:opacity-50 shrink-0"
+                            title="Upload"
+                        >
+                            {urlLoading ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+                        </button>
+                        <button
+                            onClick={() => { setShowUrlInput(false); setUrlInput(''); setUrlError(''); }}
+                            className="p-2 bg-white/20 hover:bg-white/30 text-white rounded-lg shrink-0"
+                            title="Cancel"
+                        >
+                            <X size={14} />
+                        </button>
+                    </div>
+                    {urlError && (
+                        <p className="text-red-300 text-[10px] text-center leading-snug">{urlError}</p>
+                    )}
+                </div>
+            )}
         </div>
     );
 }
@@ -647,6 +727,7 @@ const ExerciseLibrary = () => {
                             onDelete={handleDelete}
                             onEdit={() => { }}
                             onThumbnailUpload={handleThumbnailUpload}
+                            onNotification={showNotification}
                         />
                     ))}
                 </div>
