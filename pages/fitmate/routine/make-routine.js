@@ -760,8 +760,15 @@ const UnifiedRoutineBuilder = ({
                                         </div>
                                         <div className="flex-1 min-w-0">
                                             <div className="flex justify-between items-start">
-                                                <h3 className="font-bold text-lg text-gray-800 truncate pr-4">{exIdx + 1}. {item.exercise}</h3>
-                                                <div className="flex items-center gap-1">
+                                                <div className="flex items-center gap-2 flex-1 min-w-0 pr-2">
+                                                    <h3 className="font-bold text-lg text-gray-800 truncate">{exIdx + 1}. {item.exercise}</h3>
+                                                    {item.sets.filter(s => s.completed).length > 0 && (
+                                                        <span className="shrink-0 text-[10px] font-black px-2 py-0.5 bg-green-100 text-green-600 rounded-full whitespace-nowrap">
+                                                            {item.sets.filter(s => s.completed).length}/{item.sets.length}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <div className="flex items-center gap-1 shrink-0">
                                                     <button onClick={() => openHistory(item.exercise)} className="text-gray-300 hover:text-blue-500 transition-colors p-1"><History size={18} /></button>
                                                     <button onClick={() => removeFromCart(exIdx)} className="text-gray-300 hover:text-red-500 transition-colors p-1"><Trash2 size={18} /></button>
                                                 </div>
@@ -784,47 +791,98 @@ const UnifiedRoutineBuilder = ({
                                     </div>
 
                                     <div className="border-t border-gray-100">
-                                        <div className="grid grid-cols-12 gap-2 px-4 py-2 bg-gray-50/50 text-[10px] font-bold text-gray-400 uppercase tracking-widest text-center">
-                                            <div className="col-span-1">Set</div>
-                                            <div className={item.exerciseUnit === 'reps' ? 'col-span-5' : 'col-span-3'}>
-                                                {item.exerciseUnit === 'weight' ? 'Weight' : item.exerciseUnit === 'time' ? 'Time' : 'Reps'}
-                                            </div>
-                                            {item.exerciseUnit !== 'reps' && <div className="col-span-2">Reps</div>}
-                                            <div className="col-span-6">Actions</div>
+                                        {/* Column hints */}
+                                        <div className="flex items-center px-5 py-1.5 bg-gray-50/80 border-b border-gray-100">
+                                            <span className="w-6 shrink-0" />
+                                            <span className="flex-1 text-[10px] font-black text-gray-400 uppercase tracking-widest pl-8">
+                                                {item.exerciseUnit === 'weight' ? 'Weight' : item.exerciseUnit === 'time' ? 'Duration' : 'Reps'}
+                                            </span>
+                                            {item.exerciseUnit !== 'reps' && (
+                                                <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest mr-24">Reps</span>
+                                            )}
                                         </div>
-                                        <div className="divide-y divide-gray-50">
-                                            {item.sets.map((set, setIdx) => (
-                                                <div key={set.id} className={`grid grid-cols-12 gap-2 px-4 py-2 items-center text-center ${set.completed ? 'bg-green-50/50' : 'bg-white'}`}>
-                                                    <div className="col-span-1 font-bold text-blue-600 text-sm">{setIdx + 1}</div>
-                                                    <div className={`${item.exerciseUnit === 'reps' ? 'col-span-5' : 'col-span-3'} flex items-center justify-center gap-1`}>
-                                                        <input type="number" className="w-16 bg-gray-100 border-none rounded-md py-1 text-center font-bold text-gray-700 text-sm" value={set.weight} onChange={(e) => handleUpdateSet(exIdx, setIdx, 'weight', e.target.value)} placeholder="0" />
-                                                        <button
-                                                            onClick={() => {
-                                                                const units = item.exerciseUnit === 'weight' ? ['KG', 'LB'] :
-                                                                    item.exerciseUnit === 'time' ? ['min', 'HR', 'sec'] :
-                                                                        ['REPS'];
-                                                                const currentIndex = units.indexOf(set.unit);
-                                                                const nextIndex = (currentIndex + 1) % units.length;
-                                                                handleUpdateSet(exIdx, setIdx, 'unit', units[nextIndex]);
-                                                            }}
-                                                            className="text-[10px] font-bold text-gray-400 hover:text-blue-600 uppercase"
-                                                        >
-                                                            {set.unit}
-                                                        </button>
-                                                    </div>
-                                                    {item.exerciseUnit !== 'reps' && (
-                                                        <div className="col-span-2">
-                                                            <input type="number" className="w-full bg-gray-100 border-none rounded-md py-1 text-center font-bold text-gray-700 text-sm" value={set.reps} onChange={(e) => handleUpdateSet(exIdx, setIdx, 'reps', e.target.value)} placeholder="0" />
-                                                        </div>
-                                                    )}
-                                                    <div className="col-span-6 flex justify-center gap-2">
-                                                        <button onClick={() => handleToggleSet(exIdx, setIdx)} className={`w-7 h-7 rounded-md flex items-center justify-center transition-all ${set.completed ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-400 hover:bg-green-100 hover:text-green-600'}`}><Check size={14} strokeWidth={3} /></button>
-                                                        <button onClick={() => removeSet(exIdx, setIdx)} className="w-7 h-7 rounded-md flex items-center justify-center bg-gray-100 text-gray-400 hover:bg-red-100 hover:text-red-500"><Trash2 size={12} /></button>
-                                                    </div>
+
+                                        {/* Set rows */}
+                                        {item.sets.map((set, setIdx) => (
+                                            <div key={set.id} className={`flex items-center gap-3 px-5 py-2.5 group transition-colors border-b border-gray-50 last:border-b-0
+                                                ${set.completed ? 'bg-green-50/50' : 'bg-white hover:bg-gray-50/40'}`}>
+
+                                                {/* Set badge */}
+                                                <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 transition-all
+                                                    ${set.completed ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-500 text-[11px] font-black'}`}>
+                                                    {set.completed ? <Check size={11} strokeWidth={3.5} /> : setIdx + 1}
                                                 </div>
-                                            ))}
-                                        </div>
-                                        <button onClick={() => handleAddSet(exIdx)} className="w-full py-2 bg-gray-50 hover:bg-gray-100 text-blue-600/70 font-semibold text-xs flex items-center justify-center gap-1 border-t"><Plus size={14} /> Add Set</button>
+
+                                                {/* Main value stepper */}
+                                                <div className={`flex items-center gap-1.5 flex-1 transition-opacity ${set.completed ? 'opacity-40' : ''}`}>
+                                                    <button type="button"
+                                                        onClick={() => handleUpdateSet(exIdx, setIdx, 'weight', String(Math.max(0, (Number(set.weight) || 0) - 1)))}
+                                                        className="w-6 h-6 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 flex items-center justify-center text-base font-bold leading-none select-none shrink-0">−</button>
+                                                    <input
+                                                        type="number" min="0"
+                                                        value={set.weight}
+                                                        onChange={e => handleUpdateSet(exIdx, setIdx, 'weight', e.target.value)}
+                                                        className="w-14 text-center font-black text-base border-none bg-transparent focus:ring-0 focus:outline-none text-gray-800 p-0 tabular-nums"
+                                                        placeholder="0"
+                                                    />
+                                                    <button type="button"
+                                                        onClick={() => handleUpdateSet(exIdx, setIdx, 'weight', String((Number(set.weight) || 0) + 1))}
+                                                        className="w-6 h-6 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 flex items-center justify-center text-base font-bold leading-none select-none shrink-0">+</button>
+                                                    <button type="button"
+                                                        onClick={() => {
+                                                            const units = item.exerciseUnit === 'weight' ? ['KG', 'LB'] : item.exerciseUnit === 'time' ? ['min', 'sec', 'HR'] : ['REPS'];
+                                                            handleUpdateSet(exIdx, setIdx, 'unit', units[(units.indexOf(set.unit) + 1) % units.length]);
+                                                        }}
+                                                        className="px-2 py-0.5 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded text-[10px] font-black uppercase tracking-wider transition-colors shrink-0">
+                                                        {set.unit}
+                                                    </button>
+                                                </div>
+
+                                                {/* Reps (weight / time exercises) */}
+                                                {item.exerciseUnit !== 'reps' && (
+                                                    <div className={`flex items-center gap-1.5 transition-opacity ${set.completed ? 'opacity-40' : ''}`}>
+                                                        <span className="text-gray-200 font-black select-none text-lg">×</span>
+                                                        <button type="button"
+                                                            onClick={() => handleUpdateSet(exIdx, setIdx, 'reps', String(Math.max(0, (Number(set.reps) || 0) - 1)))}
+                                                            className="w-6 h-6 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 flex items-center justify-center text-base font-bold leading-none select-none shrink-0">−</button>
+                                                        <input
+                                                            type="number" min="0"
+                                                            value={set.reps}
+                                                            onChange={e => handleUpdateSet(exIdx, setIdx, 'reps', e.target.value)}
+                                                            className="w-12 text-center font-black text-base border-none bg-transparent focus:ring-0 focus:outline-none text-gray-800 p-0 tabular-nums"
+                                                            placeholder="0"
+                                                        />
+                                                        <button type="button"
+                                                            onClick={() => handleUpdateSet(exIdx, setIdx, 'reps', String((Number(set.reps) || 0) + 1))}
+                                                            className="w-6 h-6 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 flex items-center justify-center text-base font-bold leading-none select-none shrink-0">+</button>
+                                                        <span className="text-[10px] text-gray-400 font-bold shrink-0">reps</span>
+                                                    </div>
+                                                )}
+
+                                                {/* Done + delete */}
+                                                <div className="flex items-center gap-1.5 shrink-0 ml-1">
+                                                    <button type="button"
+                                                        onClick={() => handleToggleSet(exIdx, setIdx)}
+                                                        className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all
+                                                            ${set.completed
+                                                                ? 'bg-green-500 text-white shadow-md shadow-green-200 scale-105'
+                                                                : 'bg-gray-100 text-gray-300 hover:bg-green-100 hover:text-green-500 hover:scale-105'}`}>
+                                                        <Check size={16} strokeWidth={3} />
+                                                    </button>
+                                                    <button type="button"
+                                                        onClick={() => removeSet(exIdx, setIdx)}
+                                                        className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-200 hover:text-red-400 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all">
+                                                        <Trash2 size={12} />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ))}
+
+                                        {/* Add set */}
+                                        <button onClick={() => handleAddSet(exIdx)}
+                                            className="w-full py-3 text-blue-500 hover:text-blue-700 text-xs font-bold flex items-center justify-center gap-1.5 hover:bg-blue-50/50 transition-colors">
+                                            <Plus size={13} /> Add Set
+                                        </button>
                                     </div>
                                 </div>
                             ))}
