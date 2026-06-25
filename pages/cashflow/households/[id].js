@@ -2409,6 +2409,7 @@ const LogsTab = ({ expenses, currency, onEditClick, onDeleteClick }) => {
     const [typeFilter, setTypeFilter] = useState("all");
     const [ownerFilter, setOwnerFilter] = useState("all");
     const [paymentModeFilter, setPaymentModeFilter] = useState("all");
+    const [expenseForFilter, setExpenseForFilter] = useState("all");
     const [amountMin, setAmountMin] = useState("");
     const [amountMax, setAmountMax] = useState("");
     const [dateFrom, setDateFrom] = useState("");
@@ -2427,6 +2428,7 @@ const LogsTab = ({ expenses, currency, onEditClick, onDeleteClick }) => {
         setTypeFilter("all");
         setOwnerFilter("all");
         setPaymentModeFilter("all");
+        setExpenseForFilter("all");
         setAmountMin("");
         setAmountMax("");
         setDateFrom("");
@@ -2435,7 +2437,7 @@ const LogsTab = ({ expenses, currency, onEditClick, onDeleteClick }) => {
     };
 
     const hasActiveFilters = searchQuery || categoryFilter !== "all" || typeFilter !== "all" ||
-        ownerFilter !== "all" || paymentModeFilter !== "all" || amountMin || amountMax || dateFrom || dateTo;
+        ownerFilter !== "all" || paymentModeFilter !== "all" || expenseForFilter !== "all" || amountMin || amountMax || dateFrom || dateTo;
 
     // Filtering logic (client-side for design demonstration)
     const filteredExpenses = (expenses || []).filter(expense => {
@@ -2445,6 +2447,7 @@ const LogsTab = ({ expenses, currency, onEditClick, onDeleteClick }) => {
         const matchesType = typeFilter === "all" || expense.type === typeFilter;
         const matchesOwner = ownerFilter === "all" || expense.owner === ownerFilter;
         const matchesPaymentMode = paymentModeFilter === "all" || expense.paymentMode === paymentModeFilter;
+        const matchesExpenseFor = expenseForFilter === "all" || expense.expenseFor === expenseForFilter;
         const amount = expense.amount || 0;
         const matchesAmountMin = amountMin === "" || amount >= parseFloat(amountMin);
         const matchesAmountMax = amountMax === "" || amount <= parseFloat(amountMax);
@@ -2455,7 +2458,7 @@ const LogsTab = ({ expenses, currency, onEditClick, onDeleteClick }) => {
             : null;
         const matchesDateFrom = !dateFrom || (expDate && expDate >= new Date(dateFrom));
         const matchesDateTo = !dateTo || (expDate && expDate <= new Date(dateTo));
-        return matchesSearch && matchesCategory && matchesType && matchesOwner && matchesPaymentMode && matchesAmountMin && matchesAmountMax && matchesDateFrom && matchesDateTo;
+        return matchesSearch && matchesCategory && matchesType && matchesOwner && matchesPaymentMode && matchesExpenseFor && matchesAmountMin && matchesAmountMax && matchesDateFrom && matchesDateTo;
     });
 
     // Sorting logic
@@ -2547,6 +2550,16 @@ const LogsTab = ({ expenses, currency, onEditClick, onDeleteClick }) => {
                         <option value="CASH">Cash</option>
                         <option value="OTHERS">Others</option>
                     </select>
+                    <select
+                        value={expenseForFilter}
+                        onChange={(e) => { setExpenseForFilter(e.target.value); setCurrentPage(1); }}
+                        className="bg-gray-50 dark:bg-gray-900 border-none rounded-2xl px-6 py-4 text-xs font-black uppercase tracking-widest text-gray-500 focus:ring-2 focus:ring-indigo-500/20 cursor-pointer shadow-sm"
+                    >
+                        <option value="all">Any Expense For</option>
+                        <option value="FAMILY">Family</option>
+                        <option value="PERSONAL">Personal</option>
+                        <option value="OTHERS">Others</option>
+                    </select>
                     <div className="flex items-center gap-2 flex-1">
                         <div className="relative flex-1">
                             <input
@@ -2604,79 +2617,93 @@ const LogsTab = ({ expenses, currency, onEditClick, onDeleteClick }) => {
             <div className="bg-white dark:bg-gray-800 rounded-[2.5rem] border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden flex flex-col">
                 <div className="overflow-x-auto">
                     {paginatedExpenses.length > 0 ? (
-                        <table className="w-full text-left min-w-[900px]">
+                        <table className="w-full text-left min-w-[1050px]">
                             <thead>
-                                <tr className="bg-gray-50 dark:bg-gray-900/50 text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] border-b border-gray-100 dark:border-gray-700">
-                                    <th className="px-8 py-6 cursor-pointer hover:text-indigo-600 transition-colors" onClick={() => handleSort('expenseDate')}>
+                                <tr className="bg-gray-50 dark:bg-gray-900/50 text-[10px] font-black text-gray-400 uppercase tracking-[0.15em] border-b border-gray-100 dark:border-gray-700">
+                                    <th className="px-5 py-4 cursor-pointer hover:text-indigo-600 transition-colors" onClick={() => handleSort('expenseDate')}>
                                         <div className="flex items-center">Date <SortIcon column="expenseDate" /></div>
                                     </th>
-                                    <th className="px-8 py-6">Description</th>
-                                    <th className="px-8 py-6 cursor-pointer hover:text-indigo-600 transition-colors" onClick={() => handleSort('category')}>
+                                    <th className="px-5 py-4">Description</th>
+                                    <th className="px-5 py-4 cursor-pointer hover:text-indigo-600 transition-colors" onClick={() => handleSort('category')}>
                                         <div className="flex items-center">Category <SortIcon column="category" /></div>
                                     </th>
-                                    <th className="px-8 py-6">Owner</th>
-                                    <th className="px-8 py-6">Payment Mode</th>
-                                    <th className="px-8 py-6 text-right cursor-pointer hover:text-indigo-600 transition-colors" onClick={() => handleSort('amount')}>
+                                    <th className="px-5 py-4">Owner</th>
+                                    <th className="px-5 py-4">Payment</th>
+                                    <th className="px-5 py-4 cursor-pointer hover:text-indigo-600 transition-colors" onClick={() => handleSort('expenseFor')}>
+                                        <div className="flex items-center">For <SortIcon column="expenseFor" /></div>
+                                    </th>
+                                    <th className="px-5 py-4 text-right cursor-pointer hover:text-indigo-600 transition-colors" onClick={() => handleSort('amount')}>
                                         <div className="flex items-center justify-end">Amount <SortIcon column="amount" /></div>
                                     </th>
-                                    <th className="px-8 py-6 text-right">Actions</th>
+                                    <th className="px-5 py-4 text-right">Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-50 dark:divide-gray-700">
                                 {paginatedExpenses.map((expense) => (
                                     <tr key={expense.uuid} className="hover:bg-gray-50 dark:hover:bg-gray-900/40 transition-all group">
-                                        <td className="px-8 py-6">
+                                        <td className="px-5 py-4">
                                             <div className="flex flex-col">
-                                                <span className="text-sm text-gray-800 dark:text-white font-black">{formatDate(expense.expenseDate)}</span>
-                                                <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Confirmed</span>
+                                                <span className="text-xs text-gray-800 dark:text-white font-black">{formatDate(expense.expenseDate)}</span>
+                                                <span className="text-[9px] text-gray-400 font-bold uppercase tracking-wider">Confirmed</span>
                                             </div>
                                         </td>
-                                        <td className="px-8 py-6">
-                                            <div className="max-w-[200px]">
-                                                <p className="font-black text-gray-800 dark:text-white truncate">{expense.description}</p>
-                                                <div className="flex items-center gap-2 mt-1">
-                                                    <span className={`w-1.5 h-1.5 rounded-full ${expense.type === 'RECURRING' ? 'bg-indigo-500' : 'bg-amber-500'}`} />
+                                        <td className="px-5 py-4">
+                                            <div className="max-w-[180px]">
+                                                <p className="text-xs font-black text-gray-800 dark:text-white truncate">{expense.description}</p>
+                                                <div className="flex items-center gap-1.5 mt-0.5">
+                                                    <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${expense.type === 'RECURRING' ? 'bg-indigo-500' : 'bg-amber-500'}`} />
                                                     <p className="text-[9px] text-gray-400 font-black uppercase tracking-widest">{expense.type}</p>
                                                 </div>
                                             </div>
                                         </td>
-                                        <td className="px-8 py-6">
-                                            <span className="text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-300">
+                                        <td className="px-5 py-4">
+                                            <span className="text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-300">
                                                 {expense.category}
                                             </span>
                                         </td>
-                                        <td className="px-8 py-6">
-                                            <div className="flex items-center gap-2">
-                                                <div className="w-6 h-6 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-[10px] font-black text-indigo-600">
+                                        <td className="px-5 py-4">
+                                            <div className="flex items-center gap-1.5">
+                                                <div className="w-5 h-5 rounded-md bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-[9px] font-black text-indigo-600 shrink-0">
                                                     {expense.owner?.[0]?.toUpperCase()}
                                                 </div>
-                                                <span className="text-[11px] text-gray-500 font-black uppercase tracking-tight">{expense.owner}</span>
+                                                <span className="text-[10px] text-gray-500 font-black uppercase tracking-tight">{expense.owner}</span>
                                             </div>
                                         </td>
-                                        <td className="px-8 py-6">
-                                            <div className="flex items-center gap-2">
-                                                <div className="w-6 h-6 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-[10px] font-black text-indigo-600">
+                                        <td className="px-5 py-4">
+                                            <div className="flex items-center gap-1.5">
+                                                <div className="w-5 h-5 rounded-md bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-[9px] font-black text-indigo-600 shrink-0">
                                                     {expense.paymentMode?.[0]?.toUpperCase()}
                                                 </div>
-                                                <span className="text-[11px] text-gray-500 font-black uppercase tracking-tight">{expense.paymentMode}</span>
+                                                <span className="text-[10px] text-gray-500 font-black uppercase tracking-tight">{expense.paymentMode}</span>
                                             </div>
                                         </td>
-                                        <td className="px-8 py-6 text-right">
-                                            <span className="font-black text-rose-600 text-lg">-{currency} {(expense.amount || 0).toLocaleString()}</span>
+                                        <td className="px-5 py-4">
+                                            <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-lg ${
+                                                expense.expenseFor === 'PERSONAL'
+                                                    ? 'bg-violet-50 dark:bg-violet-900/20 text-violet-600 dark:text-violet-400'
+                                                    : expense.expenseFor === 'FAMILY'
+                                                    ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400'
+                                                    : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-300'
+                                            }`}>
+                                                {expense.expenseFor || '—'}
+                                            </span>
                                         </td>
-                                        <td className="px-8 py-6">
-                                            <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300">
+                                        <td className="px-5 py-4 text-right">
+                                            <span className="font-black text-rose-600 text-sm">-{currency} {(expense.amount || 0).toLocaleString()}</span>
+                                        </td>
+                                        <td className="px-5 py-4">
+                                            <div className="flex justify-end gap-1.5 opacity-0 group-hover:opacity-100 transition-all duration-300">
                                                 <button
                                                     onClick={() => onEditClick(expense)}
-                                                    className="p-2.5 bg-white dark:bg-gray-800 text-gray-400 hover:text-amber-500 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 hover:scale-110 transition-all"
+                                                    className="p-2 bg-white dark:bg-gray-800 text-gray-400 hover:text-amber-500 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700 hover:scale-110 transition-all"
                                                 >
-                                                    <Edit3 size={14} />
+                                                    <Edit3 size={12} />
                                                 </button>
                                                 <button
                                                     onClick={() => onDeleteClick(expense)}
-                                                    className="p-2.5 bg-white dark:bg-gray-800 text-gray-400 hover:text-rose-500 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 hover:scale-110 transition-all"
+                                                    className="p-2 bg-white dark:bg-gray-800 text-gray-400 hover:text-rose-500 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700 hover:scale-110 transition-all"
                                                 >
-                                                    <Trash2 size={14} />
+                                                    <Trash2 size={12} />
                                                 </button>
                                             </div>
                                         </td>
