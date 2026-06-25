@@ -27,7 +27,8 @@ import {
     Activity as ActivityIcon,
     UtensilsCrossed,
     Tags,
-    Layers
+    Layers,
+    Download
 } from 'lucide-react';
 
 const NewSidebar = ({ isOpen }) => {
@@ -121,7 +122,8 @@ const NewSidebar = ({ isOpen }) => {
                     ]
                 },
                 { label: 'Analytics', href: '/fitmate/analytics/exercise', icon: BarChart3 },
-                { label: 'Advanced Analytics', href: '/fitmate/advanced-analytics', icon: BarChart3 }
+                { label: 'Advanced Analytics', href: '/fitmate/advanced-analytics', icon: BarChart3 },
+                { label: 'Export', href: '/fitmate/export', icon: Download }
             ]
         },
         {

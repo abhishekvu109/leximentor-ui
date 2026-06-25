@@ -53,7 +53,10 @@ export const ENDPOINTS = {
         NUTRITION_TRENDS_SUMMARY: '/fitmate/nutrition/summary/trends',
         NUTRITION_AI_BATCH_ESTIMATE: '/fitmate/nutrition/ai/batch-estimate',
         NUTRITION_AI_BATCH_ESTIMATE_STATUS: (requestId) => `/fitmate/nutrition/ai/batch-estimate/${requestId}`,
-        EXPORT_NUTRITION: (format) => `/fitmate/v1/export/nutrition/${format}`,
+        EXPORT_EXERCISES: '/fitmate/v1/export/exercises',
+        EXPORT_ROUTINES: '/fitmate/v1/export/routines',
+        EXPORT_DRILLS: '/fitmate/v1/export/drills',
+        EXPORT_NUTRITION: '/fitmate/v1/export/nutrition',
     },
     LEXIMENTOR: {
         BASE: '/leximentor',

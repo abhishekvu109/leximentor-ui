@@ -171,9 +171,34 @@ const fitmateService = {
     getNutritionAiBatchEstimateStatus: (requestId, username) => {
         return apiClient.get(`${FITMATE_SERVICE_BASE_URL}${ENDPOINTS.FITMATE.NUTRITION_AI_BATCH_ESTIMATE_STATUS(requestId)}`, { params: { username } });
     },
-    exportNutrition: (format, username, fromDate, toDate) => {
-        return apiClient.get(`${FITMATE_SERVICE_BASE_URL}${ENDPOINTS.FITMATE.EXPORT_NUTRITION(format)}`, {
+    exportExercises: (trainingRefId, bodyPartRefId) => {
+        const params = {};
+        if (trainingRefId) params.trainingRefId = trainingRefId;
+        if (bodyPartRefId) params.bodyPartRefId = bodyPartRefId;
+        return apiClient.get(ENDPOINTS.FITMATE.EXPORT_EXERCISES, {
+            params,
+            responseType: 'blob'
+        });
+    },
+    exportRoutines: (username, fromDate, toDate, status) => {
+        const params = { username, fromDate, toDate };
+        if (status) params.status = status;
+        return apiClient.get(ENDPOINTS.FITMATE.EXPORT_ROUTINES, {
+            params,
+            responseType: 'blob'
+        });
+    },
+    exportDrills: (username, fromDate, toDate) => {
+        return apiClient.get(ENDPOINTS.FITMATE.EXPORT_DRILLS, {
             params: { username, fromDate, toDate },
+            responseType: 'blob'
+        });
+    },
+    exportNutrition: (username, fromDate, toDate, mealType) => {
+        const params = { username, fromDate, toDate };
+        if (mealType) params.mealType = mealType;
+        return apiClient.get(ENDPOINTS.FITMATE.EXPORT_NUTRITION, {
+            params,
             responseType: 'blob'
         });
     },
