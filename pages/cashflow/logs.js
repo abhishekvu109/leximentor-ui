@@ -25,7 +25,8 @@ import {
     ArrowUpDown,
     ArrowDown,
     ArrowUp,
-    Trash2
+    Trash2,
+    List
 } from "lucide-react";
 export const API_CATEGORY_SEARCH_URL = null; // To be removed
 import { useAuth } from "../../context/AuthContext";
@@ -36,6 +37,37 @@ const formatDateArray = (dateArray) => {
     if (!dateArray || !Array.isArray(dateArray)) return "N/A";
     const months = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
     return `${dateArray[2]} ${months[dateArray[1] - 1]}, ${dateArray[0]}`;
+};
+
+const ItemTagInput = ({ items, onAdd, onRemove }) => {
+    const [val, setVal] = useState("");
+    const handleKeyDown = (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            const v = val.trim();
+            if (v) { onAdd(v); setVal(""); }
+        }
+    };
+    return (
+        <div className="bg-white dark:bg-gray-800 rounded-xl px-3 py-2 shadow-sm focus-within:ring-2 focus-within:ring-indigo-500/20 min-h-[44px] flex flex-wrap gap-2 items-center">
+            {items.map((item, idx) => (
+                <span key={idx} className="inline-flex items-center gap-1 bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 text-xs font-bold px-3 py-1.5 rounded-full">
+                    {item}
+                    <button type="button" onClick={() => onRemove(idx)} className="hover:text-indigo-900 dark:hover:text-indigo-100 ml-0.5 flex items-center">
+                        <X size={12} />
+                    </button>
+                </span>
+            ))}
+            <input
+                type="text"
+                value={val}
+                onChange={e => setVal(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder={items.length === 0 ? "Type item and press Enter..." : "Add more..."}
+                className="flex-1 min-w-[120px] bg-transparent border-none outline-none text-sm font-bold dark:text-white py-1 px-1 placeholder:font-normal placeholder:text-gray-400"
+            />
+        </div>
+    );
 };
 
 const ExpenseLogsLogic = () => {
@@ -62,7 +94,8 @@ const ExpenseLogsLogic = () => {
         expenseDate: new Date().toISOString().split('T')[0],
         type: "ONE_TIME",
         expenseFor: "FAMILY",
-        paymentMode: "UPI"
+        paymentMode: "UPI",
+        items: []
     });
     const [filteredCategories, setFilteredCategories] = useState([]);
     const [showCategoryList, setShowCategoryList] = useState(false);
@@ -157,6 +190,9 @@ const ExpenseLogsLogic = () => {
         setShowCategoryList(false);
     };
 
+    const handleAddItem = (item) => setFormData(prev => ({ ...prev, items: [...prev.items, item] }));
+    const handleRemoveItem = (idx) => setFormData(prev => ({ ...prev, items: prev.items.filter((_, i) => i !== idx) }));
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (!formData.description || !formData.amount || !formData.categoryRefId || !formData.householdRefId) {
@@ -177,7 +213,8 @@ const ExpenseLogsLogic = () => {
                 categoryRefId: formData.categoryRefId,
                 type: formData.type,
                 expenseFor: formData.expenseFor,
-                paymentMode: formData.paymentMode
+                paymentMode: formData.paymentMode,
+                items: formData.items
             }
         ];
 
@@ -192,7 +229,8 @@ const ExpenseLogsLogic = () => {
                 expenseDate: new Date().toISOString().split('T')[0],
                 type: "ONE_TIME",
                 expenseFor: "FAMILY",
-                paymentMode: "UPI"
+                paymentMode: "UPI",
+                items: []
             });
             setShowLogForm(false);
             refreshData();
@@ -573,6 +611,10 @@ const ExpenseLogsLogic = () => {
                                 {households.map(h => <option key={h.uuid || h.refId} value={h.refId}>{h.name}</option>)}
                             </select>
                         </div>
+                        <div className="sm:col-span-2 lg:col-span-3 space-y-2">
+                            <label className="text-[10px] font-black text-indigo-400 uppercase tracking-widest ml-1">Items</label>
+                            <ItemTagInput items={formData.items} onAdd={handleAddItem} onRemove={handleRemoveItem} />
+                        </div>
                         <div className="lg:col-span-3 flex flex-col-reverse sm:flex-row justify-end gap-3 mt-4">
                             <button type="button" onClick={() => setShowLogForm(false)} className="px-6 py-3 text-gray-500 font-bold text-sm uppercase tracking-wider">Cancel</button>
                             <button
@@ -817,6 +859,23 @@ const ExpenseLogsLogic = () => {
                                                             {expense.type?.replace('_', ' ')}
                                                         </span>
                                                     </div>
+                                                    {expense.items?.length > 0 && (
+                                                        <div className="relative inline-block mt-1.5 group/items">
+                                                            <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest cursor-default flex items-center gap-1">
+                                                                <List size={10} /> {expense.items.length} item{expense.items.length !== 1 ? 's' : ''}
+                                                            </span>
+                                                            <div className="absolute bottom-full left-0 mb-2 hidden group-hover/items:block z-50 w-max max-w-[300px]">
+                                                                <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-100 dark:border-gray-700 p-3 flex flex-wrap gap-1.5">
+                                                                    {expense.items.map((item, idx) => (
+                                                                        <span key={idx} className="inline-flex items-center bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 text-[10px] font-bold px-2.5 py-1 rounded-full whitespace-nowrap">
+                                                                            {item}
+                                                                        </span>
+                                                                    ))}
+                                                                </div>
+                                                                <div className="w-2.5 h-2.5 bg-white dark:bg-gray-900 border-b border-r border-gray-100 dark:border-gray-700 rotate-45 ml-4 -mt-[5px]" />
+                                                            </div>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </div>
                                         </td>

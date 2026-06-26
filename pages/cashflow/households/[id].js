@@ -25,7 +25,8 @@ import {
     UserPlus,
     Shield,
     Zap,
-    Activity
+    Activity,
+    List
 } from "lucide-react";
 import {
     AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -726,6 +727,37 @@ const AddDepositModal = ({ isOpen, onClose, onSuccess, householdRefId }) => {
 };
 
 
+const ItemTagInput = ({ items, onAdd, onRemove }) => {
+    const [val, setVal] = useState("");
+    const handleKeyDown = (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            const v = val.trim();
+            if (v) { onAdd(v); setVal(""); }
+        }
+    };
+    return (
+        <div className="bg-white dark:bg-gray-800 rounded-2xl px-3 py-2 shadow-sm focus-within:ring-2 focus-within:ring-indigo-500/20 min-h-[52px] flex flex-wrap gap-2 items-center">
+            {items.map((item, idx) => (
+                <span key={idx} className="inline-flex items-center gap-1 bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 text-xs font-bold px-3 py-1.5 rounded-full">
+                    {item}
+                    <button type="button" onClick={() => onRemove(idx)} className="hover:text-indigo-900 dark:hover:text-indigo-100 ml-0.5 flex items-center">
+                        <X size={12} />
+                    </button>
+                </span>
+            ))}
+            <input
+                type="text"
+                value={val}
+                onChange={e => setVal(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder={items.length === 0 ? "Type item and press Enter..." : "Add more..."}
+                className="flex-1 min-w-[120px] bg-transparent border-none outline-none text-sm font-bold dark:text-white py-1 px-1 placeholder:font-normal placeholder:text-gray-400"
+            />
+        </div>
+    );
+};
+
 const AddExpenseModal = ({ isOpen, onClose, onSuccess, householdRefId, categories = [] }) => {
     const { user } = useAuth();
     const [formData, setFormData] = useState({
@@ -736,7 +768,8 @@ const AddExpenseModal = ({ isOpen, onClose, onSuccess, householdRefId, categorie
         description: "",
         type: "ONE_TIME",
         expenseFor: "FAMILY",
-        paymentMode: "UPI"
+        paymentMode: "UPI",
+        items: []
     });
     const [filteredCategories, setFilteredCategories] = useState([]);
     const [showCategoryList, setShowCategoryList] = useState(false);
@@ -770,6 +803,9 @@ const AddExpenseModal = ({ isOpen, onClose, onSuccess, householdRefId, categorie
         setShowCategoryList(false);
     };
 
+    const handleAddItem = (item) => setFormData(prev => ({ ...prev, items: [...prev.items, item] }));
+    const handleRemoveItem = (idx) => setFormData(prev => ({ ...prev, items: prev.items.filter((_, i) => i !== idx) }));
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         setIsSubmitting(true);
@@ -785,7 +821,8 @@ const AddExpenseModal = ({ isOpen, onClose, onSuccess, householdRefId, categorie
                 categoryRefId: formData.categoryRefId,
                 type: formData.type,
                 expenseFor: formData.expenseFor,
-                paymentMode: formData.paymentMode
+                paymentMode: formData.paymentMode,
+                items: formData.items
             }
         ];
 
@@ -801,7 +838,8 @@ const AddExpenseModal = ({ isOpen, onClose, onSuccess, householdRefId, categorie
                 description: "",
                 type: "ONE_TIME",
                 expenseFor: "FAMILY",
-                paymentMode: "UPI"
+                paymentMode: "UPI",
+                items: []
             });
         } catch (err) {
             console.error("Failed to log expense:", err);
@@ -816,136 +854,133 @@ const AddExpenseModal = ({ isOpen, onClose, onSuccess, householdRefId, categorie
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-sm animate-in fade-in duration-300">
             <div className="bg-white dark:bg-gray-800 rounded-[2.5rem] shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-300">
-                <div className="bg-indigo-600 p-8 text-white relative">
+                <div className="bg-indigo-600 px-6 py-5 text-white relative">
                     <button
                         onClick={onClose}
-                        className="absolute top-6 right-6 p-2 hover:bg-white/20 rounded-xl transition-colors"
+                        className="absolute top-4 right-5 p-2 hover:bg-white/20 rounded-xl transition-colors"
                     >
-                        <X size={20} />
+                        <X size={18} />
                     </button>
-                    <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center mb-4 backdrop-blur-md border border-white/30">
-                        <Plus size={32} />
+                    <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center mb-2 backdrop-blur-md border border-white/30">
+                        <Plus size={20} />
                     </div>
-                    <h2 className="text-2xl font-black tracking-tight uppercase">New Expense</h2>
-                    <p className="text-indigo-100 text-sm font-medium mt-1">Log a new spending in your household.</p>
+                    <h2 className="text-lg font-black tracking-tight uppercase">New Expense</h2>
+                    <p className="text-indigo-100 text-xs font-medium mt-0.5">Log a new spending in your household.</p>
                 </div>
 
-                <form onSubmit={handleSubmit} className="p-8 space-y-4 bg-gray-50 dark:bg-gray-900/50">
+                <form onSubmit={handleSubmit} className="p-5 space-y-2.5 bg-gray-50 dark:bg-gray-900/50">
                     {error && (
-                        <div className="bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400 p-4 rounded-2xl text-xs font-bold uppercase tracking-wider flex items-center gap-3 border border-rose-100 dark:border-rose-800">
+                        <div className="bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400 p-3 rounded-2xl text-xs font-bold uppercase tracking-wider flex items-center gap-3 border border-rose-100 dark:border-rose-800">
                             <span className="w-2 h-2 rounded-full bg-rose-600 animate-pulse" />
                             {error}
                         </div>
                     )}
 
-                    <div className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Amount</label>
-                                <input
-                                    required
-                                    type="number"
-                                    name="amount"
-                                    value={formData.amount}
-                                    onChange={handleChange}
-                                    placeholder="0.00"
-                                    className="w-full bg-white dark:bg-gray-800 border-none rounded-2xl px-5 py-4 text-sm font-bold focus:ring-2 focus:ring-indigo-500/20 shadow-sm dark:text-white"
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Date</label>
-                                <input
-                                    required
-                                    type="date"
-                                    name="expenseDate"
-                                    value={formData.expenseDate}
-                                    onChange={handleChange}
-                                    className="w-full bg-white dark:bg-gray-800 border-none rounded-2xl px-5 py-4 text-sm font-bold focus:ring-2 focus:ring-indigo-500/20 shadow-sm dark:text-white"
-                                />
-                            </div>
+                    <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Amount</label>
+                            <input
+                                required
+                                type="number"
+                                name="amount"
+                                value={formData.amount}
+                                onChange={handleChange}
+                                placeholder="0.00"
+                                className="w-full bg-white dark:bg-gray-800 border-none rounded-xl px-4 py-2.5 text-sm font-bold focus:ring-2 focus:ring-indigo-500/20 shadow-sm dark:text-white"
+                            />
                         </div>
-
-                        <div className="space-y-2 relative">
-                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Category</label>
-                            <div className="relative">
-                                <input
-                                    required
-                                    autoComplete="off"
-                                    type="text"
-                                    name="category"
-                                    value={formData.category}
-                                    onChange={handleChange}
-                                    onFocus={handleCategoryFocus}
-                                    onBlur={() => setTimeout(() => setShowCategoryList(false), 200)}
-                                    placeholder="Select category..."
-                                    className="w-full bg-white dark:bg-gray-800 border-none rounded-2xl px-5 py-4 text-sm font-bold focus:ring-2 focus:ring-indigo-500/20 shadow-sm dark:text-white"
-                                />
-                                {showCategoryList && filteredCategories.length > 0 && (
-                                    <div className="absolute z-[110] left-0 right-0 mt-2 bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-700 max-h-48 overflow-y-auto overflow-x-hidden scrollbar-none animate-in slide-in-from-top-2 duration-200">
-                                        {filteredCategories.map((cat) => (
-                                            <button
-                                                key={cat.uuid || cat.refId}
-                                                type="button"
-                                                onClick={() => handleSelectCategory(cat)}
-                                                className="w-full text-left px-5 py-3 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors flex flex-col"
-                                            >
-                                                <span className="text-sm font-bold text-gray-800 dark:text-white">{cat.name}</span>
-                                                <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{cat.status}</span>
-                                            </button>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
+                        <div className="space-y-1">
+                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Date</label>
+                            <input
+                                required
+                                type="date"
+                                name="expenseDate"
+                                value={formData.expenseDate}
+                                onChange={handleChange}
+                                className="w-full bg-white dark:bg-gray-800 border-none rounded-xl px-4 py-2.5 text-sm font-bold focus:ring-2 focus:ring-indigo-500/20 shadow-sm dark:text-white"
+                            />
                         </div>
+                    </div>
 
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Type</label>
-                                <select
-                                    name="type"
-                                    value={formData.type}
-                                    onChange={handleChange}
-                                    className="w-full bg-white dark:bg-gray-800 border-none rounded-2xl px-5 py-4 text-sm font-bold focus:ring-2 focus:ring-indigo-500/20 shadow-sm appearance-none dark:text-white"
-                                >
-                                    <option value="ONE_TIME">One-time</option>
-                                    <option value="RECURRING">Recurring</option>
-                                </select>
-                            </div>
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Expense For</label>
-                                <select
-                                    name="expenseFor"
-                                    value={formData.expenseFor}
-                                    onChange={handleChange}
-                                    className="w-full bg-white dark:bg-gray-800 border-none rounded-2xl px-5 py-4 text-sm font-bold focus:ring-2 focus:ring-indigo-500/20 shadow-sm appearance-none dark:text-white"
-                                >
-                                    <option value="FAMILY">Family</option>
-                                    <option value="PERSONAL">Personal</option>
-                                    <option value="OTHERS">Others</option>
-                                </select>
-                            </div>
+                    <div className="space-y-1 relative">
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Category</label>
+                        <div className="relative">
+                            <input
+                                required
+                                autoComplete="off"
+                                type="text"
+                                name="category"
+                                value={formData.category}
+                                onChange={handleChange}
+                                onFocus={handleCategoryFocus}
+                                onBlur={() => setTimeout(() => setShowCategoryList(false), 200)}
+                                placeholder="Select category..."
+                                className="w-full bg-white dark:bg-gray-800 border-none rounded-xl px-4 py-2.5 text-sm font-bold focus:ring-2 focus:ring-indigo-500/20 shadow-sm dark:text-white"
+                            />
+                            {showCategoryList && filteredCategories.length > 0 && (
+                                <div className="absolute z-[110] left-0 right-0 mt-2 bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-700 max-h-40 overflow-y-auto overflow-x-hidden scrollbar-none animate-in slide-in-from-top-2 duration-200">
+                                    {filteredCategories.map((cat) => (
+                                        <button
+                                            key={cat.uuid || cat.refId}
+                                            type="button"
+                                            onClick={() => handleSelectCategory(cat)}
+                                            className="w-full text-left px-4 py-2.5 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors flex flex-col"
+                                        >
+                                            <span className="text-sm font-bold text-gray-800 dark:text-white">{cat.name}</span>
+                                            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{cat.status}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
                         </div>
+                    </div>
 
-                        <div className="grid grid-cols-1 gap-4">
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Payment Mode</label>
-                                <select
-                                    name="paymentMode"
-                                    value={formData.paymentMode}
-                                    onChange={handleChange}
-                                    className="w-full bg-white dark:bg-gray-800 border-none rounded-2xl px-5 py-4 text-sm font-bold focus:ring-2 focus:ring-indigo-500/20 shadow-sm appearance-none dark:text-white"
-                                >
-                                    <option value="UPI">UPI</option>
-                                    <option value="INTERNET BANKING">Internet Banking</option>
-                                    <option value="DEBIT CARD">Debit Card</option>
-                                    <option value="CREDIT CARD">Credit Card</option>
-                                    <option value="CASH">Cash</option>
-                                    <option value="OTHERS">Others</option>
-                                </select>
-                            </div>
+                    <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Type</label>
+                            <select
+                                name="type"
+                                value={formData.type}
+                                onChange={handleChange}
+                                className="w-full bg-white dark:bg-gray-800 border-none rounded-xl px-4 py-2.5 text-sm font-bold focus:ring-2 focus:ring-indigo-500/20 shadow-sm appearance-none dark:text-white"
+                            >
+                                <option value="ONE_TIME">One-time</option>
+                                <option value="RECURRING">Recurring</option>
+                            </select>
                         </div>
+                        <div className="space-y-1">
+                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Expense For</label>
+                            <select
+                                name="expenseFor"
+                                value={formData.expenseFor}
+                                onChange={handleChange}
+                                className="w-full bg-white dark:bg-gray-800 border-none rounded-xl px-4 py-2.5 text-sm font-bold focus:ring-2 focus:ring-indigo-500/20 shadow-sm appearance-none dark:text-white"
+                            >
+                                <option value="FAMILY">Family</option>
+                                <option value="PERSONAL">Personal</option>
+                                <option value="OTHERS">Others</option>
+                            </select>
+                        </div>
+                    </div>
 
-                        <div className="space-y-2">
+                    <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Payment Mode</label>
+                            <select
+                                name="paymentMode"
+                                value={formData.paymentMode}
+                                onChange={handleChange}
+                                className="w-full bg-white dark:bg-gray-800 border-none rounded-xl px-4 py-2.5 text-sm font-bold focus:ring-2 focus:ring-indigo-500/20 shadow-sm appearance-none dark:text-white"
+                            >
+                                <option value="UPI">UPI</option>
+                                <option value="INTERNET BANKING">Internet Banking</option>
+                                <option value="DEBIT CARD">Debit Card</option>
+                                <option value="CREDIT CARD">Credit Card</option>
+                                <option value="CASH">Cash</option>
+                                <option value="OTHERS">Others</option>
+                            </select>
+                        </div>
+                        <div className="space-y-1">
                             <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Description</label>
                             <input
                                 required
@@ -954,18 +989,23 @@ const AddExpenseModal = ({ isOpen, onClose, onSuccess, householdRefId, categorie
                                 value={formData.description}
                                 onChange={handleChange}
                                 placeholder="What was this for?"
-                                className="w-full bg-white dark:bg-gray-800 border-none rounded-2xl px-5 py-4 text-sm font-bold focus:ring-2 focus:ring-indigo-500/20 shadow-sm dark:text-white"
+                                className="w-full bg-white dark:bg-gray-800 border-none rounded-xl px-4 py-2.5 text-sm font-bold focus:ring-2 focus:ring-indigo-500/20 shadow-sm dark:text-white"
                             />
                         </div>
                     </div>
 
-                    <div className="pt-6">
+                    <div className="space-y-1">
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Items</label>
+                        <ItemTagInput items={formData.items} onAdd={handleAddItem} onRemove={handleRemoveItem} />
+                    </div>
+
+                    <div className="pt-2">
                         <button
                             disabled={isSubmitting}
                             type="submit"
-                            className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white py-5 rounded-2xl font-black text-sm uppercase tracking-widest shadow-xl shadow-indigo-100 transition-all active:scale-95 flex items-center justify-center gap-3"
+                            className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white py-3.5 rounded-2xl font-black text-sm uppercase tracking-widest shadow-lg shadow-indigo-100 transition-all active:scale-95 flex items-center justify-center gap-3"
                         >
-                            {isSubmitting ? <Loader2 className="animate-spin" size={20} /> : <CheckCircle2 size={20} />}
+                            {isSubmitting ? <Loader2 className="animate-spin" size={18} /> : <CheckCircle2 size={18} />}
                             {isSubmitting ? "Logging..." : "Log Expense"}
                         </button>
                     </div>
@@ -985,7 +1025,8 @@ const EditExpenseModal = ({ isOpen, onClose, onSuccess, expense, householdRefId,
         description: "",
         type: "ONE_TIME",
         expenseFor: "FAMILY",
-        paymentMode: "UPI"
+        paymentMode: "UPI",
+        items: []
     });
     const [filteredCategories, setFilteredCategories] = useState([]);
     const [showCategoryList, setShowCategoryList] = useState(false);
@@ -1002,7 +1043,8 @@ const EditExpenseModal = ({ isOpen, onClose, onSuccess, expense, householdRefId,
                 description: expense.description || "",
                 type: expense.type || "ONE_TIME",
                 expenseFor: expense.expenseFor || "FAMILY",
-                paymentMode: expense.paymentMode || "UPI"
+                paymentMode: expense.paymentMode || "UPI",
+                items: expense.items || []
             });
         }
     }, [isOpen, expense]);
@@ -1029,6 +1071,9 @@ const EditExpenseModal = ({ isOpen, onClose, onSuccess, expense, householdRefId,
         setShowCategoryList(false);
     };
 
+    const handleAddItem = (item) => setFormData(prev => ({ ...prev, items: [...prev.items, item] }));
+    const handleRemoveItem = (idx) => setFormData(prev => ({ ...prev, items: prev.items.filter((_, i) => i !== idx) }));
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         setIsSubmitting(true);
@@ -1045,7 +1090,8 @@ const EditExpenseModal = ({ isOpen, onClose, onSuccess, expense, householdRefId,
                 categoryRefId: formData.categoryRefId,
                 type: formData.type,
                 expenseFor: formData.expenseFor,
-                paymentMode: formData.paymentMode
+                paymentMode: formData.paymentMode,
+                items: formData.items
             }
         ];
 
@@ -1066,135 +1112,132 @@ const EditExpenseModal = ({ isOpen, onClose, onSuccess, expense, householdRefId,
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-sm animate-in fade-in duration-300">
             <div className="bg-white dark:bg-gray-800 rounded-[2.5rem] shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-300">
-                <div className="bg-amber-500 p-8 text-white relative">
+                <div className="bg-amber-500 px-6 py-5 text-white relative">
                     <button
                         onClick={onClose}
-                        className="absolute top-6 right-6 p-2 hover:bg-white/20 rounded-xl transition-colors"
+                        className="absolute top-4 right-5 p-2 hover:bg-white/20 rounded-xl transition-colors"
                     >
-                        <X size={20} />
+                        <X size={18} />
                     </button>
-                    <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center mb-4 backdrop-blur-md border border-white/30">
-                        <Edit3 size={32} />
+                    <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center mb-2 backdrop-blur-md border border-white/30">
+                        <Edit3 size={20} />
                     </div>
-                    <h2 className="text-2xl font-black tracking-tight uppercase">Edit Expense</h2>
-                    <p className="text-amber-100 text-sm font-medium mt-1">Update the details of this transaction.</p>
+                    <h2 className="text-lg font-black tracking-tight uppercase">Edit Expense</h2>
+                    <p className="text-amber-100 text-xs font-medium mt-0.5">Update the details of this transaction.</p>
                 </div>
 
-                <form onSubmit={handleSubmit} className="p-8 space-y-4 bg-gray-50 dark:bg-gray-900/50">
+                <form onSubmit={handleSubmit} className="p-5 space-y-2.5 bg-gray-50 dark:bg-gray-900/50">
                     {error && (
-                        <div className="bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400 p-4 rounded-2xl text-xs font-bold uppercase tracking-wider flex items-center gap-3 border border-rose-100 dark:border-rose-800">
+                        <div className="bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400 p-3 rounded-2xl text-xs font-bold uppercase tracking-wider flex items-center gap-3 border border-rose-100 dark:border-rose-800">
                             <span className="w-2 h-2 rounded-full bg-rose-600 animate-pulse" />
                             {error}
                         </div>
                     )}
 
-                    <div className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Amount</label>
-                                <input
-                                    required
-                                    type="number"
-                                    name="amount"
-                                    value={formData.amount}
-                                    onChange={handleChange}
-                                    placeholder="0.00"
-                                    className="w-full bg-white dark:bg-gray-800 border-none rounded-2xl px-5 py-4 text-sm font-bold focus:ring-2 focus:ring-amber-500/20 shadow-sm dark:text-white"
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Date</label>
-                                <input
-                                    required
-                                    type="date"
-                                    name="expenseDate"
-                                    value={formData.expenseDate}
-                                    onChange={handleChange}
-                                    className="w-full bg-white dark:bg-gray-800 border-none rounded-2xl px-5 py-4 text-sm font-bold focus:ring-2 focus:ring-amber-500/20 shadow-sm dark:text-white"
-                                />
-                            </div>
+                    <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Amount</label>
+                            <input
+                                required
+                                type="number"
+                                name="amount"
+                                value={formData.amount}
+                                onChange={handleChange}
+                                placeholder="0.00"
+                                className="w-full bg-white dark:bg-gray-800 border-none rounded-xl px-4 py-2.5 text-sm font-bold focus:ring-2 focus:ring-amber-500/20 shadow-sm dark:text-white"
+                            />
                         </div>
-
-                        <div className="space-y-2 relative">
-                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Category</label>
-                            <div className="relative">
-                                <input
-                                    required
-                                    autoComplete="off"
-                                    type="text"
-                                    name="category"
-                                    value={formData.category}
-                                    onChange={handleChange}
-                                    onFocus={() => formData.category && setShowCategoryList(true)}
-                                    onBlur={() => setTimeout(() => setShowCategoryList(false), 200)}
-                                    placeholder="Select category..."
-                                    className="w-full bg-white dark:bg-gray-800 border-none rounded-2xl px-5 py-4 text-sm font-bold focus:ring-2 focus:ring-amber-500/20 shadow-sm dark:text-white"
-                                />
-                                {showCategoryList && filteredCategories.length > 0 && (
-                                    <div className="absolute z-[110] left-0 right-0 mt-2 bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-700 max-h-48 overflow-y-auto overflow-x-hidden scrollbar-none animate-in slide-in-from-top-2 duration-200">
-                                        {filteredCategories.map((cat) => (
-                                            <button
-                                                key={cat.uuid || cat.refId}
-                                                type="button"
-                                                onClick={() => handleSelectCategory(cat)}
-                                                className="w-full text-left px-5 py-3 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors flex flex-col"
-                                            >
-                                                <span className="text-sm font-bold text-gray-800 dark:text-white">{cat.name}</span>
-                                                <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{cat.status}</span>
-                                            </button>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
+                        <div className="space-y-1">
+                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Date</label>
+                            <input
+                                required
+                                type="date"
+                                name="expenseDate"
+                                value={formData.expenseDate}
+                                onChange={handleChange}
+                                className="w-full bg-white dark:bg-gray-800 border-none rounded-xl px-4 py-2.5 text-sm font-bold focus:ring-2 focus:ring-amber-500/20 shadow-sm dark:text-white"
+                            />
                         </div>
+                    </div>
 
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Type</label>
-                                <select
-                                    name="type"
-                                    value={formData.type}
-                                    onChange={handleChange}
-                                    className="w-full bg-white dark:bg-gray-800 border-none rounded-2xl px-5 py-4 text-sm font-bold focus:ring-2 focus:ring-amber-500/20 shadow-sm appearance-none dark:text-white"
-                                >
-                                    <option value="ONE_TIME">One-time</option>
-                                    <option value="RECURRING">Recurring</option>
-                                </select>
-                            </div>
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Expense For</label>
-                                <select
-                                    name="expenseFor"
-                                    value={formData.expenseFor}
-                                    onChange={handleChange}
-                                    className="w-full bg-white dark:bg-gray-800 border-none rounded-2xl px-5 py-4 text-sm font-bold focus:ring-2 focus:ring-amber-500/20 shadow-sm appearance-none dark:text-white"
-                                >
-                                    <option value="FAMILY">Family</option>
-                                    <option value="PERSONAL">Personal</option>
-                                    <option value="OTHERS">Others</option>
-                                </select>
-                            </div>
+                    <div className="space-y-1 relative">
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Category</label>
+                        <div className="relative">
+                            <input
+                                required
+                                autoComplete="off"
+                                type="text"
+                                name="category"
+                                value={formData.category}
+                                onChange={handleChange}
+                                onFocus={() => formData.category && setShowCategoryList(true)}
+                                onBlur={() => setTimeout(() => setShowCategoryList(false), 200)}
+                                placeholder="Select category..."
+                                className="w-full bg-white dark:bg-gray-800 border-none rounded-xl px-4 py-2.5 text-sm font-bold focus:ring-2 focus:ring-amber-500/20 shadow-sm dark:text-white"
+                            />
+                            {showCategoryList && filteredCategories.length > 0 && (
+                                <div className="absolute z-[110] left-0 right-0 mt-2 bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-700 max-h-40 overflow-y-auto overflow-x-hidden scrollbar-none animate-in slide-in-from-top-2 duration-200">
+                                    {filteredCategories.map((cat) => (
+                                        <button
+                                            key={cat.uuid || cat.refId}
+                                            type="button"
+                                            onClick={() => handleSelectCategory(cat)}
+                                            className="w-full text-left px-4 py-2.5 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors flex flex-col"
+                                        >
+                                            <span className="text-sm font-bold text-gray-800 dark:text-white">{cat.name}</span>
+                                            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{cat.status}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
                         </div>
+                    </div>
 
-                        <div className="grid grid-cols-1 gap-4">
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Payment Mode</label>
-                                <select
-                                    name="paymentMode"
-                                    value={formData.paymentMode}
-                                    onChange={handleChange}
-                                    className="w-full bg-white dark:bg-gray-800 border-none rounded-2xl px-5 py-4 text-sm font-bold focus:ring-2 focus:ring-amber-500/20 shadow-sm appearance-none dark:text-white"
-                                >
-                                    <option value="UPI">UPI</option>
-                                    <option value="INTERNET BANKING">Internet Banking</option>
-                                    <option value="DEBIT CARD">Debit Card</option>
-                                    <option value="CREDIT CARD">Credit Card</option>
-                                    <option value="OTHERS">Others</option>
-                                </select>
-                            </div>
+                    <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Type</label>
+                            <select
+                                name="type"
+                                value={formData.type}
+                                onChange={handleChange}
+                                className="w-full bg-white dark:bg-gray-800 border-none rounded-xl px-4 py-2.5 text-sm font-bold focus:ring-2 focus:ring-amber-500/20 shadow-sm appearance-none dark:text-white"
+                            >
+                                <option value="ONE_TIME">One-time</option>
+                                <option value="RECURRING">Recurring</option>
+                            </select>
                         </div>
+                        <div className="space-y-1">
+                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Expense For</label>
+                            <select
+                                name="expenseFor"
+                                value={formData.expenseFor}
+                                onChange={handleChange}
+                                className="w-full bg-white dark:bg-gray-800 border-none rounded-xl px-4 py-2.5 text-sm font-bold focus:ring-2 focus:ring-amber-500/20 shadow-sm appearance-none dark:text-white"
+                            >
+                                <option value="FAMILY">Family</option>
+                                <option value="PERSONAL">Personal</option>
+                                <option value="OTHERS">Others</option>
+                            </select>
+                        </div>
+                    </div>
 
-                        <div className="space-y-2">
+                    <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Payment Mode</label>
+                            <select
+                                name="paymentMode"
+                                value={formData.paymentMode}
+                                onChange={handleChange}
+                                className="w-full bg-white dark:bg-gray-800 border-none rounded-xl px-4 py-2.5 text-sm font-bold focus:ring-2 focus:ring-amber-500/20 shadow-sm appearance-none dark:text-white"
+                            >
+                                <option value="UPI">UPI</option>
+                                <option value="INTERNET BANKING">Internet Banking</option>
+                                <option value="DEBIT CARD">Debit Card</option>
+                                <option value="CREDIT CARD">Credit Card</option>
+                                <option value="OTHERS">Others</option>
+                            </select>
+                        </div>
+                        <div className="space-y-1">
                             <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Description</label>
                             <input
                                 required
@@ -1203,18 +1246,23 @@ const EditExpenseModal = ({ isOpen, onClose, onSuccess, expense, householdRefId,
                                 value={formData.description}
                                 onChange={handleChange}
                                 placeholder="What was this for?"
-                                className="w-full bg-white dark:bg-gray-800 border-none rounded-2xl px-5 py-4 text-sm font-bold focus:ring-2 focus:ring-amber-500/20 shadow-sm dark:text-white"
+                                className="w-full bg-white dark:bg-gray-800 border-none rounded-xl px-4 py-2.5 text-sm font-bold focus:ring-2 focus:ring-amber-500/20 shadow-sm dark:text-white"
                             />
                         </div>
                     </div>
 
-                    <div className="pt-6">
+                    <div className="space-y-1">
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Items</label>
+                        <ItemTagInput items={formData.items} onAdd={handleAddItem} onRemove={handleRemoveItem} />
+                    </div>
+
+                    <div className="pt-2">
                         <button
                             disabled={isSubmitting}
                             type="submit"
-                            className="w-full bg-amber-500 hover:bg-amber-600 disabled:bg-amber-300 text-white py-5 rounded-2xl font-black text-sm uppercase tracking-widest shadow-xl shadow-amber-100 dark:shadow-none transition-all active:scale-95 flex items-center justify-center gap-3"
+                            className="w-full bg-amber-500 hover:bg-amber-600 disabled:bg-amber-300 text-white py-3.5 rounded-2xl font-black text-sm uppercase tracking-widest shadow-lg shadow-amber-100 dark:shadow-none transition-all active:scale-95 flex items-center justify-center gap-3"
                         >
-                            {isSubmitting ? <Loader2 className="animate-spin" size={20} /> : <CheckCircle2 size={20} />}
+                            {isSubmitting ? <Loader2 className="animate-spin" size={18} /> : <CheckCircle2 size={18} />}
                             {isSubmitting ? "Updating..." : "Update Transaction"}
                         </button>
                     </div>
@@ -2654,6 +2702,23 @@ const LogsTab = ({ expenses, currency, onEditClick, onDeleteClick }) => {
                                                     <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${expense.type === 'RECURRING' ? 'bg-indigo-500' : 'bg-amber-500'}`} />
                                                     <p className="text-[9px] text-gray-400 font-black uppercase tracking-widest">{expense.type}</p>
                                                 </div>
+                                                {expense.items?.length > 0 && (
+                                                    <div className="relative inline-block mt-1 group/items">
+                                                        <span className="text-[9px] font-black text-indigo-400 uppercase tracking-widest cursor-default flex items-center gap-0.5">
+                                                            <List size={9} /> {expense.items.length} item{expense.items.length !== 1 ? 's' : ''}
+                                                        </span>
+                                                        <div className="absolute bottom-full left-0 mb-2 hidden group-hover/items:block z-50 w-max max-w-[260px]">
+                                                            <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-100 dark:border-gray-700 p-3 flex flex-wrap gap-1.5">
+                                                                {expense.items.map((item, idx) => (
+                                                                    <span key={idx} className="inline-flex items-center bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 text-[9px] font-bold px-2 py-1 rounded-full whitespace-nowrap">
+                                                                        {item}
+                                                                    </span>
+                                                                ))}
+                                                            </div>
+                                                            <div className="w-2.5 h-2.5 bg-white dark:bg-gray-900 border-b border-r border-gray-100 dark:border-gray-700 rotate-45 ml-3 -mt-[5px]" />
+                                                        </div>
+                                                    </div>
+                                                )}
                                             </div>
                                         </td>
                                         <td className="px-5 py-4">
