@@ -25,6 +25,9 @@ export const ENDPOINTS = {
         HOUSEHOLD_ANALYTICS_BEHAVIOR: '/cashflow/households/analytics/behavior',
         HOUSEHOLD_ANALYTICS_DIAGNOSTIC: '/cashflow/households/analytics/diagnostic',
         HOUSEHOLD_ANALYTICS_PLANNING: '/cashflow/households/analytics/planning',
+        EXPORT_EXPENSES: '/cashflow/export/expenses',
+        EXPORT_EARNINGS: '/cashflow/export/earnings',
+        EXPORT_DEPOSITS: '/cashflow/export/deposits',
     },
     FITMATE: {
         BASE: '/fitmate',

@@ -19,7 +19,16 @@ const cashflowService = {
     },
     deleteCategory: (payload) => {
         return apiClient.delete(ENDPOINTS.CASHFLOW.CATEGORY, { data: payload });
-    }
+    },
+    exportExpenses: (filter = {}) => {
+        return apiClient.post(ENDPOINTS.CASHFLOW.EXPORT_EXPENSES, filter, { responseType: 'blob' });
+    },
+    exportEarnings: (filter = {}) => {
+        return apiClient.post(ENDPOINTS.CASHFLOW.EXPORT_EARNINGS, filter, { responseType: 'blob' });
+    },
+    exportDeposits: (filter = {}) => {
+        return apiClient.post(ENDPOINTS.CASHFLOW.EXPORT_DEPOSITS, filter, { responseType: 'blob' });
+    },
 };
 
 export default cashflowService;
