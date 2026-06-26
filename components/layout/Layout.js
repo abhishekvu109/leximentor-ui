@@ -13,14 +13,18 @@ import {
     ChevronDown,
     LayoutDashboard,
     Bell,
-    CheckCircle2
+    CheckCircle2,
+    Sun,
+    Moon
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
+import { useTheme } from "../../context/ThemeContext";
 
 const Layout = ({ content }) => {
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
     const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
     const { logout, user } = useAuth();
+    const { theme, toggleTheme } = useTheme();
     const dropdownRef = useRef(null);
     const buttonRef = useRef(null);
 
@@ -46,8 +50,6 @@ const Layout = ({ content }) => {
     };
 
     useEffect(() => {
-        console.log("Layout mounted");
-
         // Restore sidebar state from localStorage
         if (typeof window !== "undefined") {
             const savedState = localStorage.getItem('sidebar_open');
@@ -77,7 +79,6 @@ const Layout = ({ content }) => {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, [isUserDropdownOpen]);
 
-    console.log("Layout Render - isUserDropdownOpen:", isUserDropdownOpen);
     return <>
         <nav
             className="fixed top-0 z-50 w-full bg-white border-b border-gray-200 dark:bg-gray-800 dark:border-gray-700">
@@ -109,6 +110,14 @@ const Layout = ({ content }) => {
                                 {/* Notifications hub - purely aesthetic for now */}
                                 <button className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all hidden sm:flex">
                                     <Bell size={20} />
+                                </button>
+
+                                <button
+                                    onClick={toggleTheme}
+                                    title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+                                    className="p-2 text-gray-400 hover:text-amber-500 hover:bg-amber-50 dark:hover:text-amber-300 dark:hover:bg-amber-500/10 rounded-xl transition-all hidden sm:flex"
+                                >
+                                    {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
                                 </button>
 
                                 <button type="button"
@@ -200,7 +209,7 @@ const Layout = ({ content }) => {
 
         <NewSidebar isOpen={isSidebarOpen} />
 
-        <div className={`p-0 transition-all duration-300 ease-in-out bg-gray-50/50 min-h-screen ${isSidebarOpen ? 'sm:ml-64' : 'ml-0'}`}>
+        <div className={`p-0 transition-all duration-300 ease-in-out bg-gray-50/50 dark:bg-gray-950 min-h-screen ${isSidebarOpen ? 'sm:ml-64' : 'ml-0'}`}>
             <main className="p-4 md:p-8 mt-14 max-w-[1600px] mx-auto">
                 <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden p-6 md:p-8 min-h-[calc(100vh-160px)]">
                     {content}
