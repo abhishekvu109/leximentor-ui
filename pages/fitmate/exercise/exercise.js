@@ -73,8 +73,11 @@ const ExerciseCard = ({ exercise, analytics, onDelete, onEdit, onThumbnailUpload
         setUrlError('');
         setUrlLoading(true);
         try {
-            const response = await fetch(url);
-            if (!response.ok) throw new Error('Could not fetch the image.');
+            const response = await fetch(`/api/proxy-image?url=${encodeURIComponent(url)}`);
+            if (!response.ok) {
+                const err = await response.json().catch(() => ({}));
+                throw new Error(err.error || 'Could not fetch the image.');
+            }
             const blob = await response.blob();
             if (!blob.type.startsWith('image/')) throw new Error('URL does not point to an image.');
             const ext = blob.type.split('/')[1] || 'jpg';
@@ -83,11 +86,7 @@ const ExerciseCard = ({ exercise, analytics, onDelete, onEdit, onThumbnailUpload
             setShowUrlInput(false);
             setUrlInput('');
         } catch (err) {
-            // CORS or network errors surface here
-            const msg = err.message.includes('fetch')
-                ? 'CORS blocked — try downloading and uploading the image directly.'
-                : err.message;
-            setUrlError(msg);
+            setUrlError(err.message);
         } finally {
             setUrlLoading(false);
         }

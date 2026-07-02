@@ -1,6 +1,6 @@
 
 import Layout from "@/components/layout/Layout";
-import { ChevronDown, Option, CheckCircle2, MoreVertical, Plus, Trash2, Timer, Check, X, Dumbbell, Calendar, Save, Filter, Search, ArrowRight, Download, FileText, History, Info, Clock, Sparkles, Loader2 } from "lucide-react";
+import { ChevronDown, Option, CheckCircle2, MoreVertical, Plus, Trash2, Timer, Check, X, Dumbbell, Calendar, Save, Filter, Search, ArrowRight, Download, FileText, History, Info, Clock, Sparkles, Loader2, Camera, Globe } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState } from "react";
 import fitmateService from "../../../services/fitmate.service";
@@ -17,11 +17,24 @@ const AddExerciseModal = ({ isOpen, onClose, onSuccess, trainings, bodyParts, mu
     const [form, setForm] = useState({ name: "", description: "", training: "", bodyPart: "", targetMuscles: [], equipments: [], status: "ACTIVE", unit: "reps" });
     const [filteredMuscles, setFilteredMuscles] = useState([]);
 
+    // Thumbnail state
+    const [thumbnailFile, setThumbnailFile] = useState(null);
+    const [thumbnailPreview, setThumbnailPreview] = useState(null);
+    const [showUrlInput, setShowUrlInput] = useState(false);
+    const [urlInput, setUrlInput] = useState('');
+    const [urlError, setUrlError] = useState('');
+    const [urlLoading, setUrlLoading] = useState(false);
+
     useEffect(() => {
         if (isOpen) {
             setForm({ name: "", description: "", training: "", bodyPart: "", targetMuscles: [], equipments: [], status: "ACTIVE", unit: "reps" });
             setFilteredMuscles([]);
             setError('');
+            setThumbnailFile(null);
+            setThumbnailPreview(null);
+            setShowUrlInput(false);
+            setUrlInput('');
+            setUrlError('');
         }
     }, [isOpen]);
 
@@ -40,6 +53,41 @@ const AddExerciseModal = ({ isOpen, onClose, onSuccess, trainings, bodyParts, mu
         });
     };
 
+    const handleFileChange = (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        setThumbnailFile(file);
+        setThumbnailPreview(URL.createObjectURL(file));
+        setShowUrlInput(false);
+        setUrlError('');
+    };
+
+    const handleUrlSubmit = async () => {
+        const url = urlInput.trim();
+        if (!url) return;
+        setUrlError('');
+        setUrlLoading(true);
+        try {
+            const response = await fetch(`/api/proxy-image?url=${encodeURIComponent(url)}`);
+            if (!response.ok) {
+                const err = await response.json().catch(() => ({}));
+                throw new Error(err.error || 'Could not fetch the image.');
+            }
+            const blob = await response.blob();
+            if (!blob.type.startsWith('image/')) throw new Error('URL does not point to an image.');
+            const ext = blob.type.split('/')[1] || 'jpg';
+            const file = new File([blob], `thumbnail.${ext}`, { type: blob.type });
+            setThumbnailFile(file);
+            setThumbnailPreview(URL.createObjectURL(blob));
+            setShowUrlInput(false);
+            setUrlInput('');
+        } catch (err) {
+            setUrlError(err.message);
+        } finally {
+            setUrlLoading(false);
+        }
+    };
+
     const handleSubmit = async (e) => {
         e?.preventDefault();
         setError('');
@@ -51,7 +99,23 @@ const AddExerciseModal = ({ isOpen, onClose, onSuccess, trainings, bodyParts, mu
                 targetMuscles: form.targetMuscles.map(m => ({ name: m })),
                 equipments: form.equipments, status: form.status, unit: form.unit
             }];
-            await fitmateService.addExercise(payload);
+            const res = await fitmateService.addExercise(payload);
+
+            // Upload thumbnail if one was selected
+            if (thumbnailFile) {
+                try {
+                    const created = res?.data?.[0] || res?.data?.content?.[0] || res?.data;
+                    const refId = created?.refId || (Array.isArray(created) ? created[0]?.refId : null);
+                    if (refId) {
+                        const formData = new FormData();
+                        formData.append('files', thumbnailFile);
+                        await fitmateService.uploadThumbnail(refId, formData);
+                    }
+                } catch (thumbErr) {
+                    console.error('Thumbnail upload failed (exercise still created):', thumbErr);
+                }
+            }
+
             onSuccess(form.name);
             onClose();
         } catch (err) {
@@ -82,6 +146,76 @@ const AddExerciseModal = ({ isOpen, onClose, onSuccess, trainings, bodyParts, mu
                         </div>
 
                         <form onSubmit={handleSubmit} className="overflow-y-auto max-h-[65vh] p-6 space-y-5">
+
+                            {/* Thumbnail picker */}
+                            <div>
+                                <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Thumbnail <span className="font-normal normal-case text-gray-400">(optional)</span></label>
+                                <div className="relative group rounded-2xl overflow-hidden border border-gray-200 bg-gray-50" style={{ aspectRatio: '16/6' }}>
+                                    {thumbnailPreview ? (
+                                        <img src={thumbnailPreview} alt="Preview" className="w-full h-full object-cover" />
+                                    ) : (
+                                        <div className="w-full h-full flex flex-col items-center justify-center gap-2 text-gray-300">
+                                            <Dumbbell size={28} />
+                                            <span className="text-xs text-gray-400 font-medium">Upload a thumbnail or paste an image URL</span>
+                                        </div>
+                                    )}
+
+                                    {/* Hover actions */}
+                                    <div className={`absolute inset-0 flex items-center justify-center gap-3 transition-opacity duration-200
+                                        ${showUrlInput ? 'opacity-0 pointer-events-none' : 'bg-black/30 opacity-0 group-hover:opacity-100'}`}>
+                                        <label className="p-2.5 bg-white/90 rounded-full cursor-pointer hover:bg-white transition-colors shadow-md" title="Upload from file">
+                                            <input type="file" className="hidden" accept="image/*" onChange={handleFileChange} />
+                                            <Camera size={16} className="text-gray-700" />
+                                        </label>
+                                        <button type="button"
+                                            onClick={() => { setShowUrlInput(true); setUrlError(''); setUrlInput(''); }}
+                                            className="p-2.5 bg-white/90 rounded-full hover:bg-white transition-colors shadow-md text-gray-700"
+                                            title="Paste image URL">
+                                            <Globe size={16} />
+                                        </button>
+                                        {thumbnailPreview && (
+                                            <button type="button"
+                                                onClick={() => { setThumbnailFile(null); setThumbnailPreview(null); }}
+                                                className="p-2.5 bg-white/90 rounded-full hover:bg-white transition-colors shadow-md text-red-500"
+                                                title="Remove thumbnail">
+                                                <X size={16} />
+                                            </button>
+                                        )}
+                                    </div>
+
+                                    {/* URL input overlay */}
+                                    {showUrlInput && (
+                                        <div className="absolute inset-0 bg-black/75 backdrop-blur-sm flex flex-col items-center justify-center p-5 gap-3">
+                                            <p className="text-white text-xs font-bold tracking-wide uppercase">Paste image URL</p>
+                                            <div className="flex gap-2 w-full">
+                                                <input
+                                                    autoFocus
+                                                    type="url"
+                                                    value={urlInput}
+                                                    onChange={e => { setUrlInput(e.target.value); setUrlError(''); }}
+                                                    onKeyDown={e => e.key === 'Enter' && handleUrlSubmit()}
+                                                    placeholder="https://example.com/image.jpg"
+                                                    className="flex-1 text-xs px-3 py-2 rounded-lg border-none outline-none min-w-0"
+                                                />
+                                                <button type="button" onClick={handleUrlSubmit}
+                                                    disabled={urlLoading || !urlInput.trim()}
+                                                    className="p-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg disabled:opacity-50 shrink-0">
+                                                    {urlLoading ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+                                                </button>
+                                                <button type="button"
+                                                    onClick={() => { setShowUrlInput(false); setUrlInput(''); setUrlError(''); }}
+                                                    className="p-2 bg-white/20 hover:bg-white/30 text-white rounded-lg shrink-0">
+                                                    <X size={14} />
+                                                </button>
+                                            </div>
+                                            {urlError && <p className="text-red-300 text-[10px] text-center leading-snug">{urlError}</p>}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className="w-full h-px bg-gray-100" />
+
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Exercise Name *</label>
