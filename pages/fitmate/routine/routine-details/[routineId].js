@@ -208,30 +208,26 @@ const ExerciseGridItem = ({ name, refId, isSelected, onClick }) => {
     const [thumbUrl, setThumbUrl] = useState(null);
 
     useEffect(() => {
+        let objectUrl = null;
         const fetchThumb = async () => {
             setThumbUrl(null);
             try {
                 let blob;
-                try {
-                    blob = await fitmateService.getThumbnail(refId);
-                } catch (err) { }
-
+                try { blob = await fitmateService.getThumbnail(refId); } catch (err) {}
                 if (!blob || blob.size === 0 || !blob.type.startsWith('image/')) {
-                    try {
-                        blob = await fitmateService.getExerciseResource(refId, 'GIF');
-                    } catch (err) { }
+                    try { blob = await fitmateService.getExerciseResource(refId, 'GIF'); } catch (err) {}
                 }
-
                 if (blob && blob.size > 0 && blob.type.startsWith('image/')) {
-                    setThumbUrl(URL.createObjectURL(blob));
+                    objectUrl = URL.createObjectURL(blob);
+                    setThumbUrl(objectUrl);
                 }
             } catch (e) {
                 console.error("Grid item thumb fetch failed", e);
             }
         };
         if (refId) fetchThumb();
-        return () => { if (thumbUrl) URL.revokeObjectURL(thumbUrl); };
-    }, [refId, thumbUrl]);
+        return () => { if (objectUrl) URL.revokeObjectURL(objectUrl); };
+    }, [refId]);
 
     return (
         <div
